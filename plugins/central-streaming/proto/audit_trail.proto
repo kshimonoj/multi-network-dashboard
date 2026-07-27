@@ -1,0 +1,54 @@
+// New Central Streaming API — Audit Trail(監査証跡)のペイロード。
+// 出典: https://developer.arubanetworks.com/new-central/docs/streaming-api-event-audit-trail
+// エンドポイント: wss://<host>/network-services/v1alpha1/audit-trail-events
+// event-types: com.hpe.greenlake.network-services.v1alpha1.audit-trail.<sub-category> (20 種)
+
+syntax = "proto3";
+
+package network_services.audit_trail.v1alpha1;
+
+import "google/protobuf/struct.proto";
+
+message AuditTrail {
+  string tenant_id = 1;
+  int64 occurred_on = 2; // epoch millis
+  string action = 3;
+  string category = 4;
+  string sub_category = 5;
+  string destination = 6;
+  string destination_name = 7;
+  ScopeInfo scope_info = 8;
+  string ip_address = 9;
+  string description = 10;
+  string source = 11;
+  string service_name = 12;
+  LogDetails log_details = 13;
+  string additional_info = 14;
+}
+
+message ScopeInfo {
+  string scope_type = 1;
+  repeated string scope_ids = 2;
+}
+
+message LogDetails {
+  repeated ChangedField changed_fields = 1;
+  repeated ImpactRadius impact_radius = 2;
+  ChangedJSON changed_json = 3;
+}
+
+message ChangedField {
+  string field_label_key = 1;
+  repeated string before_transaction = 2;
+  repeated string after_transaction = 3;
+}
+
+message ImpactRadius {
+  string context = 1;
+  repeated string values = 2;
+}
+
+message ChangedJSON {
+  google.protobuf.Struct before_transaction = 1;
+  google.protobuf.Struct after_transaction = 2;
+}

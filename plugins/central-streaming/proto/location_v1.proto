@@ -1,0 +1,32 @@
+// New Central Streaming API — Location(Wi-Fi クライアント / アセットタグの位置)の新エンドポイント。
+// エンドポイント: wss://<host>/network-services/v1/location-events
+// event-types:
+//   com.hpe.greenlake.network-services.v1.wifi-client-locations.created
+//   com.hpe.greenlake.network-services.v1.asset-tags.last-known-location.created
+//
+// 21 番のタスクで v1alpha1/location からの移行前倒しの一環として実測(2026-07-27)から
+// 逆算した定義。公開ドキュメントには v1 版の .proto がまだ存在しない(developer.arubanetworks.com の
+// event-location ページは v1alpha1 のみ記載)。
+//
+// v1alpha1 の StreamLocationMessage(location.proto)との実測差分:
+//   ・先頭に string tenant_id(CloudEvent の attributes.subject と同じ値)が追加された。
+//   ・oneof の各フィールド番号が 1 つずつ後ろにずれた(1,2 → 2,3)。
+//   ・WifiClientLocation 本体のバイト列は v1alpha1 と完全に一致(実測で確認済み)。
+//     → 本体メッセージ自体は location.proto のものをそのまま import して使い回す。
+//   ・AssetTagLocation 側(oneof の 3 番目)は実測できていない(アセットタグ未検証)。
+//     tenant_id 追加によるフィールド番号のずれが wifi_client_location と同様に
+//     入るという前提で 3 番としているが、これは推測であり未検証。
+syntax = "proto3";
+
+package network_services.location.v1;
+
+import "location.proto";
+
+message StreamLocationMessage {
+  string tenant_id = 1;
+  oneof location_event {
+    network_services.location.v1alpha1.WifiClientLocation wifi_client_location = 2;
+    // 未検証(推測): アセットタグの実イベントで確認できていない。
+    network_services.location.v1alpha1.AssetTagLocation asset_tag_location = 3;
+  }
+}

@@ -1,0 +1,178 @@
+/* multi-network-dashboard — テーマ変数(Corstack 共通シェル src/styles.css からの切り出し)
+ *
+ * network-investigation の view 配下が実際に参照している CSS 変数だけを複製する。
+ * (`grep -ohE 'var\(--[a-zA-Z0-9-]+' view/*.css view/*.tsx` で全件抽出した 12 個)
+ *   --accent / --accent-amber / --border / --border-soft / --mono / --panel /
+ *   --panel-2 / --radius / --sans / --text / --text-dim / --text-muted
+ *
+ * Corstack のテーマシステム全体(シェルのレイアウト・アイコンツールバー・ライトテーマ切替 UI 等)は
+ * 持ち込まない。ただしダーク/ライトの値そのものは元と同じにして、見た目のトーンを保つ。
+ * --bg / --bg-raise / --shadow は view 側では未参照だが、body の下地として --bg のみ使う。
+ *
+ * 03: ダーク/ライトの切替(Task 1)。
+ *   - 値は data-theme="dark" / data-theme="light" の 2 ブロックに持たせる。
+ *   - :root は data-theme が付く前の一瞬(index.html のインラインスクリプトが走る前)の
+ *     フォールバックとしてダーク値を持つ。実際の表示は必ずどちらかの属性ブロックが決める。
+ *   - 上の 12 変数に加えて、テーマで反転が必要なものだけ追加した:
+ *       --on-accent … アクセント色の上に載せる文字色(ライトでは白、ダークでは黒)
+ *       --badge-bg  … ロゴバッジ等の「わずかに浮かせる」下地
+ */
+
+:root,
+html[data-theme="dark"] {
+  --bg: #12151a;
+  --panel: #1a1f27;
+  --panel-2: #1f2530;
+  --border: #262d38;
+  --border-soft: #1e242e;
+  --text: #e7eaee;
+  --text-muted: #8892a0;
+  --text-dim: #5b6472;
+  --accent: #4fd1c5;
+  --accent-amber: #f2a65a;
+  --on-accent: #0d0f12;
+  --badge-bg: rgba(255, 255, 255, 0.06);
+  --radius: 3px;
+  --mono: "IBM Plex Mono", monospace;
+  --sans: "IBM Plex Sans", "IBM Plex Sans JP", sans-serif;
+}
+
+/* Corstack と同じ切替キー。 */
+html[data-theme="light"] {
+  --bg: #f6f6f4;
+  --panel: #ffffff;
+  --panel-2: #eef0ee;
+  --border: #dfe2e1;
+  --border-soft: #e9ebe9;
+  --text: #1c2024;
+  --text-muted: #5c6570;
+  --text-dim: #93999f;
+  --accent: #0f9488;
+  --accent-amber: #b5691e;
+  --on-accent: #ffffff;
+  --badge-bg: rgba(0, 0, 0, 0.05);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* 単一プラグインアプリのシェル。Corstack のようなプラグイン切替トップバーは持たず、
+   タイトル行 + プラグイン View の 2 段だけにする。 */
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+.app-bar {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+  flex-shrink: 0;
+}
+.app-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+.app-sub {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-dim);
+}
+/* トップバー右端のモデル表示(Corstack シェルの topbarModel 相当をローカルに再現) */
+.app-model {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+/* モデル表示が無いときもトグルは右端に寄せる。 */
+.app-theme-toggle {
+  margin-left: auto;
+}
+.app-model + .app-theme-toggle {
+  margin-left: 0;
+}
+.app-body {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+/* タブごとのペイン(06 Task 1)。非表示側はマウントしたまま display:none で隠す。
+   [hidden] の UA 既定は .app-pane の display に負けるため、明示的に打ち消す。 */
+.app-pane {
+  height: 100%;
+  min-height: 0;
+}
+.app-pane[hidden] {
+  display: none;
+}
+
+/* ---- 画面切替タブ(06 Task 1) ---- */
+.app-tabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  align-self: center;
+  margin-left: 8px;
+}
+.app-tab {
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  padding: 5px 14px;
+  font-family: var(--sans);
+  font-size: 12px;
+  cursor: pointer;
+  line-height: 1.4;
+}
+.app-tab:hover {
+  color: var(--text);
+  background: var(--panel-2);
+}
+.app-tab-on {
+  color: var(--text);
+  background: var(--panel-2);
+  border-color: var(--border);
+  box-shadow: inset 0 -2px 0 var(--accent);
+  font-weight: 600;
+}
+
+/* ---- テーマ切替トグル(Task 1) ---- */
+.app-theme-btn {
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--panel-2);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 4px 10px;
+  font-family: var(--mono);
+  font-size: 11px;
+  cursor: pointer;
+  line-height: 1.4;
+}
+.app-theme-btn:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+.app-theme-icon {
+  font-size: 12px;
+  line-height: 1;
+}

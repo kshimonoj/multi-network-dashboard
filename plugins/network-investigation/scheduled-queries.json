@@ -1,0 +1,14 @@
+[
+  {
+    "id": "cbf03685-d12a-4e74-a58b-324bc698506f",
+    "query": "全サイトの健全性(health)を確認し、健全性が低い、またはアラートのあるサイトを挙げて",
+    "site": null,
+    "enabled": true
+  },
+  {
+    "id": "b6537da5-d5f5-44c7-96a2-0c9675b12e00",
+    "query": "Home サイトの障害・アラートと端末の接続状況を確認して",
+    "site": "Home",
+    "enabled": true
+  }
+]

@@ -1,0 +1,1322 @@
+/* Network Investigation View。参照モックアップ
+   (instructions/reference/network-investigation-sse-mockup.html)の配色・レイアウトを、
+   Corstack 共通シェルのテーマ変数(src/styles.css)に載せ替えたもの。 */
+
+.ni-root {
+  --central: #ff8a3d;
+  --mist: #22c55e;
+  --skip: #3a4150;
+  padding: 16px;
+  height: 100%;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ni-mono {
+  font-family: var(--mono);
+}
+.ni-dim {
+  color: var(--text-dim);
+}
+
+.ni-error {
+  background: rgba(220, 80, 80, 0.14);
+  border: 1px solid rgba(220, 80, 80, 0.5);
+  color: var(--text);
+  padding: 8px 12px;
+  border-radius: var(--radius);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.ni-panel-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* ---- 上段: コンソール + サイト一覧の2カラム ----
+   地図(380px 固定高)を外したぶん、主役のコンソール側へ幅を寄せる(約 2:1)。
+   サイト一覧は情報密度が高く幅を必要としないため、下限 260px で足りる。 */
+.ni-grid {
+  display: grid;
+  grid-template-columns: minmax(420px, 2fr) minmax(260px, 1fr);
+  gap: 16px;
+  /* 既定の stretch のまま。左右で背の低いほうに余白が残らないよう、
+     コンソール側は SSE ログパネルが余った高さを吸う(下の .ni-sse-panel)。 */
+}
+@media (max-width: 900px) {
+  .ni-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ni-console {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+/* ---- 入力フォーム ---- */
+.ni-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ni-input {
+  width: 100%;
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  font-family: var(--sans);
+  font-size: 13.5px;
+  resize: vertical;
+}
+.ni-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.ni-form-row {
+  display: flex;
+  gap: 8px;
+}
+.ni-select {
+  flex: 1;
+  min-width: 0;
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px 10px;
+  font-size: 13px;
+}
+/* モデル選択は幅を抑えて、サイト選択・実行ボタンと並べる */
+.ni-model-select {
+  flex: 0 0 auto;
+  min-width: 120px;
+}
+.ni-btn {
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.ni-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+.ni-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.ni-btn.primary {
+  background: var(--accent);
+  /* アクセント上の文字色はテーマで反転する(ダーク=黒 / ライト=白)。 */
+  color: var(--on-accent, #0d0f12);
+  border-color: var(--accent);
+  font-weight: 600;
+}
+.ni-btn.sm {
+  padding: 5px 10px;
+  font-size: 12px;
+}
+
+/* ---- SSE ログパネル(モックアップ踏襲) ---- */
+.ni-sse-panel {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--panel);
+  /* 右のサイト一覧のほうが背が高いときは、このパネルが余白を吸って行の高さを埋める
+     (地図を外したあとに左カラム下部が空くのを防ぐ)。 */
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+}
+.ni-sse-panel .ni-sse-log {
+  flex: 1 1 auto;
+}
+.ni-sse-head {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-soft);
+  font-size: 12px;
+  color: var(--text-muted);
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+.ni-sse-log {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 90px;
+}
+.ni-sse-empty {
+  color: var(--text-dim);
+  font-size: 12.5px;
+}
+
+/* ロゴバッジ(丸型)。スキップ側はグレースケール + 減光。 */
+.ni-badge {
+  border-radius: 50%;
+  flex-shrink: 0;
+  object-fit: contain;
+  background: var(--badge-bg, rgba(255, 255, 255, 0.06));
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-dim);
+  font-family: var(--mono);
+  font-weight: 700;
+  vertical-align: middle;
+}
+.ni-badge.skipped {
+  filter: grayscale(1) brightness(0.55);
+  opacity: 0.7;
+}
+
+.ni-routing {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--panel-2);
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+.ni-routing-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.ni-skip-tag {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--text-dim);
+  background: rgba(127, 127, 127, 0.08);
+  border: 1px solid var(--border);
+  padding: 3px 9px;
+  border-radius: 10px;
+}
+
+.ni-call-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--mono);
+  font-size: 12.5px;
+}
+.ni-tool {
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ni-tool .ni-dim {
+  margin-left: 2px;
+}
+.ni-status {
+  margin-left: auto;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+}
+.ni-status.calling {
+  color: var(--accent-amber);
+}
+.ni-status.done {
+  color: var(--accent);
+}
+.ni-status.error {
+  color: #e5674f;
+}
+.ni-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  display: inline-block;
+  margin-right: 6px;
+  animation: ni-pulse 1.2s infinite;
+}
+.ni-status.done .ni-dot,
+.ni-status.error .ni-dot {
+  animation: none;
+}
+@keyframes ni-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+.ni-thinking {
+  opacity: 0.8;
+}
+
+/* ---- 08 Task 1: 失敗したツール呼び出しの詳細展開 ---- */
+/* 失敗行だけ <details> になる。閉じているときは通常の行と同じ高さに見えるようにする。 */
+.ni-call-fail > summary {
+  cursor: pointer;
+  list-style: none;
+}
+.ni-call-fail > summary::-webkit-details-marker {
+  display: none;
+}
+/* 失敗であることと「開ける」ことを同時に示す小さなキャレット。 */
+.ni-call-fail > summary::after {
+  content: "▸";
+  color: #e5674f;
+  font-size: 10px;
+  margin-left: 6px;
+}
+.ni-call-fail[open] > summary::after {
+  content: "▾";
+}
+.ni-call-fail > summary:hover .ni-tool {
+  text-decoration: underline;
+}
+.ni-call-fail-body {
+  margin: 6px 0 2px 0;
+  padding: 8px 10px;
+  border: 1px solid rgba(229, 103, 79, 0.4);
+  border-radius: var(--radius);
+  background: rgba(229, 103, 79, 0.06);
+}
+.ni-call-fail-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+.ni-err-code {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #e5674f;
+  border: 1px solid rgba(229, 103, 79, 0.5);
+  border-radius: 10px;
+  padding: 2px 8px;
+}
+.ni-err-code.none {
+  color: var(--text-dim);
+  border-color: var(--border);
+  font-weight: 400;
+}
+.ni-err-label {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  margin: 8px 0 3px 0;
+}
+.ni-err-text {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: var(--text);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 260px;
+  overflow: auto;
+}
+
+.ni-legend {
+  display: flex;
+  gap: 16px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--border-soft);
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-dim);
+  flex-wrap: wrap;
+}
+.ni-legend span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ---- 回答 ---- */
+.ni-answer {
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius);
+  background: var(--panel);
+  padding: 12px 14px;
+}
+.ni-answer.error {
+  border-left-color: #e5674f;
+}
+.ni-answer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: var(--mono);
+  margin-bottom: 6px;
+}
+.ni-answer-body {
+  font-size: 13.5px;
+  color: var(--text);
+  white-space: pre-wrap;
+  line-height: 1.6;
+}
+
+/* ---- サイト一覧(03 Task 3: 旧・地図の置き換え) ---- */
+.ni-sitepanel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.ni-sitepanel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.ni-sitelist {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--panel);
+  /* 左のコンソール(入力 + ログ + 回答)が伸びても一覧だけが伸び続けないよう上限を置く。
+     上限を超えた分はこの中でスクロールする(ページ全体は伸ばさない)。 */
+  max-height: 420px;
+  overflow-y: auto;
+}
+.ni-site-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  padding: 7px 10px;
+  background: transparent;
+  color: var(--text);
+  border: none;
+  border-bottom: 1px solid var(--border-soft);
+  font-family: var(--sans);
+  font-size: 13px;
+  cursor: pointer;
+}
+.ni-site-row:last-child {
+  border-bottom: none;
+}
+.ni-site-row:hover {
+  background: var(--panel-2);
+}
+.ni-site-row.selected {
+  background: var(--panel-2);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+.ni-site-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ni-site-metrics {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10.5px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.ni-health {
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 1px 7px;
+  color: var(--text-muted);
+}
+.ni-health.good {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.ni-health.fair {
+  color: var(--accent-amber);
+  border-color: var(--accent-amber);
+}
+.ni-health.poor {
+  color: #e5674f;
+  border-color: #e5674f;
+}
+.ni-site-alerts {
+  color: var(--accent-amber);
+}
+.ni-sitepanel-foot {
+  font-size: 11px;
+}
+
+/* ---- 下段: タイムライン ---- */
+.ni-timeline {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--panel);
+  padding: 14px 16px;
+}
+.ni-timeline-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+.ni-sched-note {
+  font-size: 11px;
+}
+.ni-empty {
+  color: var(--text-dim);
+  font-size: 12.5px;
+  padding: 8px 0;
+}
+.ni-timeline-list {
+  display: flex;
+  flex-direction: column;
+}
+.ni-tl-card {
+  display: flex;
+  gap: 10px;
+  padding: 8px 6px;
+  cursor: pointer;
+  border-radius: var(--radius);
+}
+.ni-tl-card:hover {
+  background: var(--panel-2);
+}
+.ni-tl-card.focused {
+  background: var(--panel-2);
+  outline: 1px solid var(--accent);
+}
+.ni-tl-rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 5px;
+}
+.ni-tl-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+}
+.ni-tl-card.error .ni-tl-dot {
+  background: #e5674f;
+}
+.ni-tl-body {
+  flex: 1;
+  min-width: 0;
+}
+.ni-tl-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 2px;
+}
+.ni-tl-query {
+  font-size: 13px;
+  color: var(--text);
+}
+.ni-tl-excerpt {
+  font-size: 11.5px;
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.ni-tag {
+  font-family: var(--mono);
+  font-size: 10px;
+  padding: 1px 7px;
+  border-radius: 9px;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+}
+.ni-tag.scheduled {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+/* Webhook ログの重大アラートから自動で走った調査(17 Task 4)。
+   人が実行したもの・定期実行と一目で区別できるようにする。 */
+.ni-tag.auto {
+  color: var(--accent-amber);
+  border-color: var(--accent-amber);
+}
+.ni-tag.error {
+  color: #e5674f;
+  border-color: #e5674f;
+}
+/* 「続けて調べる」で繋がったセッション(04)。タイムラインではカード 1 枚 = 1 スレッド。 */
+.ni-tag.thread {
+  color: var(--accent-amber);
+  border-color: var(--accent-amber);
+}
+.ni-tl-lastq {
+  font-size: 11.5px;
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 汎用の小さめテキスト */
+.ni-root .sm {
+  font-size: 11.5px;
+}
+
+/* ---- Task 1: モデル判断による省略(吹き出しアイコン付き。サイト管理スキップとは別の見た目) ---- */
+.ni-judgment {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  padding: 7px 10px;
+  border: 1px dashed var(--accent-amber, #e0a94a);
+  border-radius: var(--radius);
+  background: rgba(224, 169, 74, 0.08);
+}
+.ni-judgment-icon {
+  font-size: 14px;
+  line-height: 1;
+}
+.ni-judgment-text {
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ni-judgment-tag {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--accent-amber, #e0a94a);
+  border: 1px solid var(--accent-amber, #e0a94a);
+  border-radius: 9px;
+  padding: 1px 7px;
+  margin-right: 6px;
+}
+
+/* ---- Task 2: ラベル併記の生ツール名 ---- */
+.ni-tool-raw {
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+/* ---- Task 3: Markdown 描画 ---- */
+.ni-md {
+  white-space: normal;
+}
+.ni-md > *:first-child {
+  margin-top: 0;
+}
+.ni-md > *:last-child {
+  margin-bottom: 0;
+}
+.ni-md h3,
+.ni-md h4,
+.ni-md h5,
+.ni-md h6 {
+  font-size: 13.5px;
+  font-weight: 700;
+  margin: 10px 0 4px;
+  color: var(--text);
+}
+.ni-md p {
+  margin: 6px 0;
+}
+.ni-md ul,
+.ni-md ol {
+  margin: 6px 0;
+  padding-left: 20px;
+}
+.ni-md li {
+  margin: 2px 0;
+}
+.ni-md code.ni-md-code {
+  font-family: var(--mono);
+  font-size: 12px;
+  background: var(--panel-2);
+  border: 1px solid var(--border-soft);
+  border-radius: 4px;
+  padding: 0 4px;
+}
+.ni-md pre.ni-md-pre {
+  background: var(--panel-2);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  padding: 8px 10px;
+  overflow-x: auto;
+  margin: 8px 0;
+}
+.ni-md pre.ni-md-pre code {
+  font-family: var(--mono);
+  font-size: 12px;
+  white-space: pre;
+}
+.ni-md a {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+/* ---- Task 4: 履歴の詳細ビュー ---- */
+.ni-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.ni-detail-top {
+  display: flex;
+  gap: 8px;
+}
+.ni-detail-head {
+  border-bottom: 1px solid var(--border-soft);
+  padding-bottom: 10px;
+}
+.ni-detail-query {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  margin-top: 6px;
+  line-height: 1.5;
+}
+.ni-detail-block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ni-detail-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.ni-detail-label {
+  font-size: 11px;
+  font-family: var(--mono);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.ni-detail-plats {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.ni-detail-calls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--panel-2);
+}
+.ni-detail-calls .ni-status {
+  font-size: 11px;
+}
+
+/* ---- 04 Task 3: セッション(調査スレッド)の一気通貫表示 ---- */
+/* スレッド本体。コンソール側(実行中)と履歴側(HistoryThread)で同じ見た目にする。 */
+.ni-thread {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.ni-turn {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius);
+  background: var(--panel);
+}
+.ni-turn.error {
+  border-left-color: #e5674f;
+}
+.ni-turn-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+/* 「ターン 2/3」。スレッドの中の位置が一目で分かるようにアクセント色で置く。 */
+.ni-turn-no {
+  font-size: 10.5px;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 9px;
+  padding: 1px 7px;
+  white-space: nowrap;
+}
+.ni-turn-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  flex-wrap: wrap;
+}
+.ni-turn-query {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.5;
+}
+.ni-turn-judgments {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+/* ツール一覧はターンが複数あるときは畳んでおく(スクロールで連続して読めるように)。 */
+.ni-turn-calls > summary {
+  cursor: pointer;
+  font-size: 11px;
+  list-style: revert;
+}
+.ni-turn-calls > summary::marker {
+  color: var(--text-dim);
+}
+.ni-turn-calls .ni-detail-calls {
+  margin-top: 6px;
+}
+/* 回答パネルはターンの中では枠を二重にしない。 */
+.ni-turn .ni-answer {
+  border: none;
+  border-left: none;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
+}
+.ni-thread-share {
+  margin-top: 10px;
+}
+/* コンソール側のスレッド見出し */
+.ni-console-session {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.ni-console-session-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.ni-console-session-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.ni-continue {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  cursor: pointer;
+}
+
+/* ---- Task 5: 定期実行の設定エディタ ---- */
+.ni-timeline-head-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.ni-sched-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  margin-bottom: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--panel-2);
+}
+.ni-sched-config {
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.ni-sched-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.ni-sched-field > span:first-child {
+  font-family: var(--mono);
+  font-size: 11px;
+}
+.ni-sched-field .ni-select {
+  flex: none;
+  min-width: 90px;
+}
+.ni-sched-time {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.ni-time-input {
+  width: 56px;
+  text-align: center;
+  padding: 6px 4px;
+}
+.ni-sched-check {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+}
+.ni-launchd-msg {
+  font-size: 11px;
+  padding: 4px 2px;
+}
+.ni-sched-qlist {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ni-sched-qrow {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--panel);
+}
+.ni-sched-qrow.off {
+  opacity: 0.55;
+}
+.ni-sched-toggle {
+  padding-top: 2px;
+}
+.ni-sched-qbody {
+  flex: 1;
+  min-width: 0;
+}
+.ni-sched-qtext {
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.4;
+}
+.ni-sched-qactions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.ni-sched-edit {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ni-sched-add {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-top: 1px solid var(--border-soft);
+  padding-top: 10px;
+}
+
+/* ---- Task 19: リッチ出力(提案アクション / グラフ / トポロジ図) ---- */
+
+/* クリック可能な追い質問チップ(Task 1) */
+.ni-suggested {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-soft);
+}
+.ni-suggested-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: var(--mono);
+  margin-bottom: 6px;
+}
+.ni-suggested-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.ni-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 12.5px;
+  font-family: var(--sans);
+  cursor: pointer;
+  transition: border-color 0.12s, background 0.12s;
+}
+.ni-chip:hover {
+  border-color: var(--accent);
+  background: var(--panel);
+}
+.ni-chip-site {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--text-dim);
+  background: var(--panel);
+  border: 1px solid var(--border-soft);
+  border-radius: 4px;
+  padding: 0 4px;
+}
+
+/* グラフ(Task 2, recharts) */
+.ni-chart {
+  margin: 10px 0;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  background: var(--panel-2);
+  padding: 10px 12px 6px;
+}
+.ni-chart-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+.ni-chart-canvas {
+  width: 100%;
+  height: 240px;
+}
+
+/* トポロジ図(Task 3, mermaid) */
+.ni-topology {
+  margin: 10px 0;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  background: var(--panel-2);
+  padding: 12px;
+  overflow-x: auto;
+  text-align: center;
+}
+.ni-topology svg {
+  max-width: 100%;
+  height: auto;
+}
+
+/* ---- 03 Task 2: 調査結果の共有・報告 ---- */
+.ni-share {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.ni-share-label {
+  font-size: 10.5px;
+  color: var(--text-dim);
+}
+.ni-share-msg {
+  font-size: 10.5px;
+  color: var(--accent);
+}
+.ni-share.compact .ni-btn.sm {
+  padding: 4px 8px;
+  font-size: 11px;
+}
+
+/* ---- 09: MCP サーバーに接続できなかったときの警告 ---- */
+/* 「回答は返ったが、そのサーバーのツールが 1 度も使われていない & 直接確認でも到達できない」
+   実行に出す。回答自体は成立しているので、失敗(赤枠のターン)ではなくバナーで示す。 */
+.ni-turn.mcp-unreachable {
+  border-left-color: #e5674f;
+}
+.ni-turn.mcp-warn {
+  border-left-color: var(--accent-amber);
+}
+.ni-tag.mcp-unreachable {
+  color: #e5674f;
+  border-color: #e5674f;
+}
+.ni-tag.mcp-warn {
+  color: var(--accent-amber);
+  border-color: var(--accent-amber);
+}
+
+.ni-mcp-health {
+  margin: 8px 0;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  border: 1px solid rgba(229, 103, 79, 0.45);
+  background: rgba(229, 103, 79, 0.07);
+}
+.ni-mcp-health.warn {
+  border-color: var(--accent-amber);
+  background: rgba(242, 166, 90, 0.09);
+}
+.ni-mcp-health-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #e5674f;
+}
+.ni-mcp-health.warn .ni-mcp-health-head {
+  color: var(--accent-amber);
+}
+.ni-mcp-health-item {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--border);
+}
+.ni-mcp-health-item-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 12px;
+}
+.ni-mcp-health-state {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  padding: 1px 7px;
+  border-radius: 9px;
+  border: 1px solid #e5674f;
+  color: #e5674f;
+}
+.ni-mcp-health-state.warn {
+  border-color: var(--accent-amber);
+  color: var(--accent-amber);
+}
+.ni-mcp-health-reason {
+  margin-top: 5px;
+  font-size: 11.5px;
+  color: var(--text-muted);
+  word-break: break-word;
+}
+.ni-mcp-health-note {
+  margin-top: 4px;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+/* 印刷用レポート。画面には出さず、@media print のときだけ紙面に現れる
+   (ShareActions が body 直下へポータルで生やす)。 */
+#ni-print-root {
+  display: none;
+}
+
+@media print {
+  /* 画面用シェルは高さ 100vh / overflow hidden なので、印刷では解除する。 */
+  html,
+  body {
+    height: auto !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+  /* 画面 UI(サイドの一覧・入力欄・ボタン・SSE のライブ表示・タイムライン)は印刷しない。 */
+  body > #root {
+    display: none !important;
+  }
+  #ni-print-root {
+    display: block !important;
+  }
+  .ni-print-doc {
+    font-family: var(--sans);
+    color: #000000;
+    background: #ffffff;
+    font-size: 10.5pt;
+    line-height: 1.65;
+    padding: 0;
+  }
+  .ni-print-head {
+    border-bottom: 2px solid #000000;
+    padding-bottom: 6pt;
+    margin-bottom: 12pt;
+  }
+  .ni-print-title {
+    font-size: 16pt;
+    font-weight: 700;
+    margin: 0;
+  }
+  .ni-print-sub {
+    font-family: var(--mono);
+    font-size: 8.5pt;
+    color: #444444;
+    margin-top: 3pt;
+  }
+  .ni-print-meta {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 14pt;
+    font-size: 9.5pt;
+  }
+  .ni-print-meta th,
+  .ni-print-meta td {
+    border: 1px solid #999999;
+    padding: 4pt 7pt;
+    text-align: left;
+    vertical-align: top;
+  }
+  .ni-print-meta th {
+    width: 22%;
+    background: #f0f0f0;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .ni-print-meta td {
+    font-family: var(--mono);
+    font-size: 9pt;
+    word-break: break-all;
+  }
+  .ni-print-h2 {
+    font-size: 12pt;
+    margin: 0 0 6pt;
+    padding-bottom: 3pt;
+    border-bottom: 1px solid #000000;
+  }
+  /* セッション全体の印刷(04 Task 4)。ターンの区切りが紙面で分かるようにする。
+     見出しだけが前ページの末尾に残らないよう、次の要素と離さない。 */
+  .ni-print-turn {
+    margin-top: 14pt;
+  }
+  .ni-print-turn .ni-print-h2 {
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+  .ni-print-turn-query {
+    font-size: 10pt;
+    font-weight: 600;
+    margin-bottom: 2pt;
+  }
+  .ni-print-turn-tools {
+    font-size: 8.5pt;
+    color: #444444;
+    margin-bottom: 6pt;
+    word-break: break-all;
+  }
+  /* 回答本文は Markdown コンポーネントで描画する。画面用のテーマ変数(暗い背景・
+     淡い文字色)は紙では読めないので、印刷向けの色へ上書きする。 */
+  .ni-print-body .ni-md {
+    color: #000000;
+  }
+  .ni-print-body .ni-md h3,
+  .ni-print-body .ni-md h4,
+  .ni-print-body .ni-md h5,
+  .ni-print-body .ni-md h6 {
+    font-size: 11pt;
+    color: #000000;
+    margin: 10pt 0 3pt;
+    /* 見出しだけがページ末尾に取り残されないようにする(直後がグラフのとき目立つ)。 */
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+  .ni-print-body .ni-md code.ni-md-code,
+  .ni-print-body .ni-md pre.ni-md-pre {
+    background: #f4f4f4;
+    border: 1px solid #cccccc;
+    color: #000000;
+  }
+  .ni-print-body .ni-md a {
+    color: #000000;
+  }
+  .ni-print-body .ni-md li,
+  .ni-print-body .ni-md p {
+    /* 段落・箇条書きは途中でページを跨がせない。 */
+    page-break-inside: avoid;
+  }
+  /* グラフ / トポロジ図(03b)。画面で描画済みの SVG をそのまま複製して差し込む枠。
+     図の途中でページが分かれると読めないので、ブロックごと次ページへ送る。 */
+  .ni-print-rich {
+    margin: 8pt 0 12pt;
+    page-break-inside: avoid;
+    break-inside: avoid;
+    /* SVG の塗り(棒グラフの色・mermaid のノード背景)を紙面でもそのまま出す。 */
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .ni-print-rich-title {
+    font-size: 10pt;
+    font-weight: 600;
+    color: #000000;
+    margin-bottom: 3pt;
+  }
+  .ni-print-rich-slot {
+    text-align: center;
+  }
+  /* 画面での実寸(width/height 属性 + viewBox)を保ちつつ、紙面幅を超える場合だけ縮める。 */
+  .ni-print-rich-slot > svg {
+    max-width: 100%;
+    height: auto;
+  }
+  .ni-print-rich-note {
+    font-size: 9pt;
+    font-style: italic;
+    color: #555555;
+  }
+  /* 円グラフの凡例(recharts が HTML で描く部分)。画面ではグラフ本体に絶対配置される
+     ので、印刷では通常フローに戻して図の下に並べる。色は inline style(画面向けの
+     淡いグレー)を !important で紙面向けに上書きする。 */
+  .ni-print-rich-slot .recharts-legend-wrapper {
+    position: static !important;
+    width: auto !important;
+    height: auto !important;
+    left: auto !important;
+    top: auto !important;
+    bottom: auto !important;
+    margin-top: 3pt;
+    color: #000000 !important;
+  }
+  .ni-print-rich-slot .recharts-legend-wrapper ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .ni-print-rich-slot .recharts-legend-wrapper li,
+  .ni-print-rich-slot .recharts-legend-item-text {
+    display: inline-block;
+    margin: 0 4pt;
+    font-size: 8.5pt;
+    /* 系列名は recharts が inline style で系列色にしている。淡い色(黄など)は紙で読めない
+       ので黒に戻す。色は隣の見本(SVG)が示す。 */
+    color: #000000 !important;
+  }
+  .ni-print-foot {
+    margin-top: 16pt;
+    padding-top: 5pt;
+    border-top: 1px solid #999999;
+    font-family: var(--mono);
+    font-size: 8pt;
+    color: #555555;
+  }
+  @page {
+    margin: 15mm 14mm;
+  }
+}

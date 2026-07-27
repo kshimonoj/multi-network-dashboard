@@ -1,0 +1,28 @@
+# --- dependencies / build artifacts ---
+node_modules/
+dist/
+*.tsbuildinfo
+
+# --- secrets ---
+secrets/
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+service-account*.json
+
+# --- runtime data (Central / Mist / GLP / Sheets の実データ・キャッシュ・state) ---
+data/
+
+# --- logs ---
+*.log
+logs/
+npm-debug.log*
+
+# --- OS / editor ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

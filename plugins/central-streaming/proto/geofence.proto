@@ -1,0 +1,45 @@
+// New Central Streaming API — Geofence(ジオフェンス出入り)のペイロード。
+// 出典: https://developer.arubanetworks.com/new-central/docs/streaming-api-event-geofence
+// エンドポイント: wss://<host>/network-services/v1alpha1/geofence
+// event-types:
+//   com.hpe.greenlake.network-services.v1alpha1.wifi-client-geofence-crossed
+//   com.hpe.greenlake.network-services.v1alpha1.asset-tag-geofence-crossed
+//
+// 2 種類とも封筒の本体は StreamGeofenceMessage(oneof)なので、デコード先は 1 つで足りる。
+
+syntax = "proto3";
+
+package network_services.geofence.v1alpha1;
+
+message StreamGeofenceMessage {
+  oneof geofence_event {
+    WifiClientGeofence wifi_client_geofence = 1;
+    AssetTagGeofence asset_tag_geofence = 2;
+  }
+}
+
+message WifiClientGeofence {
+  enum EventType {
+    EVENT_TYPE_UNSPECIFIED = 0;
+    EVENT_TYPE_ENTER = 1;
+    EVENT_TYPE_EXIT = 2;
+  }
+  optional string zone_id = 1;
+  optional EventType event_type = 2;
+  optional string sta_eth_mac = 3;
+  optional string assoc_bssid = 4;
+  optional string hashed_sta_eth_mac = 5;
+  optional uint32 dwell_time_in_seconds = 6;
+}
+
+message AssetTagGeofence {
+  enum EventType {
+    EVENT_TYPE_UNSPECIFIED = 0;
+    EVENT_TYPE_ENTER = 1;
+    EVENT_TYPE_EXIT = 2;
+  }
+  optional string zone_id = 1;
+  optional EventType event_type = 2;
+  optional string device_id = 3;
+  optional uint32 dwell_time_in_seconds = 4;
+}

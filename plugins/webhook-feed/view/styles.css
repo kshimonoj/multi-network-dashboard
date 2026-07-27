@@ -1,0 +1,289 @@
+/* Webhook ログ タブ(17 Task 3)固有のスタイル。
+ *
+ * 画面の骨格は Global Overview の styles.css(.go-*)をそのまま使い、
+ * ここには「3 ソースのバッジ」「行の展開表示(自動調査 / サイト状況 / 生データ)」だけを足す。
+ * 配色は src/theme.css の変数と .go-root が定義するローカル変数(--warn / --down …)を使う。
+ */
+
+.wf-dim {
+  color: var(--text-dim);
+}
+
+/* ---- ソースバッジ ----
+   New Central / Classic Central は Aruba のオレンジ系、Mist はグリーン。
+   Global Overview のプラットフォーム色と意味を揃え、New と Classic は濃淡で区別する。 */
+.wf-src-tag {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 10px;
+  line-height: 1.5;
+  padding: 1px 7px;
+  border-radius: 9px;
+  border: 1px solid currentColor;
+  white-space: nowrap;
+}
+.wf-src-new-central {
+  color: var(--central);
+  background: color-mix(in srgb, var(--central) 14%, transparent);
+}
+.wf-src-classic-central {
+  color: var(--warn);
+  background: color-mix(in srgb, var(--warn) 14%, transparent);
+}
+.wf-src-mist {
+  color: var(--mist);
+  background: color-mix(in srgb, var(--mist) 14%, transparent);
+}
+
+/* ---- 重要度 ----
+   .go-fsev の枠を借りて色だけこちらで持つ(「なし」= unknown が Global Overview 側に無いため)。 */
+.wf-sev-critical {
+  background: color-mix(in srgb, var(--down) 20%, transparent);
+  color: var(--down);
+  font-weight: 600;
+}
+.wf-sev-warning {
+  background: color-mix(in srgb, var(--warn) 20%, transparent);
+  color: var(--warn);
+}
+.wf-sev-info {
+  background: var(--badge-bg);
+  color: var(--text-muted);
+}
+.wf-sev-unknown {
+  background: transparent;
+  color: var(--text-dim);
+}
+
+/* ---- 表 ---- */
+.wf-table .wf-c-exp {
+  width: 26px;
+  text-align: center;
+}
+.wf-table .wf-c-src {
+  width: 108px;
+}
+.wf-exp-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 11px;
+  padding: 2px 4px;
+  line-height: 1;
+}
+.wf-exp-btn:disabled {
+  color: var(--text-dim);
+  cursor: default;
+}
+.wf-exp-btn:not(:disabled):hover {
+  color: var(--accent);
+}
+
+/* ---- 行全体クリックでの展開/折りたたみ(18 Task 1) ----
+   三角ボタン以外の場所(バッジ・リンクボタンを除く)をクリックしても開閉できるようにする。
+   詳細を持たない行(wf-row-click が付かない行)はクリックできないので既定のポインタに戻す。 */
+.wf-table tbody tr.wf-row-click {
+  cursor: pointer;
+}
+.wf-table tbody tr:not(.wf-row-click) {
+  cursor: default;
+}
+.wf-table tbody tr.wf-row-click:hover > td {
+  background: var(--panel-2);
+}
+.wf-table tbody tr.wf-detail-row {
+  cursor: default;
+}
+.wf-row-open > td {
+  background: var(--badge-bg);
+}
+/* 開いている行は展開背景を優先させる(hover と重なっても見た目が揺れないように)。 */
+.wf-table tbody tr.wf-row-open.wf-row-click:hover > td {
+  background: var(--badge-bg);
+}
+
+/* ---- 自動調査のタグ ----
+   「完了」(= 展開しなくても要約が読める行)は他のタグより目立つ配色にして、
+   一覧を流し見しただけで気付けるようにする(18 Task 1-3)。 */
+.wf-auto-tag {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 10px;
+  padding: 0 6px;
+  border-radius: 9px;
+  border: 1px solid currentColor;
+  margin-left: 4px;
+}
+.wf-auto-running {
+  color: var(--accent);
+}
+.wf-auto-done {
+  color: var(--accent-amber);
+  background: color-mix(in srgb, var(--accent-amber) 18%, transparent);
+  font-weight: 600;
+}
+.wf-auto-error {
+  color: var(--down);
+}
+
+/* ---- 「調査する」/「調査結果を見る」の操作列(18 Task 2) ----
+   両方並ぶと sticky 列の既定幅では収まらないため、この表だけ広げて縦に並べる。
+   配色をはっきり分けて、「新しいクエリを渡す(調査する)」と
+   「既存の実行結果を開く(調査結果を見る)」を混同しないようにする。 */
+.wf-table .go-fc-act.wf-c-act {
+  width: 128px;
+  vertical-align: middle;
+}
+.wf-act-col {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+.wf-history-btn {
+  flex-shrink: 0;
+  background: transparent;
+  color: var(--accent-amber);
+  border: 1px solid var(--accent-amber);
+  border-radius: var(--radius);
+  padding: 3px 10px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.wf-history-btn:hover {
+  background: var(--accent-amber);
+  color: var(--on-accent);
+}
+
+/* ---- 展開部 ---- */
+.wf-detail-row > td {
+  padding: 0 !important;
+  background: var(--badge-bg);
+}
+.wf-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px 14px 34px;
+}
+.wf-dsec {
+  border-left: 2px solid var(--border);
+  padding-left: 10px;
+}
+.wf-dsec-auto {
+  border-left-color: var(--accent-amber);
+}
+.wf-dsec-site {
+  border-left-color: var(--accent);
+}
+.wf-dsec-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-weight: 600;
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+.wf-auto-query {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+  word-break: break-word;
+}
+.wf-auto-body {
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 12.5px;
+  line-height: 1.65;
+}
+.wf-auto-foot {
+  font-size: 10.5px;
+  margin-top: 6px;
+}
+
+/* サイト状況(先読み)の KPI 群 */
+.wf-kpis {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-bottom: 6px;
+}
+.wf-kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.wf-kpi-label {
+  font-size: 10px;
+  color: var(--text-dim);
+}
+.wf-kpi-value {
+  font-family: var(--mono);
+  font-size: 15px;
+  font-weight: 600;
+}
+.wf-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin-bottom: 6px;
+}
+.wf-metric {
+  display: inline-flex;
+  gap: 4px;
+  align-items: baseline;
+  font-size: 11px;
+}
+.wf-metric-label {
+  color: var(--text-dim);
+}
+.wf-alerts {
+  margin: 4px 0 6px;
+  padding-left: 16px;
+  font-size: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.wf-alert-sev {
+  color: var(--warn);
+  margin-right: 6px;
+  font-size: 10.5px;
+}
+
+/* 生データ(列名 → 値) */
+.wf-raw {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.wf-raw-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 200px) 1fr;
+  gap: 10px;
+  font-size: 11.5px;
+}
+.wf-raw-row dt {
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.wf-raw-row dd {
+  margin: 0;
+  word-break: break-all;
+  white-space: pre-wrap;
+}
+
+@media (max-width: 900px) {
+  .wf-raw-row {
+    grid-template-columns: 1fr;
+    gap: 0;
+    margin-bottom: 4px;
+  }
+}

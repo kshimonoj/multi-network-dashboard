@@ -1,0 +1,391 @@
+/* Streaming(Central)タブ(20 Task 4)固有のスタイル。
+ *
+ * 骨格(.go-root / .go-panel / .go-table / .go-chip …)は
+ * plugins/global-overview/view/styles.css をそのまま使うので、ここは cs-* だけ。
+ * 色はすべてテーマ変数(--panel / --border / --text-muted …)経由にしてあり、
+ * ライト・ダークの両方で同じ定義が効く。 */
+
+.go-root {
+  /* global-overview 側と同じ値。単独で読み込まれた場合の保険。 */
+  --up: #22c55e;
+  --down: #ef4444;
+}
+
+/* ---- 全体トグル ---- */
+
+.cs-master {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--panel-2);
+  color: var(--text-muted);
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cs-master:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.cs-master:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.cs-master-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-dim);
+}
+
+.cs-master-on {
+  color: var(--text);
+  border-color: var(--accent);
+}
+
+.cs-master-on .cs-master-dot {
+  background: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
+/* ---- 接続状態カード ---- */
+
+.cs-conns {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 10px;
+  padding: 10px 12px 12px;
+}
+
+.cs-conn {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--panel-2);
+}
+
+.cs-conn-on {
+  border-left-color: var(--text-dim);
+}
+
+.cs-conn.cs-state-open {
+  border-left-color: var(--up);
+}
+
+.cs-conn.cs-state-connecting,
+.cs-conn.cs-state-reconnecting {
+  border-left-color: var(--accent-amber);
+}
+
+.cs-conn.cs-state-error {
+  border-left-color: var(--down);
+}
+
+.cs-conn-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.cs-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+}
+
+.cs-check input {
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.cs-conn-label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.cs-badge {
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--badge-bg);
+  color: var(--text-muted);
+  font-size: 10.5px;
+  white-space: nowrap;
+}
+
+.cs-badge-open {
+  background: color-mix(in srgb, var(--up) 18%, transparent);
+  color: var(--up);
+}
+
+.cs-badge-connecting,
+.cs-badge-reconnecting {
+  background: color-mix(in srgb, var(--accent-amber) 18%, transparent);
+  color: var(--accent-amber);
+}
+
+.cs-badge-error {
+  background: color-mix(in srgb, var(--down) 18%, transparent);
+  color: var(--down);
+}
+
+.cs-conn-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  font-size: 10.5px;
+  color: var(--text-muted);
+}
+
+.cs-vol-high {
+  color: var(--accent-amber);
+}
+
+.cs-conn-types {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.cs-edit,
+.cs-disc {
+  flex: none;
+  font-size: 10.5px;
+}
+
+.cs-disc {
+  align-self: flex-start;
+}
+
+.cs-conn-note {
+  font-size: 10.5px;
+  color: var(--text-dim);
+}
+
+.cs-conn-url {
+  font-size: 10px;
+  color: var(--text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---- イベント種別の選択 ---- */
+
+.cs-picker {
+  border-color: var(--accent);
+}
+
+.cs-picker-note {
+  padding: 8px 12px 0;
+  font-size: 11.5px;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.cs-types {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 6px;
+  padding: 10px 12px 4px;
+}
+
+.cs-type {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 9px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  background: var(--panel-2);
+  cursor: pointer;
+}
+
+.cs-type:hover {
+  border-color: var(--border);
+}
+
+.cs-type-on {
+  border-color: var(--accent);
+}
+
+.cs-type input {
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.cs-type-label {
+  flex: 1;
+  font-size: 11.5px;
+  color: var(--text);
+}
+
+.cs-type-msg {
+  font-size: 10px;
+  color: var(--text-dim);
+}
+
+.cs-picker-foot {
+  padding: 6px 12px 12px;
+  font-size: 10.5px;
+  color: var(--text-dim);
+}
+
+/* ---- タイムライン ---- */
+
+.cs-table .cs-c-exp {
+  width: 26px;
+}
+
+.cs-table .cs-c-stream {
+  width: 88px;
+}
+
+.cs-row-click {
+  cursor: pointer;
+}
+
+.cs-row-click:hover td {
+  background: var(--panel-2);
+}
+
+.cs-row-open td {
+  background: var(--panel-2);
+}
+
+.cs-exp-btn {
+  border: 0;
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 11px;
+  padding: 0 2px;
+}
+
+.cs-exp-btn:hover {
+  color: var(--text);
+}
+
+.cs-tag {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--badge-bg);
+  color: var(--text-muted);
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.cs-tag-audit-trail {
+  color: var(--central);
+}
+
+.cs-tag-ap-monitoring {
+  color: var(--accent);
+}
+
+.cs-tag-geofence,
+.cs-tag-location,
+.cs-tag-location-analytics {
+  color: var(--text-muted);
+}
+
+.cs-typelabel {
+  display: block;
+  font-size: 11.5px;
+  color: var(--text);
+}
+
+.cs-cat {
+  display: block;
+  font-size: 10px;
+  color: var(--text-dim);
+}
+
+.cs-dev {
+  display: block;
+  font-size: 10px;
+  color: var(--text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 240px;
+  white-space: nowrap;
+}
+
+.cs-summary {
+  line-height: 1.5;
+}
+
+.cs-actor {
+  display: block;
+  font-size: 10px;
+  color: var(--text-dim);
+}
+
+.cs-decode-bad {
+  display: inline-block;
+  margin-right: 6px;
+  width: 14px;
+  height: 14px;
+  line-height: 14px;
+  text-align: center;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--down) 20%, transparent);
+  color: var(--down);
+  font-size: 10px;
+  font-weight: 700;
+  cursor: help;
+}
+
+/* ---- 展開した生データ ---- */
+
+.cs-detail-row td {
+  background: var(--panel-2);
+  padding: 0;
+}
+
+.cs-detail {
+  padding: 10px 14px 14px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cs-detail-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  font-size: 10.5px;
+  color: var(--text-dim);
+}
+
+.cs-raw {
+  margin: 0;
+  padding: 10px 12px;
+  max-height: 340px;
+  overflow: auto;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+}

@@ -1,0 +1,620 @@
+// New Central Streaming API — AP Monitoring のペイロード。
+// 出典: https://developer.arubanetworks.com/new-central/docs/streaming-api-event-ap-monitoring
+// エンドポイント: wss://<host>/network-monitoring/v1alpha1/ap-events
+//   ※ ここだけベースパスが network-services ではなく **network-monitoring** で、
+//     event-types の名前空間も com.hpe.greenlake.network-monitoring.v1alpha1.aps.* になる。
+//
+// event-types → デコードするメッセージの対応(catalog.ts の message と揃えること):
+//   aps.state.device                 → APInfo
+//   aps.state.radio                  → RadioInfo
+//   aps.state.port                   → PortInfo
+//   aps.state.virtual_access_point   → VapInfo
+//   aps.state.wlan                   → WlanInfo
+//   aps.state.tunnel                 → TunnelInfo
+//   aps.stats.device                 → APSystemStat
+//   aps.stats.radio                  → RadioStat
+//   aps.stats.virtual_access_point   → VapStat
+//   aps.stats.port                   → PortStat
+//   aps.stats.modem                  → ModemStat
+//   aps.stats.tunnel                 → TunnelStat
+//   aps.stats.ip_probe               → IPProbeStat
+//   aps.stats.user_role              → RoleStat
+//   aps.stats.ssid                   → SsidStat
+//   aps.stats.vlan                   → VlanStat
+
+syntax = "proto3";
+
+package network_monitoring.ap.v1alpha1;
+
+enum APMode {
+  AP_MODE_UNSPECIFIED = 0;
+  AP_MODE_ACCESS = 1;
+  AP_MODE_MONITOR = 2;
+  AP_MODE_DEDICATED_SPECTRUM = 3;
+  AP_MODE_HYBRID_SPECTRUM = 4;
+}
+
+enum APRole {
+  AP_ROLE_UNSPECIFIED = 0;
+  AP_ROLE_MEMBER = 1;
+  AP_ROLE_CONDUCTOR = 2;
+}
+
+enum MeshRole {
+  MESH_ROLE_UNSPECIFIED = 0;
+  MESH_ROLE_POINT = 1;
+  MESH_ROLE_PORTAL = 2;
+  MESH_ROLE_AUTO_ROLE = 3;
+}
+
+enum UplinkType {
+  UPLINK_TYPE_UNSPECIFIED = 0;
+  UPLINK_TYPE_ETH = 1;
+  UPLINK_TYPE_MESH = 2;
+  UPLINK_TYPE_STA = 3;
+  UPLINK_TYPE_3G = 4;
+  UPLINK_TYPE_DUMMY = 5;
+}
+
+enum DeviceDownReason {
+  DEVICE_DOWN_REASON_UNSPECIFIED = 0;
+  DEVICE_DOWN_REASON_LICENSE_UNASSIGNED = 1;
+  DEVICE_DOWN_REASON_AP_REBOOT = 2;
+}
+
+enum RadioBand {
+  RADIO_BAND_UNSPECIFIED = 0;
+  RADIO_BAND_24GHZ = 1;
+  RADIO_BAND_5GHZ = 2;
+  RADIO_BAND_6GHZ = 3;
+}
+
+enum RadioMode {
+  RADIO_MODE_UNSPECIFIED = 0;
+  RADIO_MODE_AIR_MONITOR = 1;
+  RADIO_MODE_CLIENT_ACCESS = 2;
+  RADIO_MODE_SPECTRUM_ANALYSIS = 3;
+  RADIO_MODE_MESH_PORTAL = 4;
+  RADIO_MODE_MESH_POINT = 5;
+}
+
+enum ChannelBandwidth {
+  CHANNEL_BANDWIDTH_UNSPECIFIED = 0;
+  CHANNEL_BANDWIDTH_20MHZ = 1;
+  CHANNEL_BANDWIDTH_40MHZ_ABOVE = 2;
+  CHANNEL_BANDWIDTH_40MHZ_BELOW = 3;
+  CHANNEL_BANDWIDTH_80MHZ = 4;
+  CHANNEL_BANDWIDTH_160MHZ = 5;
+  CHANNEL_BANDWIDTH_80PLUS80MHZ = 6;
+  CHANNEL_BANDWIDTH_320MHZ_1 = 7;
+  CHANNEL_BANDWIDTH_320MHZ_2 = 8;
+}
+
+enum Status {
+  STATUS_UNSPECIFIED = 0;
+  STATUS_UP = 1;
+  STATUS_DOWN = 2;
+  STATUS_DISABLED = 3;
+}
+
+enum HTType {
+  HT_TYPE_UNSPECIFIED = 0;
+  HT_TYPE_20MZ = 1;
+  HT_TYPE_40MZ = 2;
+  HT_TYPE_VHT_20MZ = 3;
+  HT_TYPE_VHT_40MZ = 4;
+  HT_TYPE_VHT_80MZ = 5;
+  HT_TYPE_VHT_160MZ = 6;
+  HT_TYPE_VHT_80PLUS80MZ = 7;
+  HT_TYPE_HE_20MZ = 8;
+  HT_TYPE_HE_40MZ = 9;
+  HT_TYPE_HE_80MZ = 10;
+  HT_TYPE_HE_160MZ = 11;
+  HT_TYPE_HE_80PLUS80MZ = 12;
+  HT_TYPE_EHT_20MZ = 13;
+  HT_TYPE_EHT_40MZ = 14;
+  HT_TYPE_EHT_80MZ = 15;
+  HT_TYPE_EHT_160MZ = 16;
+  HT_TYPE_EHT_80PLUS80MZ = 17;
+  HT_TYPE_EHT_320MZ = 18;
+}
+
+enum PHYType {
+  PHY_TYPE_UNSPECIFIED = 0;
+  PHY_TYPE_80211B = 1;
+  PHY_TYPE_80211A = 2;
+  PHY_TYPE_80211G = 3;
+  PHY_TYPE_80211AG = 4;
+  PHY_TYPE_80211_6GHZ = 5;
+}
+
+enum ChangeReason {
+  CHANGE_REASON_UNSPECIFIED = 0;
+  CHANGE_REASON_ARM = 1;
+  CHANGE_REASON_RADAR_DETECTED = 2;
+  CHANGE_REASON_RADAR_CLEARED = 3;
+  CHANGE_REASON_TX_HANG = 4;
+  CHANGE_REASON_TX_CLEAR = 5;
+  CHANGE_REASON_40MHZ_INTOL = 6;
+  CHANGE_REASON_CANCEL_40MHZ_INTOL = 7;
+  CHANGE_REASON_40MHZ_ALIGN = 8;
+  CHANGE_REASON_ARM_INTERFERENCE = 9;
+  CHANGE_REASON_ARM_INVALID_CH = 10;
+  CHANGE_REASON_ARM_ERROR_THRESH = 11;
+  CHANGE_REASON_ARM_NOISE_THRESH = 12;
+  CHANGE_REASON_ARM_EMPTY_CH = 13;
+  CHANGE_REASON_ARM_ROGUE_CONT = 14;
+  CHANGE_REASON_ARM_DECREASE_POWER = 15;
+  CHANGE_REASON_ARM_INCREASE_POWER = 16;
+  CHANGE_REASON_RADAR_TURN_OFF_RADIO = 17;
+  CHANGE_REASON_ARM_TURN_ON_RADIO = 18;
+  CHANGE_REASON_ARM_CHANNEL_QUALITY_THRESH = 19;
+  CHANGE_REASON_ARM_DYNAMIC_BW = 20;
+  CHANGE_REASON_ARM_INTERFERENCE_CCA = 21;
+  CHANGE_REASON_AIRMATCH_NOISE = 22;
+  CHANGE_REASON_AIRMATCH_SOLVER = 23;
+  CHANGE_REASON_AIRMATCH_FREEZE = 24;
+  CHANGE_REASON_AIRMATCH_UNFREEZE = 25;
+  CHANGE_REASON_SAPM_RANDOM = 26;
+  CHANGE_REASON_AIRMATCH_INIT = 27;
+  CHANGE_REASON_UNKNOWN = 28;
+  CHANGE_REASON_AIRMATCH_NOISE_CLEARED = 29;
+  CHANGE_REASON_AIRMATCH_ROGUE_CONTAINMENT = 30;
+  CHANGE_REASON_AIRMATCH_REGDOM_PROFILE = 31;
+  CHANGE_REASON_AIRMATCH_DRT_CHANGE = 32;
+  CHANGE_REASON_AIRMATCH_MIN_CBW_CHANGE = 33;
+  CHANGE_REASON_AIRMATCH_MAX_CBW_CHANGE = 34;
+  CHANGE_REASON_AP_CACHE = 35;
+  CHANGE_REASON_AP_CONFIG = 36;
+  CHANGE_REASON_AIRMATCH_EIRP_MIN_CHANGE = 37;
+  CHANGE_REASON_AIRMATCH_EIRP_MAX_CHANGE = 38;
+  CHANGE_REASON_DYNAMIC_MODE_CHANGE = 39;
+  CHANGE_REASON_OPMODE_CHANGE = 40;
+  CHANGE_REASON_ARM_MODE_AWARE_TURN_OFF_RADIO = 41;
+  CHANGE_REASON_RADIO_MODE_CHANGE = 42;
+  CHANGE_REASON_APM_DUE_TO_CONFIG = 43;
+  CHANGE_REASON_AIRMATCH_CLIENT_PREF_CHANGE = 44;
+  CHANGE_REASON_ARM_EMPTY_CO_CH = 45;
+  CHANGE_REASON_ARM_CBW = 46;
+  CHANGE_REASON_UTB_CHANNEL_DETECTED = 47;
+  CHANGE_REASON_AIRMATCH_CHANNEL_QUALITY_THRESHOLD = 48;
+  CHANGE_REASON_AIRMATCH_LTE_NOISE = 49;
+  CHANGE_REASON_AIRMATCH_LTE_NOISE_CLEARED = 50;
+  CHANGE_REASON_AIRMATCH_APM_DUE_TO_LTE = 51;
+  CHANGE_REASON_AFC_AM_TURN_OFF_RADIO = 52;
+  CHANGE_REASON_AFC_AM_UPDATE = 53;
+}
+
+enum RadioType {
+  RADIO_TYPE_UNSPECIFIED = 0;
+  RADIO_TYPE_80211N = 1;
+  RADIO_TYPE_80211AC = 2;
+  RADIO_TYPE_80211AX = 3;
+  RADIO_TYPE_80211BE = 4;
+}
+
+enum RadioAntenna {
+  RADIO_ANTENNA_TYPE_UNSPECIFIED = 0;
+  RADIO_ANTENNA_TYPE_INTERNAL = 1;
+  RADIO_ANTENNA_TYPE_EXTERNAL = 2;
+}
+
+enum BandRange {
+  BAND_RANGE_UNSPECIFIED = 0;
+  BAND_RANGE_FULL = 1;
+  BAND_RANGE_LOWER = 2;
+  BAND_RANGE_MIDDLE = 3;
+  BAND_RANGE_UPPER = 4;
+}
+
+enum PortType {
+  PORT_TYPE_UNSPECIFIED = 0;
+  PORT_TYPE_FAST = 1;
+  PORT_TYPE_GIG = 2;
+  PORT_TYPE_XGIG = 3;
+  PORT_TYPE_2_GIG = 4;
+  PORT_TYPE_5_GIG = 5;
+  PORT_TYPE_USB = 6;
+}
+
+enum PortMode {
+  PORT_MODE_UNSPECIFIED = 0;
+  PORT_MODE_STANDBY = 1;
+  PORT_MODE_TUNNEL = 2;
+  PORT_MODE_BRIDGE = 3;
+  PORT_MODE_NA = 4;
+  PORT_MODE_SPLIT = 5;
+}
+
+enum PortMaxSpeed {
+  PORT_MAX_SPEED_UNSPECIFIED = 0;
+  PORT_MAX_SPEED_10 = 1;
+  PORT_MAX_SPEED_100 = 2;
+  PORT_MAX_SPEED_1000 = 3;
+  PORT_MAX_SPEED_AUTO = 4;
+  PORT_MAX_SPEED_2500 = 5;
+  PORT_MAX_SPEED_5000 = 6;
+  PORT_MAX_SPEED_10000 = 7;
+}
+
+enum PortDuplex {
+  PORT_DUPLEX_UNSPECIFIED = 0;
+  PORT_DUPLEX_HALF = 1;
+  PORT_DUPLEX_FULL = 2;
+  PORT_DUPLEX_AUTO = 3;
+}
+
+enum PortVLANMode {
+  PORT_VLAN_MODE_UNSPECIFIED = 0;
+  PORT_VLAN_MODE_ACCESS = 1;
+  PORT_VLAN_MODE_TRUNK = 2;
+}
+
+enum WlanOpMode {
+  WLAN_OP_MODE_UNSPECIFIED = 0;
+  WLAN_OP_MODE_OPEN_SYSTEM = 1;
+  WLAN_OP_MODE_STATIC_WEP = 2;
+  WLAN_OP_MODE_DYNAMIC_WEP_WITH_8021X = 4;
+  WLAN_OP_MODE_WPA_PERSONAL_TKIP = 8;
+  WLAN_OP_MODE_WPA_ENTERPRISE_TKIP = 16;
+  WLAN_OP_MODE_WPA2_PERSONAL_AES = 32;
+  WLAN_OP_MODE_BOTH_WPA2_AND_WPA = 40;
+  WLAN_OP_MODE_WPA2_ENTERPRISE_AES = 64;
+  WLAN_OP_MODE_WPA_PERSONAL_AES = 512;
+  WLAN_OP_MODE_WPA_PERSONAL_TKIP_AES = 520;
+  WLAN_OP_MODE_WPA_ENTERPRISE_AES = 1024;
+  WLAN_OP_MODE_BOTH_WPA_WPA2_PERSONAL_TKIP_AES = 2600;
+  WLAN_OP_MODE_WPA2_ENTERPRISE_TKIP = 4096;
+  WLAN_OP_MODE_BOTH_WPA2_AND_WPA_ENTERPRISE = 5200;
+  WLAN_OP_MODE_ENHANCED_OPEN = 65536;
+  WLAN_OP_MODE_WPA3_PERSONAL = 131072;
+  WLAN_OP_MODE_WPA3_ENTERPRISE_SUITEB = 262144;
+  WLAN_OP_MODE_WPA3_AES_CCM_128 = 524288;
+  WLAN_OP_MODE_MPSK_AES = 2097152;
+  WLAN_OP_MODE_WPA3_AES_GCM_256_NON_CNSA = 4194304;
+  WLAN_OP_MODE_DPP = 8388608;
+  WLAN_OP_MODE_DPP_WPA2_PERSONAL_AES = 8388640;
+  WLAN_OP_MODE_DPP_WPA2_ENTERPRISE_AES = 8388672;
+}
+
+enum WlanType {
+  WLAN_TYPE_UNSPECIFIED = 0;
+  WLAN_TYPE_EMPLOYEE = 1;
+  WLAN_TYPE_GUEST = 2;
+  WLAN_TYPE_VOICE = 3;
+  WLAN_TYPE_LOCAL = 4;
+}
+
+enum WlanBand {
+  WLAN_BAND_UNSPECIFIED = 0;
+  WLAN_BAND_24GHZ = 1;
+  WLAN_BAND_5GHZ = 2;
+  WLAN_BAND_6GHZ = 3;
+  WLAN_BAND_24GHZ_5GHZ = 4;
+  WLAN_BAND_24GHZ_6GHZ = 5;
+  WLAN_BAND_5GHZ_6GHZ = 6;
+  WLAN_BAND_ALL = 7;
+}
+
+enum EventOperation {
+  EVENT_OPERATION_UNSPECIFIED = 0;
+  EVENT_OPERATION_ADD = 1;
+  EVENT_OPERATION_UPDATE = 2;
+  EVENT_OPERATION_DELETE = 3;
+}
+
+enum APOpMode {
+  AP_OP_MODE_UNSPECIFIED = 0;
+  AP_OP_MODE_CLUSTER = 1;
+  AP_OP_MODE_STANDALONE = 2;
+}
+
+enum TunnelIndex {
+  TUNNEL_INDEX_UNSPECIFIED = 0;
+  TUNNEL_INDEX_PRIMARY = 1;
+  TUNNEL_INDEX_BACKUP = 2;
+}
+
+enum TunnelType {
+  TUNNEL_TYPE_UNSPECIFIED = 0;
+  TUNNEL_TYPE_ARUBA_IPSEC = 1;
+  TUNNEL_TYPE_ARUBA_GRE = 2;
+  TUNNEL_TYPE_MANUAL_GRE = 3;
+}
+
+enum ProbeOwner {
+  PROBE_OWNER_UNSPECIFIED = 0;
+  PROBE_OWNER_VPN = 1;
+  PROBE_OWNER_UPLINK = 2;
+  PROBE_OWNER_GW = 3;
+}
+
+enum ProbeStatus {
+  PROBE_STATUS_UNSPECIFIED = 0;
+  PROBE_STATUS_SUCCESS = 1;
+  PROBE_STATUS_FAILURE = 2;
+}
+
+enum TunnelCryptoType {
+  TUNNEL_CRYPTO_TYPE_UNSPECIFIED = 0;
+  TUNNEL_CRYPTO_TYPE_CERTIFICATE = 1;
+  TUNNEL_CRYPTO_TYPE_PSK = 2;
+}
+
+enum TunnelStatus {
+  TUNNEL_STATUS_UNSPECIFIED = 0;
+  TUNNEL_STATUS_INIT = 1;
+  TUNNEL_STATUS_CONNECTING = 2;
+  TUNNEL_STATUS_CONNECTED = 3;
+  TUNNEL_STATUS_SWITCHING_TO_SURVIVE = 4;
+  TUNNEL_STATUS_REKEYING = 5;
+  TUNNEL_STATUS_SURVIVING = 6;
+  TUNNEL_STATUS_SURVIVED = 7;
+  TUNNEL_STATUS_SURVIVE_REKEYING = 8;
+  TUNNEL_STATUS_DISCONNECTED = 9;
+}
+
+message ClusterInfo {
+  optional string cluster_id = 1;
+  optional string name = 2;
+  optional string ip_v4 = 3;
+}
+
+message APInfo {
+  optional EventOperation operation = 1;
+  optional string timestamp = 2;
+  optional string tenant_id = 3;
+  optional string serial_number = 4;
+  optional string mac_address = 5;
+  optional string device_name = 6;
+  optional string model = 7;
+  optional string ip_v4 = 8;
+  optional string ip_v6 = 9;
+  optional string public_ip = 10;
+  optional uint32 uptime = 11;
+  optional APMode mode = 12;
+  optional bool status = 13;
+  optional APOpMode operating_mode = 14;
+  optional ClusterInfo cluster = 15;
+  optional APRole elected_role = 16;
+  optional MeshRole mesh_mode = 17;
+  optional UplinkType current_uplink_inuse = 18;
+  optional string firmware_version = 19;
+  optional string zone = 20;
+  optional string drt_version = 21;
+  optional string country_code = 22;
+  optional DeviceDownReason down_reason = 23;
+  optional bool modem_status = 24;
+}
+
+message RadioInfo {
+  optional EventOperation operation = 1;
+  optional string timestamp = 2;
+  optional string tenant_id = 3;
+  optional string serial_number = 4;
+  optional string mac_address = 5;
+  optional string radio_mac_address = 6;
+  optional string channel = 7;
+  optional int32 transmit_power = 8;
+  optional uint32 radio_number = 9;
+  optional RadioBand band = 10;
+  optional BandRange band_range = 11;
+  optional RadioMode mode = 12;
+  optional Status status = 13;
+  optional HTType ht_type = 14;
+  optional PHYType phy_type = 15;
+  optional ChangeReason chan_reason = 16;
+  optional ChangeReason eirp_reason = 17;
+  optional uint32 eirp_resolution = 18;
+  optional int32 eirp = 19;
+  optional uint32 primary_chan = 20;
+  optional uint32 secondary_chan = 21;
+  optional ChannelBandwidth bandwidth = 22;
+  optional string spatial_stream = 23;
+  optional RadioType radio_type = 24;
+  optional RadioAntenna antenna = 25;
+}
+
+message VapInfo {
+  optional EventOperation operation = 1;
+  optional string timestamp = 2;
+  optional string tenant_id = 3;
+  optional string serial_number = 4;
+  optional string mac_address = 5;
+  optional string radio_mac_address = 6;
+  optional string bssid = 7;
+  optional string essid = 8;
+}
+
+message PortInfo {
+  optional EventOperation operation = 1;
+  optional string timestamp = 2;
+  optional string tenant_id = 3;
+  optional string serial_number = 4;
+  optional string mac_address = 5;
+  optional uint32 port_index = 6;
+  optional string port_name = 7;
+  optional string port_mac_address = 8;
+  optional Status status = 9;
+  optional bool admin_state = 10;
+  optional bool operate_state = 11;
+  optional PortType type = 12;
+  optional PortMode mode = 13;
+  optional PortMaxSpeed speed = 14;
+  optional PortDuplex duplex = 15;
+  optional PortVLANMode vlan_mode = 16;
+  optional uint32 access_vlan = 17;
+  optional uint32 native_vlan = 18;
+  optional string allowed_vlan = 19;
+  optional bool is_uplink = 20;
+}
+
+message WlanInfo {
+  optional EventOperation operation = 1;
+  optional string timestamp = 2;
+  optional string tenant_id = 3;
+  optional string serial_number = 4;
+  optional string mac_address = 5;
+  optional string essid = 6;
+  optional string vlan = 7;
+  optional WlanOpMode wlan_op_mode = 8;
+  optional WlanType wlan_type = 9;
+  optional WlanBand wlan_band = 10;
+  optional bool status = 11;
+}
+
+message TunnelInfo {
+  optional EventOperation operation = 1;
+  optional string timestamp = 2;
+  optional string tenant_id = 3;
+  optional string serial_number = 4;
+  optional string mac_address = 5;
+  optional TunnelIndex index = 6;
+  optional string tunnel_name = 7;
+  optional TunnelCryptoType crypto_type = 8;
+  optional string peer_ip = 9;
+  optional string ip = 10;
+  optional TunnelStatus status = 11;
+  optional bool active = 12;
+  optional uint32 uptime = 13;
+  optional string peer_name = 14;
+}
+
+message APSystemStat {
+  optional string timestamp = 1;
+  optional string tenant_id = 2;
+  optional string serial_number = 3;
+  optional string mac_address = 4;
+  optional float cpu_utilization = 5;
+  optional float memory_utilization = 6;
+  optional double power_consumption = 7;
+}
+
+message RadioStat {
+  optional string timestamp = 1;
+  optional string tenant_id = 2;
+  optional string serial_number = 3;
+  optional string mac_address = 4;
+  optional string radio_mac_address = 5;
+  optional RadioBand band = 6;
+  optional BandRange band_range = 7;
+  optional uint64 tx_bytes = 8;
+  optional uint64 rx_bytes = 9;
+  optional int32 noise_floor = 10;
+  optional uint32 channel_quality = 11;
+  optional uint32 total_utilization = 12;
+  optional uint32 tx_utilization = 13;
+  optional uint32 rx_utilization = 14;
+  optional uint32 non_wifi_interference = 15;
+  optional uint64 total_frame_retries = 16;
+  optional float frame_retries = 17;
+  optional uint64 total_frame_drops = 18;
+  optional float frame_drops = 19;
+}
+
+message VapStat {
+  optional string timestamp = 1;
+  optional string tenant_id = 2;
+  optional string serial_number = 3;
+  optional string mac_address = 4;
+  optional string radio_mac_address = 5;
+  optional string bssid = 6;
+  optional string essid = 7;
+  optional uint64 tx_bytes = 8;
+  optional uint64 rx_bytes = 9;
+}
+
+message PortStat {
+  optional string timestamp = 1;
+  optional string tenant_id = 2;
+  optional string serial_number = 3;
+  optional string mac_address = 4;
+  optional string port_mac_address = 5;
+  optional uint32 port_index = 6;
+  optional PortDuplex duplex = 7;
+  optional PortMaxSpeed speed = 8;
+  optional uint64 tx_bytes = 9;
+  optional uint64 rx_bytes = 10;
+  optional uint64 tx_pkts = 11;
+  optional uint64 rx_pkts = 12;
+  optional uint64 total_frame_errors = 13;
+  optional float frame_error = 14;
+  optional uint64 total_frame_drops = 15;
+  optional float frame_drops = 16;
+  optional uint32 total_crc = 17;
+  optional float crc = 18;
+  optional uint32 total_collision = 19;
+  optional float collision = 20;
+}
+
+message ModemStat {
+  optional string timestamp = 1;
+  optional string tenant_id = 2;
+  optional string serial_number = 3;
+  optional string mac_address = 4;
+  optional uint64 tx_bytes = 5;
+  optional uint64 rx_bytes = 6;
+  optional int32 cellular_signal = 7;
+  optional uint32 cellular_sinr = 8;
+}
+
+message TunnelStat {
+  optional string timestamp = 1;
+  optional string tenant_id = 2;
+  optional string serial_number = 3;
+  optional string mac_address = 4;
+  optional TunnelIndex tunnel_index = 5;
+  optional string tunnel_name = 6;
+  optional TunnelType tun_type = 7;
+  optional uint64 tx_bytes = 8;
+  optional uint64 rx_bytes = 9;
+  optional uint64 tx_pkts = 10;
+  optional uint64 rx_pkts = 11;
+}
+
+message IPProbeStat {
+  optional string timestamp = 1;
+  optional string tenant_id = 2;
+  optional string serial_number = 3;
+  optional string mac_address = 4;
+  optional ProbeOwner owner = 5;
+  optional string ip = 6;
+  optional uint32 src_interface = 7;
+  optional TunnelIndex tunnel_index = 8;
+  optional string tunnel_name = 9;
+  optional ProbeStatus status = 10;
+  optional uint32 loss_percentage = 11;
+  optional uint64 latency = 12;
+  optional uint64 jitter = 13;
+  optional uint32 mos = 14;
+}
+
+message RoleStat {
+  optional string timestamp = 1;
+  optional string tenant_id = 2;
+  optional string serial_number = 3;
+  optional string mac_address = 4;
+  optional string user_role = 5;
+  optional uint64 tx_bytes = 6;
+  optional uint64 rx_bytes = 7;
+}
+
+message SsidStat {
+  optional string timestamp = 1;
+  optional string tenant_id = 2;
+  optional string serial_number = 3;
+  optional string mac_address = 4;
+  optional string ssid = 5;
+  optional uint64 tx_bytes = 6;
+  optional uint64 rx_bytes = 7;
+}
+
+message VlanStat {
+  optional string timestamp = 1;
+  optional string tenant_id = 2;
+  optional string serial_number = 3;
+  optional string mac_address = 4;
+  optional uint32 vlan = 5;
+  optional uint64 tx_bytes = 6;
+  optional uint64 rx_bytes = 7;
+}

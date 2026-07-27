@@ -1,0 +1,38 @@
+// New Central Streaming API — Location Analytics(クライアント RSSI)のペイロード。
+// 出典: https://developer.arubanetworks.com/new-central/docs/streaming-api-event-location-analytics
+// エンドポイント: wss://<host>/network-services/v1alpha1/rssi-events
+// event-types:
+//   com.hpe.greenlake.network-services.v1alpha1.rssi.raw-rssi
+//   com.hpe.greenlake.network-services.v1alpha1.rssi.proximity-rssi
+//
+// 2 種類とも封筒の本体は RssiEvent。raw_rssi / proximity_rssi のどちらが入るかで区別する。
+
+syntax = "proto3";
+
+package network_services.location_analytics.v1alpha1;
+
+message ClientRssi {
+  optional string client_mac = 1;
+  optional string ap_serial = 2;
+  optional string ap_mac = 3;
+  optional string radio_mac = 4;
+  optional int32 rssi_val = 5;
+  optional bool associated = 6;
+  optional string assoc_bssid = 7;
+  optional uint32 age = 8;
+  optional uint32 noise_floor = 9;
+  optional string ap_ip = 10;
+  optional string ap_name = 11;
+}
+
+enum FirmwareVersion {
+  FIRMWARE_VERSION_UNSPECIFIED = 0;
+  FIRMWARE_VERSION_CLIENT_8X_RSSI = 1;
+  FIRMWARE_VERSION_CLIENT_10X_RSSI = 2;
+}
+
+message RssiEvent {
+  optional FirmwareVersion firmware_version = 1;
+  optional ClientRssi raw_rssi = 2;
+  optional ClientRssi proximity_rssi = 3;
+}

@@ -1,0 +1,59 @@
+// New Central Streaming API — Location(Wi-Fi クライアント / アセットタグの位置)のペイロード。
+// 出典: https://developer.arubanetworks.com/new-central/docs/streaming-api-event-location
+// エンドポイント: wss://<host>/network-services/v1alpha1/location
+// event-types:
+//   com.hpe.greenlake.network-services.v1alpha1.wifi-client-locations.created
+//   com.hpe.greenlake.network-services.v1alpha1.asset-tags.last-known-location.created
+//
+// 2 種類とも封筒の本体は StreamLocationMessage(oneof)。
+
+syntax = "proto3";
+
+package network_services.location.v1alpha1;
+
+message StreamLocationMessage {
+  oneof location_event {
+    WifiClientLocation wifi_client_location = 1;
+    AssetTagLocation asset_tag_location = 2;
+  }
+}
+
+message WifiClientLocation {
+  optional double x = 1;
+  optional double y = 2;
+  optional double error_level = 3;
+  optional string sta_eth_mac = 4;
+  optional double longitude = 5;
+  optional double latitude = 6;
+  optional string site_id = 7;
+  optional string building_id = 8;
+  optional string floor_id = 9;
+  repeated string reporting_ap_serial = 10;
+  optional bool associated = 11;
+  optional string assoc_bssid = 12;
+  optional bool connected = 13;
+  repeated ZoneEntry entered_zone_info = 14;
+}
+
+message ZoneEntry {
+  optional string zone_id = 1;
+  optional uint32 dwell_time_in_seconds = 2;
+}
+
+message AssetTagLocation {
+  optional double x = 1;
+  optional double y = 2;
+  optional string device_id = 3;
+  optional string device_mac = 4;
+  repeated ZoneEntry entered_zone_info = 5;
+  optional double longitude = 6;
+  optional double latitude = 7;
+  optional string site_id = 8;
+  optional string building_id = 9;
+  optional string floor_id = 10;
+  optional double battery_level = 11;
+  optional string name = 12;
+  optional string custom_id = 13;
+  repeated string label = 14;
+  optional string notes = 15;
+}

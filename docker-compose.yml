@@ -1,0 +1,114 @@
+# multi-network-dashboard — 単一サービス構成
+#
+# ポート 8092: 既存の使用済みポートと衝突しないことを確認して選定(instructions/01_findings.md 参照)。
+#
+# ---- ボリューム方針(01 スパイクで判明した事実に基づく) ----
+#  - ホストの ~/.claude.json は MCP サーバー定義(central-mcp / mist-cloud)の唯一の供給源。
+#    ただし中に Mist の Bearer トークンが平文で入っているため、リポジトリには複製せず
+#    read-only でマウントし、コンテナ側は「読むだけ」にする(mcp.ts の NETINV_CLAUDE_JSON)。
+#  - ホストの ~/.claude も read-only でマウントする(settings.json / plugins の参照用)。
+#    read-write でコンテナの $HOME に被せると、コンテナ内 claude の session/history が
+#    ホスト側の ~/.claude を汚すため、コンテナは自前の HOME(名前付きボリューム)を持つ。
+#  - macOS では claude CLI の認証情報は ~/.claude ではなく **ログイン Keychain**
+#    ("Claude Code-credentials")に入っている。したがって ~/.claude をマウントしても
+#    認証は通らない。CLAUDE_CODE_OAUTH_TOKEN を環境変数で渡す必要がある
+#    (長期トークンはホストで `claude setup-token` を実行して取得する)。
+#  - ./data はアプリのデータ(filesystem as database)。サイト対応表・クエリ履歴・
+#    サイト状態キャッシュ・定期実行設定がここに入る。イメージを作り直しても消えないよう
+#    ホストへバインドマウントする。
+#
+# ---- ネットワーク ----
+#  - host.docker.internal 経由でホスト側の central-mcp キャッシュプロキシ(:8011)へ到達する。
+#    ~/.claude.json 内の central-mcp の url は `http://127.0.0.1:8011/mcp` なので、
+#    コンテナ内で mcp-config を組み立てる際に host.docker.internal へ書き換える
+#    (コンテナ内の 127.0.0.1 はコンテナ自身を指すため、そのままでは接続失敗する)。
+
+services:
+  app:
+    build: .
+    container_name: multi-network-dashboard
+    user: node
+    ports:
+      - "8092:8092"
+    environment:
+      PORT: "8092"
+      HOME: /home/node
+      NODE_ENV: production
+      # 定期実行(node-cron)の発火時刻の基準。移植元の launchd はマシンのローカル時刻(JST)で
+      # 動いていたため、コンテナ既定の UTC のままだと 9 時間ずれる。
+      TZ: Asia/Tokyo
+      # claude CLI の認証。ホストで `claude setup-token` した長期トークンを .env に置く。
+      CLAUDE_CODE_OAUTH_TOKEN: ${CLAUDE_CODE_OAUTH_TOKEN:-}
+      # claude CLI の既定モデル(移植元の CORSTACK_NETINV_MODEL 相当)。
+      NETINV_MODEL: ${NETINV_MODEL:-sonnet}
+      # MCP サーバー定義の供給元(read-only マウントしたホストの ~/.claude.json)。
+      NETINV_CLAUDE_JSON: /host/claude.json
+      # 上記から読んだ定義のうち、ループバック宛(central-mcp)を書き換える先。
+      CENTRAL_MCP_HOST: host.docker.internal
+      # ---- Global Overview(Central / Mist 直接 REST。MCP も cache-proxy も経由しない)----
+      # 値は .env(git 管理外)から。詳細は instructions/05_findings.md。
+      CENTRAL_BASE_URL: ${CENTRAL_BASE_URL:-}
+      CENTRAL_CLIENT_ID: ${CENTRAL_CLIENT_ID:-}
+      CENTRAL_CLIENT_SECRET: ${CENTRAL_CLIENT_SECRET:-}
+      CENTRAL_TOKEN_URL: ${CENTRAL_TOKEN_URL:-https://sso.common.cloud.hpe.com/as/token.oauth2}
+      CENTRAL_RATE_PER_SEC: ${CENTRAL_RATE_PER_SEC:-4}
+      CENTRAL_RATE_BURST: ${CENTRAL_RATE_BURST:-4}
+      MIST_BASE_URL: ${MIST_BASE_URL:-https://api.ac2.mist.com}
+      MIST_API_TOKEN: ${MIST_API_TOKEN:-}
+      MIST_ORG_ID: ${MIST_ORG_ID:-}
+      MIST_RATE_PER_SEC: ${MIST_RATE_PER_SEC:-2}
+      MIST_RATE_BURST: ${MIST_RATE_BURST:-2}
+      MIST_ALARM_WINDOW_SEC: ${MIST_ALARM_WINDOW_SEC:-86400}
+      # 既定は 5 分(12 番で 3 分→5 分)。画面から変更した値は data/global-overview/settings.json に永続化され、
+      # 起動時はそちらが env より優先される(env は settings.json が無い初回のみ効く)。
+      GLOBAL_OVERVIEW_POLL_MS: ${GLOBAL_OVERVIEW_POLL_MS:-300000}
+      GLOBAL_OVERVIEW_MIN_REFRESH_MS: ${GLOBAL_OVERVIEW_MIN_REFRESH_MS:-60000}
+      # ---- Webhook ログ(17。Google スプレッドシートをサービスアカウントで読む)----
+      # 鍵は下の secrets/ read-only マウントから読む。値そのものは .env(git 管理外)から。
+      WEBHOOK_LOG_SPREADSHEET_ID: ${WEBHOOK_LOG_SPREADSHEET_ID:-}
+      WEBHOOK_LOG_SA_KEY_FILE: ${WEBHOOK_LOG_SA_KEY_FILE:-}
+      # Webhook ログ専用のポーリング間隔。Global Overview の設定とは独立で、
+      # 画面から変更した値は data/webhook-feed/settings.json に永続化される。
+      WEBHOOK_FEED_POLL_MS: ${WEBHOOK_FEED_POLL_MS:-300000}
+      WEBHOOK_FEED_MIN_REFRESH_MS: ${WEBHOOK_FEED_MIN_REFRESH_MS:-30000}
+      # 重大アラートの自動事前調査(Task 4)/ 関連情報の先読み(Task 5)のコスト上限。
+      WEBHOOK_FEED_AUTO_ENABLED: ${WEBHOOK_FEED_AUTO_ENABLED:-1}
+      WEBHOOK_FEED_AUTO_MAX_PER_CYCLE: ${WEBHOOK_FEED_AUTO_MAX_PER_CYCLE:-3}
+      WEBHOOK_FEED_AUTO_MAX_AGE_MS: ${WEBHOOK_FEED_AUTO_MAX_AGE_MS:-3600000}
+      # ---- Streaming(Central)(20。New Central Streaming API を WSS で購読)----
+      # 認証は上の CENTRAL_* をそのまま流用する(追加の資格情報は不要)。
+      # 有効/無効・購読するイベント種別・Retention は画面から設定し、
+      # data/central-streaming/settings.json に永続化される(env は初期値にも使わない)。
+      # 既定は「停止中」なので、起動しただけでは Central へ接続しない。
+      CENTRAL_STREAMING_PURGE_MS: ${CENTRAL_STREAMING_PURGE_MS:-600000}
+      CENTRAL_STREAMING_API_MAX: ${CENTRAL_STREAMING_API_MAX:-1000}
+    volumes:
+      # ホストの claude 設定(read-only)。コンテナはここから MCP 定義を読むだけ。
+      #
+      # 注意(07 で判明): claude.json は「単一ファイル」の bind mount なので、
+      # コンテナ作成時点の inode に固定される。ホスト側の claude CLI が
+      # ~/.claude.json を差し替える(temp 書き出し → rename)と、コンテナからは
+      # 差し替え前の inode(link count 0 = ホストでは既に unlink 済み)が見え続け、
+      # その内容が書き込み途中で切れていると JSON.parse が毎回失敗する
+      # ("Unterminated string in JSON at position ...")。
+      # 対策は 2 段構え:
+      #   1. アプリ側 (plugins/network-investigation/mcp.ts) が起動直後のまだ新鮮な
+      #      マウントから定義を読み、last-known-good として保持・継続利用する。
+      #   2. ホストの ~/.claude.json の MCP 定義を変更したときは
+      #      `docker compose up -d --force-recreate` でマウントを張り直す。
+      # 現状の供給状態は GET /health の mcpConfig.source で確認できる(live / fallback)。
+      - ${HOME}/.claude:/host/claude:ro
+      - ${HOME}/.claude.json:/host/claude.json:ro
+      # アプリのデータ(対応表 / 履歴 / 状態キャッシュ / 定期実行設定 / Webhook ログの差分状態)。
+      - ./data:/app/data
+      # Google サービスアカウントの JSON 鍵(17)。read-only。
+      # ホスト側 secrets/ は .gitignore 済み。コンテナは読むだけで書き込まない。
+      - ./secrets:/app/secrets:ro
+      # コンテナ専用の HOME(claude CLI の session/history/npx キャッシュ置き場)。
+      - claude-home:/home/node
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+volumes:
+  claude-home:
