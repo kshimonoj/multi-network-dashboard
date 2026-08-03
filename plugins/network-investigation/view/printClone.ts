@@ -13,6 +13,8 @@
 // Markdown.tsx が同じ回答テキストから同じ (種類, 通し番号) を両側へ振るため、
 // mermaid の描画失敗などで画面側の要素が欠けても番号がずれない(欠けたものは注記になる)。
 
+import { getLang, translate } from "../../../src/i18n";
+
 // ShareActions が置かれた位置から「その回答パネル」を探す。
 // 共有ボタンは回答本文の兄要素(見出し行)に置かれるため closest(".ni-answer") では拾えない:
 //   Turn(コンソール / スレッド共通): .ni-turn > .ni-turn-head(ここに共有ボタン) + .ni-answer > .ni-answer-body
@@ -68,10 +70,12 @@ function uniquifySvgIds(root: SVGElement): void {
   }
 }
 
-const MISSING_NOTE: Record<string, string> = {
-  chart: "(グラフは省略。ダッシュボードで表示できます)",
-  topology: "(トポロジ図は省略。ダッシュボードで表示できます)",
-};
+// 画面側に SVG が無かったときの差し込み文言。印刷を実行した人の表示言語で出す
+// (React の外なので getLang() から引く。shareText.ts と同じ扱い)。
+function missingNote(kind: string): string {
+  const key = kind === "topology" ? "missingTopology" : "missingChart";
+  return translate(getLang(), `networkInvestigation.report.${key}`);
+}
 
 // 複製元の SVG を取り出す。
 // recharts は凡例の色見本も <svg class="recharts-surface"> で描くため、単純な
@@ -102,7 +106,7 @@ export function fillPrintRichSlots(printRoot: HTMLElement, source: HTMLElement |
     if (!src) {
       const note = document.createElement("div");
       note.className = "ni-print-rich-note";
-      note.textContent = MISSING_NOTE[kind] ?? MISSING_NOTE.chart;
+      note.textContent = missingNote(kind);
       slot.appendChild(note);
       return;
     }

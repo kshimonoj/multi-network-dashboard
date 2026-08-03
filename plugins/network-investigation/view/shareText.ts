@@ -10,6 +10,15 @@
 // 04 Task 4 で「セッション全体(一連のスレッド)」版を追加した(ファイル後半)。
 //  - buildSessionShareText  … 全ターンを連結したプレーンテキスト(コピー用)
 //  - buildSessionMailtoHref … 各ターンの要点だけを並べた要約(mailto 用)
+//
+// 33(i18n):
+//  - React の外なので Context は張れない。investigate.ts と同じく getLang() + translate() で引く。
+//  - ★ L-9: ヘッダの桁揃えは「全角スペースで手で整列」していた。英語では全角スペースが
+//    不自然なので、**行テンプレートごと辞書に持たせ、padding も辞書の中に含める**
+//    (ja は全角スペース / en は半角スペースで整列)。整列の責務をコードから辞書へ移す。
+//  - 箇条書きの記号(ja「・」/ en「- 」)、mailto の文字数上限も言語別に持つ。
+
+import { getLang, translate } from "../../../src/i18n";
 
 export interface ShareReport {
   query: string;
@@ -27,13 +36,49 @@ export interface ShareReport {
   turnId?: string;
 }
 
-export const SITE_ANY_LABEL = "指定なし(全サイト横断)";
+const K = "networkInvestigation.shareText";
+
+/** 現在の表示言語で辞書を引く小さなラッパ(このファイル専用)。 */
+function tr(key: string, params?: Record<string, string | number>): string {
+  return translate(getLang(), key, params);
+}
+
+export function siteAnyLabel(): string {
+  return tr(`${K}.siteAny`);
+}
+
+/** 辞書から取った文字列を正規表現に埋めるためのエスケープ。 */
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
 
 // mailto: の URL 長は仕様上の上限は無いが、実装依存の上限がある(概ね 2000 文字前後)。
 // 余裕を見て 1900 文字を超えないところで本文を切る。
 export const MAILTO_MAX_URL_LENGTH = 1900;
 
-const TRUNCATED_NOTE = "…(以下省略)\n\n※本文が長いため冒頭のみ引用しています。詳細はダッシュボードでご確認ください。";
+/**
+ * 文字数ベースの上限は言語で意味が変わる(28 findings のメモ)。
+ * mailto: は本文を URL エンコードするので、日本語 1 文字 = %XX 3 個 = 9 文字に膨らむ。
+ * 英語は 1 文字 = 1 文字なので、同じ URL 長でも遥かに多くの文字が載る。
+ * 「切り詰め」自体は二分探索が担保するが、**切り詰めが起きる前の既定値**は言語別に持つ。
+ */
+interface LengthBudget {
+  /** 単発メールのクエリ引用の上限 */
+  mailQueryMax: number;
+  /** セッションメールのクエリ引用の上限 */
+  mailSessionQueryMax: number;
+  /** セッションメールの 1 ターンあたりの要点の長さ */
+  mailTurnLimit: number;
+}
+const BUDGETS: Record<"ja" | "en", LengthBudget> = {
+  ja: { mailQueryMax: 60, mailSessionQueryMax: 40, mailTurnLimit: 120 },
+  // 英語は 1 文字あたりのエンコード後の長さが約 1/9 なので、同じ体裁でも余裕がある。
+  // 9 倍そのままでは 1 ターンが長くなりすぎて要約の意味が薄れるため 3 倍程度に留める。
+  en: { mailQueryMax: 180, mailSessionQueryMax: 120, mailTurnLimit: 360 },
+};
+function budget(): LengthBudget {
+  return BUDGETS[getLang() === "en" ? "en" : "ja"];
+}
 
 export function formatTimestamp(iso: string): string {
   const d = new Date(iso);
@@ -47,7 +92,7 @@ export function platformLabel(p: string): string {
 }
 
 export function siteLabel(site: string | null): string {
-  return site && site.trim() ? site : SITE_ANY_LABEL;
+  return site && site.trim() ? site : siteAnyLabel();
 }
 
 // 重複を除いたツール名の並び(呼び出し順を保つ)。
@@ -80,8 +125,8 @@ export function stripMarkdown(md: string): string {
       // chart / topology は画面専用の描画なので、開始時に注記だけ残し中身(JSON / mermaid)は捨てる。
       if (!inFence) {
         fenceLang = (fence[1] || "").toLowerCase();
-        if (fenceLang === "chart") out.push("(グラフはダッシュボード上で表示されます)");
-        else if (fenceLang === "topology") out.push("(トポロジ図はダッシュボード上で表示されます)");
+        if (fenceLang === "chart") out.push(tr(`${K}.chartNote`));
+        else if (fenceLang === "topology") out.push(tr(`${K}.topologyNote`));
       } else {
         fenceLang = "";
       }
@@ -95,7 +140,9 @@ export function stripMarkdown(md: string): string {
 
     let line = raw;
     line = line.replace(/^\s*(#{1,6})\s+/, ""); // 見出しマーカー
-    line = line.replace(/^(\s*)[-*]\s+/, "$1・"); // 箇条書き
+    // 箇条書き(ja「・」/ en「- 」)。辞書の値をそのまま置換文字列に混ぜると "$&" 等が
+    // 展開されてしまうので、コールバックで組み立てる。
+    line = line.replace(/^(\s*)[-*]\s+/, (_m, indent: string) => `${indent}${tr(`${K}.bullet`)}`);
     line = line.replace(/^(\s*)(\d+)\.\s+/, "$1$2. "); // 番号付き(そのまま読める形へ整える)
     line = line.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, "$1 ($2)"); // リンク
     line = line.replace(/`([^`]+)`/g, "$1"); // インラインコード
@@ -123,19 +170,30 @@ export interface ShareTextOptions {
   sourceUrl?: string | null;
 }
 
+// L-9: 各行の「ラベル + 桁揃えの空白 + :」まで辞書のテンプレートに含める。
+// ja は全角スペース、en は半角スペースで整列済みの文字列が入っている。
+function headerLine(field: string, value: string | number): string {
+  return tr(`${K}.header.${field}`, { value });
+}
+
 export function buildShareHeader(report: ShareReport): string {
   const tools = uniqueTools(report.tools);
   const lines = [
-    `■ 対象サイト : ${siteLabel(report.site)}`,
-    `■ 実行日時   : ${formatTimestamp(report.ts)}`,
-    `■ 調査クエリ : ${report.query}`,
+    headerLine("site", siteLabel(report.site)),
+    headerLine("ts", formatTimestamp(report.ts)),
+    headerLine("query", report.query),
   ];
   if (report.platforms.length > 0) {
-    lines.push(`■ 対象基盤   : ${report.platforms.map(platformLabel).join(" / ")}`);
+    lines.push(headerLine("platforms", report.platforms.map(platformLabel).join(" / ")));
   }
-  lines.push(`■ 使用ツール : ${tools.length > 0 ? tools.join(", ") : "(記録なし)"}`);
-  if (report.model) lines.push(`■ モデル     : ${report.model}`);
+  lines.push(headerLine("tools", tools.length > 0 ? tools.join(", ") : toolsNoneLabel()));
+  if (report.model) lines.push(headerLine("model", report.model));
   return lines.join("\n");
+}
+
+/** 「(記録なし)」。印刷レイアウト側(report.toolsNone)と同じ文言を共有する。 */
+export function toolsNoneLabel(): string {
+  return tr("networkInvestigation.report.toolsNone");
 }
 
 export function buildShareText(report: ShareReport, opts: ShareTextOptions = {}): string {
@@ -143,15 +201,15 @@ export function buildShareText(report: ShareReport, opts: ShareTextOptions = {})
   const full = stripMarkdown(report.answer);
   const limited =
     opts.bodyLimit != null && full.length > opts.bodyLimit
-      ? `${full.slice(0, opts.bodyLimit).trimEnd()}\n${TRUNCATED_NOTE}`
+      ? `${full.slice(0, opts.bodyLimit).trimEnd()}\n${tr(`${K}.truncatedNote`)}`
       : full;
-  const parts = ["【ネットワーク調査レポート】", "", header, "", "── 調査結果 ──", "", limited];
-  if (opts.sourceUrl) parts.push("", `ダッシュボード: ${opts.sourceUrl}`);
+  const parts = [tr(`${K}.docTitle`), "", header, "", tr(`${K}.resultDivider`), "", limited];
+  if (opts.sourceUrl) parts.push("", tr(`${K}.dashboard`, { url: opts.sourceUrl }));
   return parts.join("\n");
 }
 
 export function buildSubject(report: ShareReport): string {
-  return `[ネットワーク調査] ${siteLabel(report.site)} ${formatTimestamp(report.ts)}`;
+  return tr(`${K}.subject`, { site: siteLabel(report.site), ts: formatTimestamp(report.ts) });
 }
 
 // ---- メール本文 ----
@@ -161,27 +219,31 @@ export function buildSubject(report: ShareReport): string {
 // 回答本文がほとんど残らない(実データで確認)。そこでメールだけは
 //   - 見出し行を落とす(件名に同じ情報がある)
 //   - ヘッダをサイト / 日時 / クエリの 3 行に絞る(基盤・ツール・モデルは印刷/コピー側に任せる)
-//   - 長いクエリは 60 文字で切る
+//   - 長いクエリを切る(上限は言語別: BUDGETS)
 //   - 省略注記とダッシュボード URL を 1 行にまとめる
 // として、回答本文に使える文字数を最大化する。
-const MAIL_QUERY_MAX = 60;
 
 export function buildMailBody(report: ShareReport, opts: ShareTextOptions = {}): string {
-  const q =
-    report.query.length > MAIL_QUERY_MAX ? `${report.query.slice(0, MAIL_QUERY_MAX)}…` : report.query;
+  const max = budget().mailQueryMax;
+  const q = report.query.length > max ? `${report.query.slice(0, max)}…` : report.query;
   const header = [
-    `対象サイト: ${siteLabel(report.site)}`,
-    `実行日時: ${formatTimestamp(report.ts)}`,
-    `調査クエリ: ${q}`,
+    tr(`${K}.mailHeader.site`, { value: siteLabel(report.site) }),
+    tr(`${K}.mailHeader.ts`, { value: formatTimestamp(report.ts) }),
+    tr(`${K}.mailHeader.query`, { value: q }),
   ].join("\n");
 
   const full = stripMarkdown(report.answer);
   const cut = opts.bodyLimit != null && full.length > opts.bodyLimit;
-  const body = cut ? `${full.slice(0, opts.bodyLimit).trimEnd()}\n…(以下省略)` : full;
+  const body = cut ? `${full.slice(0, opts.bodyLimit).trimEnd()}\n${tr(`${K}.truncatedShort`)}` : full;
 
-  const parts = [header, "", "── 調査結果 ──", "", body];
+  const parts = [header, "", tr(`${K}.resultDivider`), "", body];
   if (cut || opts.sourceUrl) {
-    parts.push("", `詳細はダッシュボードでご確認ください${opts.sourceUrl ? `: ${opts.sourceUrl}` : ""}`);
+    parts.push(
+      "",
+      tr(`${K}.seeDashboard`, {
+        url: opts.sourceUrl ? tr(`${K}.urlSuffix`, { url: opts.sourceUrl }) : "",
+      }),
+    );
   }
   return parts.join("\n");
 }
@@ -242,9 +304,10 @@ export interface SessionShareReport {
 export function sessionSiteLabel(s: SessionShareReport): string {
   const sites = uniqueTools(s.turns.map((t) => t.site ?? ""));
   const named = sites.filter(Boolean);
-  if (named.length === 0) return SITE_ANY_LABEL;
+  if (named.length === 0) return siteAnyLabel();
   const crossed = s.turns.some((t) => !t.site);
-  return named.join(", ") + (crossed ? ` ほか(${SITE_ANY_LABEL})` : "");
+  const joined = named.join(", ");
+  return crossed ? tr(`${K}.sessionSiteOther`, { sites: joined, any: siteAnyLabel() }) : joined;
 }
 
 export function sessionPlatforms(s: SessionShareReport): string[] {
@@ -261,27 +324,32 @@ export function sessionModels(s: SessionShareReport): string[] {
 
 // 「2026-07-23 10:14 〜 10:22」。1 ターンだけなら開始時刻のみ。
 export function sessionPeriodLabel(s: SessionShareReport): string {
-  if (s.turns.length === 0) return "—";
+  if (s.turns.length === 0) return tr("networkInvestigation.report.none");
   const first = formatTimestamp(s.turns[0].ts);
   if (s.turns.length === 1) return first;
   const last = formatTimestamp(s.turns[s.turns.length - 1].ts);
   // 同日なら終わりは時刻だけにする(冗長さを避ける)。
+  // formatTimestamp は言語に依らず "YYYY-MM-DD HH:MM" 固定なので、この位置指定は成立する。
   const sameDay = first.slice(0, 10) === last.slice(0, 10);
-  return `${first} 〜 ${sameDay ? last.slice(11) : last}`;
+  return tr(`${K}.periodRange`, { first, last: sameDay ? last.slice(11) : last });
 }
 
 export function buildSessionSubject(s: SessionShareReport): string {
   const head = s.turns[0];
   const when = head ? formatTimestamp(head.ts) : "";
-  return `[ネットワーク調査] ${sessionSiteLabel(s)} ${when}(${s.turns.length}ターン)`;
+  return tr(`${K}.sessionSubject`, { site: sessionSiteLabel(s), ts: when, n: s.turns.length });
 }
 
 // 回答本文から「要点」を作る(メールの要約用)。
 // Markdown を落としたうえで、意味のある行を先頭から limit 文字ぶんだけ拾って 1 行にまとめる。
 export function summarizeAnswer(md: string, limit: number): string {
+  // 行頭の箇条書き記号を落とす。stripMarkdown が付ける記号は言語別("・" / "- ")なので、
+  // 今の言語の記号を**空白込みのまま**剥がす。英語で "-" だけを剥がす作りにすると
+  // "-5% degradation" のような負値の行から先頭の "-" まで削ってしまう。
+  const strip = new RegExp(`^(?:${escapeRegExp(tr(`${K}.bullet`))}|\\s)+`);
   const lines = stripMarkdown(md)
     .split("\n")
-    .map((l) => l.replace(/^[・\s]+/, "").trim())
+    .map((l) => l.replace(strip, "").trim())
     .filter(Boolean);
   const out: string[] = [];
   let len = 0;
@@ -305,26 +373,31 @@ export function buildSessionShareText(s: SessionShareReport, opts: ShareTextOpti
   const models = sessionModels(s).filter(Boolean);
   const platforms = sessionPlatforms(s);
   const head = [
-    `■ 対象サイト : ${sessionSiteLabel(s)}`,
-    `■ 期間       : ${sessionPeriodLabel(s)}`,
-    `■ ターン数   : ${s.turns.length}`,
+    headerLine("site", sessionSiteLabel(s)),
+    headerLine("period", sessionPeriodLabel(s)),
+    headerLine("turns", s.turns.length),
   ];
-  if (platforms.length > 0) head.push(`■ 対象基盤   : ${platforms.map(platformLabel).join(" / ")}`);
-  head.push(`■ 使用ツール : ${tools.length > 0 ? tools.join(", ") : "(記録なし)"}`);
-  if (models.length > 0) head.push(`■ モデル     : ${models.join(", ")}`);
+  if (platforms.length > 0) head.push(headerLine("platforms", platforms.map(platformLabel).join(" / ")));
+  head.push(headerLine("tools", tools.length > 0 ? tools.join(", ") : toolsNoneLabel()));
+  if (models.length > 0) head.push(headerLine("model", models.join(", ")));
 
-  const parts = ["【ネットワーク調査レポート(調査スレッド)】", "", head.join("\n")];
+  const parts = [tr(`${K}.sessionDocTitle`), "", head.join("\n")];
   s.turns.forEach((t, i) => {
     parts.push(
       "",
-      `── ターン ${i + 1}/${s.turns.length} ・ ${formatTimestamp(t.ts)} ・ ${siteLabel(t.site)} ──`,
+      tr(`${K}.turnDivider`, {
+        i: i + 1,
+        n: s.turns.length,
+        ts: formatTimestamp(t.ts),
+        site: siteLabel(t.site),
+      }),
       "",
-      `■ クエリ: ${t.query}`,
+      tr(`${K}.turnQuery`, { query: t.query }),
       "",
-      t.errorNote ? `(このターンは失敗しました)${t.errorNote}` : stripMarkdown(t.answer),
+      t.errorNote ? tr(`${K}.turnFailed`, { note: t.errorNote }) : stripMarkdown(t.answer),
     );
   });
-  if (opts.sourceUrl) parts.push("", `ダッシュボード: ${opts.sourceUrl}`);
+  if (opts.sourceUrl) parts.push("", tr(`${K}.dashboard`, { url: opts.sourceUrl }));
   return parts.join("\n");
 }
 
@@ -332,8 +405,7 @@ export function buildSessionShareText(s: SessionShareReport, opts: ShareTextOpti
 //
 // 全ターンをそのまま入れると mailto: の URL 長上限(≒1900 文字。日本語は 1 文字 9 文字に膨らむ)を
 // 確実に超える。そこで各ターンは「時刻 + クエリ + 回答の要点」の 3 点だけに畳み、
-// 詳細はダッシュボードで見てもらう。
-const MAIL_SESSION_QUERY_MAX = 40;
+// 詳細はダッシュボードで見てもらう(上限は言語別: BUDGETS)。
 
 export interface SessionMailOptions extends ShareTextOptions {
   /** 各ターンの要点に使う文字数 */
@@ -343,7 +415,8 @@ export interface SessionMailOptions extends ShareTextOptions {
 }
 
 export function buildSessionMailBody(s: SessionShareReport, opts: SessionMailOptions = {}): string {
-  const turnLimit = opts.turnLimit ?? 120;
+  const b = budget();
+  const turnLimit = opts.turnLimit ?? b.mailTurnLimit;
   const maxTurns = Math.max(1, opts.maxTurns ?? s.turns.length);
 
   // 上限を超える場合は「最初のターン + 直近のターン」を残し、中間を省略する
@@ -356,28 +429,29 @@ export function buildSessionMailBody(s: SessionShareReport, opts: SessionMailOpt
   }
 
   const lines = [
-    `対象サイト: ${sessionSiteLabel(s)}`,
-    `期間: ${sessionPeriodLabel(s)}(${s.turns.length}ターン)`,
+    tr(`${K}.mailHeader.site`, { value: sessionSiteLabel(s) }),
+    tr(`${K}.mailHeader.period`, { value: sessionPeriodLabel(s), n: s.turns.length }),
     "",
-    "── 調査サマリ ──",
+    tr(`${K}.summaryDivider`),
   ];
   shown.forEach(({ turn, no }, i) => {
-    if (omitted > 0 && i === 1) lines.push("", `…(中間の ${omitted} ターンは省略)`);
+    if (omitted > 0 && i === 1) lines.push("", tr(`${K}.omittedTurns`, { n: omitted }));
     // 枠が厳しいときはクエリ側も一緒に詰める。要約メールでは「何を聞いたか」より
     // 「何が分かったか」を残したいので、クエリの上限を要点の長さに追随させる。
-    const queryMax = Math.max(20, Math.min(MAIL_SESSION_QUERY_MAX, turnLimit));
+    const queryMax = Math.max(20, Math.min(b.mailSessionQueryMax, turnLimit));
     const q = turn.query.length > queryMax ? `${turn.query.slice(0, queryMax)}…` : turn.query;
     lines.push("", `${no}. [${formatTimestamp(turn.ts).slice(11)}] ${q}`);
     const point = turn.errorNote
-      ? `(失敗)${summarizeAnswer(turn.errorNote, turnLimit)}`
+      ? tr(`${K}.failedPoint`, { summary: summarizeAnswer(turn.errorNote, turnLimit) })
       : summarizeAnswer(turn.answer, turnLimit);
     if (point) lines.push(`   → ${point}`);
   });
   lines.push(
     "",
-    `全 ${s.turns.length} ターンの回答全文・グラフ・トポロジ図はダッシュボードでご確認ください${
-      opts.sourceUrl ? `: ${opts.sourceUrl}` : ""
-    }`,
+    tr(`${K}.mailFooter`, {
+      n: s.turns.length,
+      url: opts.sourceUrl ? tr(`${K}.urlSuffix`, { url: opts.sourceUrl }) : "",
+    }),
   );
   return lines.join("\n");
 }
@@ -393,7 +467,7 @@ export function buildSessionMailtoHref(
   const sourceUrl = opts.sourceUrl ?? null;
   const build = (o: SessionMailOptions) => mailtoUrl(subject, buildSessionMailBody(s, { ...o, sourceUrl }));
 
-  const fullLimit = 400;
+  const fullLimit = Math.max(400, budget().mailTurnLimit);
   const full = build({ turnLimit: fullLimit });
   if (full.length <= max) return { href: full, truncated: false, length: full.length };
 

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useT } from "../../../src/i18n";
 import { fetchSession } from "./api";
 import { LogoBadge } from "./LogoBadge";
 import { SessionShareActions } from "./SessionShare";
@@ -40,6 +41,7 @@ export function HistoryThread({
   /** 続けて調べる(このスレッドの続きとして実行する) */
   onRunAction: (query: string, site: string | null, sessionId: string) => void;
 }) {
+  const t = useT();
   const [records, setRecords] = useState<HistoryRecord[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const threadRef = useRef<HTMLDivElement>(null);
@@ -84,10 +86,10 @@ export function HistoryThread({
       <div className="ni-detail">
         <div className="ni-detail-top">
           <button className="ni-btn sm" onClick={onBack}>
-            ← タイムラインへ
+            {t("networkInvestigation.thread.backBtn")}
           </button>
         </div>
-        <div className="ni-error">スレッドの読み込みに失敗しました: {error}</div>
+        <div className="ni-error">{t("networkInvestigation.thread.loadFailed", { error })}</div>
       </div>
     );
   }
@@ -97,10 +99,10 @@ export function HistoryThread({
       <div className="ni-detail">
         <div className="ni-detail-top">
           <button className="ni-btn sm" onClick={onBack}>
-            ← タイムラインへ
+            {t("networkInvestigation.thread.backBtn")}
           </button>
         </div>
-        <div className="ni-dim sm">読み込み中…</div>
+        <div className="ni-dim sm">{t("networkInvestigation.thread.loading")}</div>
       </div>
     );
   }
@@ -114,7 +116,7 @@ export function HistoryThread({
     <div className="ni-detail">
       <div className="ni-detail-top">
         <button className="ni-btn sm" onClick={onBack}>
-          ← タイムラインへ
+          {t("networkInvestigation.thread.backBtn")}
         </button>
         {last && (
           <button
@@ -123,19 +125,25 @@ export function HistoryThread({
               const rec = records.find((r) => r.id === last.id);
               if (rec) onLoadQuery(rec);
             }}
-            title="このスレッドの最後のクエリを入力欄に読み込む"
+            title={t("networkInvestigation.thread.loadLastTitle")}
           >
-            最後のクエリを入力欄へ
+            {t("networkInvestigation.thread.loadLastBtn")}
           </button>
         )}
       </div>
 
       <div className="ni-detail-head">
         <div className="ni-tl-top">
-          <span className="ni-turn-no ni-mono">{turns.length} ターン</span>
+          <span className="ni-turn-no ni-mono">
+            {t(`networkInvestigation.timeline.threadTag${turns.length === 1 ? "One" : "Other"}`, {
+              n: turns.length,
+            })}
+          </span>
           <span className="ni-mono ni-dim">
             {first ? fmt(first.ts) : ""}
-            {turns.length > 1 && last ? ` 〜 ${fmt(last.ts).slice(11)}` : ""}
+            {turns.length > 1 && last
+              ? t("networkInvestigation.thread.periodTail", { time: fmt(last.ts).slice(11) })
+              : ""}
           </span>
           {servers.map((s) => (
             <LogoBadge key={s} target={s} size={16} title={s} />

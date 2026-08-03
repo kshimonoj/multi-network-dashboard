@@ -1,5 +1,6 @@
 import { useCallback, useLayoutEffect, useRef, useState, type RefObject } from "react";
 import { createPortal } from "react-dom";
+import { useT, type TFunc } from "../../../src/i18n";
 import { Markdown } from "./Markdown";
 import { fillPrintRichSlots, findAnswerPanel } from "./printClone";
 import { copyText, usePrintOnMount, useTransientMessage } from "./shareUi";
@@ -32,9 +33,11 @@ import {
 function PrintReport({
   report,
   sourceRef,
+  t,
 }: {
   report: ShareReport;
   sourceRef: RefObject<HTMLElement>;
+  t: TFunc;
 }) {
   const tools = uniqueTools(report.tools);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -49,46 +52,53 @@ function PrintReport({
     <div id="ni-print-root" ref={rootRef}>
       <div className="ni-print-doc">
         <div className="ni-print-head">
-          <h1 className="ni-print-title">ネットワーク調査レポート</h1>
-          <div className="ni-print-sub">Multi Network Dashboard — Central / Mist 横断</div>
+          <h1 className="ni-print-title">{t("networkInvestigation.report.title")}</h1>
+          <div className="ni-print-sub">{t("networkInvestigation.report.sub")}</div>
         </div>
 
         <table className="ni-print-meta">
           <tbody>
             <tr>
-              <th>対象サイト</th>
+              <th>{t("networkInvestigation.report.meta.site")}</th>
               <td>{siteLabel(report.site)}</td>
             </tr>
             <tr>
-              <th>実行日時</th>
+              <th>{t("networkInvestigation.report.meta.ts")}</th>
               <td>{formatTimestamp(report.ts)}</td>
             </tr>
             <tr>
-              <th>調査クエリ</th>
+              <th>{t("networkInvestigation.report.meta.query")}</th>
               <td>{report.query}</td>
             </tr>
             <tr>
-              <th>対象基盤</th>
-              <td>{report.platforms.length > 0 ? report.platforms.map(platformLabel).join(" / ") : "—"}</td>
+              <th>{t("networkInvestigation.report.meta.platforms")}</th>
+              <td>
+                {report.platforms.length > 0
+                  ? report.platforms.map(platformLabel).join(" / ")
+                  : t("networkInvestigation.report.none")}
+              </td>
             </tr>
             <tr>
-              <th>使用ツール</th>
-              <td>{tools.length > 0 ? tools.join(", ") : "(記録なし)"}</td>
+              <th>{t("networkInvestigation.report.meta.tools")}</th>
+              <td>{tools.length > 0 ? tools.join(", ") : t("networkInvestigation.report.toolsNone")}</td>
             </tr>
             <tr>
-              <th>モデル</th>
-              <td>{report.model || "—"}</td>
+              <th>{t("networkInvestigation.report.meta.model")}</th>
+              <td>{report.model || t("networkInvestigation.report.none")}</td>
             </tr>
           </tbody>
         </table>
 
-        <h2 className="ni-print-h2">調査結果</h2>
+        <h2 className="ni-print-h2">{t("networkInvestigation.report.resultHeading")}</h2>
         <div className="ni-print-body">
           <Markdown text={report.answer} print />
         </div>
 
         <div className="ni-print-foot">
-          出力: {formatTimestamp(new Date().toISOString())} ・ {window.location.origin}
+          {t("networkInvestigation.report.foot", {
+            ts: formatTimestamp(new Date().toISOString()),
+            origin: window.location.origin,
+          })}
         </div>
       </div>
     </div>
@@ -96,6 +106,7 @@ function PrintReport({
 }
 
 export function ShareActions({ report, compact = false }: { report: ShareReport; compact?: boolean }) {
+  const t = useT();
   const [printing, setPrinting] = useState(false);
   const [message, showMessage] = useTransientMessage();
   // 複製元(画面に描画済みのグラフ / トポロジ図)を探す起点。
@@ -111,30 +122,32 @@ export function ShareActions({ report, compact = false }: { report: ShareReport;
     window.location.href = href;
     showMessage(
       truncated
-        ? "メールを作成しました(本文が長いため冒頭のみ引用)"
-        : "メールを作成しました",
+        ? t("networkInvestigation.share.msgMailTruncated")
+        : t("networkInvestigation.share.msgMailCreated"),
     );
-  }, [report, showMessage]);
+  }, [report, showMessage, t]);
 
   const onCopy = useCallback(async () => {
     const ok = await copyText(buildShareText(report, { sourceUrl: window.location.href }));
-    showMessage(ok ? "クリップボードにコピーしました" : "コピーに失敗しました");
-  }, [report, showMessage]);
+    showMessage(
+      ok ? t("networkInvestigation.share.msgCopied") : t("networkInvestigation.share.msgCopyFailed"),
+    );
+  }, [report, showMessage, t]);
 
   return (
     <div className={`ni-share${compact ? " compact" : ""}`} ref={rootRef}>
-      <span className="ni-share-label ni-mono">共有</span>
-      <button className="ni-btn sm" onClick={onPrint} title="印刷用レイアウトで印刷します(ダイアログで「PDF として保存」を選べば PDF 化できます)">
-        印刷 / PDF
+      <span className="ni-share-label ni-mono">{t("networkInvestigation.share.label")}</span>
+      <button className="ni-btn sm" onClick={onPrint} title={t("networkInvestigation.share.printTitle")}>
+        {t("networkInvestigation.share.print")}
       </button>
-      <button className="ni-btn sm" onClick={onMail} title="この調査結果を本文に入れたメールを作成します">
-        メール
+      <button className="ni-btn sm" onClick={onMail} title={t("networkInvestigation.share.mailTitle")}>
+        {t("networkInvestigation.share.mail")}
       </button>
-      <button className="ni-btn sm" onClick={onCopy} title="この調査結果をプレーンテキストでコピーします">
-        コピー
+      <button className="ni-btn sm" onClick={onCopy} title={t("networkInvestigation.share.copyTitle")}>
+        {t("networkInvestigation.share.copy")}
       </button>
       {message && <span className="ni-share-msg ni-mono">{message}</span>}
-      {printing && createPortal(<PrintReport report={report} sourceRef={rootRef} />, document.body)}
+      {printing && createPortal(<PrintReport report={report} sourceRef={rootRef} t={t} />, document.body)}
     </div>
   );
 }

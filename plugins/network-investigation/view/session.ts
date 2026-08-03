@@ -8,9 +8,11 @@
 // sessionId を持たない旧履歴は「自分1件だけのセッション」として扱う
 // (サーバー側 api.ts の sessionKey() と同じ規則)。
 
+import type { TFunc } from "../../../src/i18n";
 import type {
   HistoryRecord,
   HistoryToolCall,
+  KnowledgeRef,
   McpCall,
   McpHealth,
   Platform,
@@ -22,16 +24,30 @@ export function sessionKey(rec: HistoryRecord): string {
   return rec.sessionId && rec.sessionId.trim() ? rec.sessionId : rec.id;
 }
 
+export type TurnSource = "manual" | "scheduled" | "auto";
+
 /**
  * 実行元のラベル(タイムライン・ターン見出しのタグ)。
  * "auto" は Webhook ログの重大アラートに対する自動事前調査(17 Task 4)。
  * 人が実行したものと区別が付くようにする。
+ * 33: 定数マップから t() 引きに変えた(未知の source は "manual" のラベルへ倒す)。
  */
-export const SOURCE_LABEL: Record<"manual" | "scheduled" | "auto", string> = {
-  manual: "手動",
-  scheduled: "定期",
-  auto: "自動調査",
-};
+export function sourceLabel(t: TFunc, source: string): string {
+  const key = source === "scheduled" || source === "auto" ? source : "manual";
+  return t(`networkInvestigation.source.${key}`);
+}
+
+/**
+ * 曜日ラベル(0=日曜 … 6=土曜。cron / launchd と同じ番号体系)。
+ * 33 L-5: 以前は Timeline.tsx と ScheduleEditor.tsx が別々に
+ * `["日","月",…]` を持ち、表示側で `${w}曜` と組み立てていた。日本語 1 文字前提の
+ * 組み立てだったので、辞書に完全な曜日名("日曜" / "Sunday")を置いてここに集約する。
+ * 範囲外の値は月曜へ倒す(ScheduleConfig の既定値と同じ)。
+ */
+export function weekdayLabel(t: TFunc, dayOfWeek: number): string {
+  const d = Number.isInteger(dayOfWeek) && dayOfWeek >= 0 && dayOfWeek <= 6 ? dayOfWeek : 1;
+  return t(`networkInvestigation.schedule.weekday.${d}`);
+}
 
 // 1ターン(1回のクエリと回答)の表示データ。履歴レコードからも、実行中の RunState からも作れる。
 // Turn.tsx / SessionShare.tsx は常にこの形だけを見る。
@@ -52,8 +68,19 @@ export interface SessionTurn {
   suggestedActions: SuggestedAction[];
   /** MCP サーバーの接続健全性(09)。level!=="ok" ならターンに警告バナーを出す。 */
   mcpHealth?: McpHealth;
+  /** この実行の所要時間(ミリ秒)(26)。旧履歴には無いので null。 */
+  durationMs: number | null;
+  /** system prompt に注入された承認済みナレッジ(47)。注入が無ければ空配列。 */
+  knowledgeRefs: KnowledgeRef[];
   /** まだ query-history.jsonl に載っていない(実行直後の)ターンか */
   live?: boolean;
+}
+
+// 所要時間の表示用整形(26)。旧履歴等で記録が無い場合は「—」にする。
+export function formatDuration(t: TFunc, ms: number | null | undefined): string {
+  if (ms == null || !Number.isFinite(ms) || ms < 0) return t("networkInvestigation.duration.none");
+  if (ms < 1000) return t("networkInvestigation.duration.ms", { n: ms });
+  return t("networkInvestigation.duration.sec", { n: (ms / 1000).toFixed(1) });
 }
 
 export function turnFromRecord(rec: HistoryRecord): SessionTurn {
@@ -74,6 +101,8 @@ export function turnFromRecord(rec: HistoryRecord): SessionTurn {
     reason: rec.reason ?? null,
     suggestedActions: rec.suggestedActions ?? [],
     mcpHealth: rec.mcpHealth,
+    durationMs: rec.durationMs ?? null,
+    knowledgeRefs: rec.knowledgeRefs ?? [],
   };
 }
 
@@ -91,6 +120,8 @@ export function turnFromRun(
     platformsUsed: Platform[];
     suggestedActions: SuggestedAction[];
     mcpHealth: McpHealth | null;
+    durationMs?: number | null;
+    knowledgeRefs?: KnowledgeRef[];
   },
 ): SessionTurn {
   return {
@@ -121,6 +152,8 @@ export function turnFromRun(
     reason: run.answer?.reason ?? null,
     suggestedActions: run.suggestedActions,
     mcpHealth: run.mcpHealth ?? undefined,
+    durationMs: run.durationMs ?? null,
+    knowledgeRefs: run.knowledgeRefs ?? [],
     live: true,
   };
 }

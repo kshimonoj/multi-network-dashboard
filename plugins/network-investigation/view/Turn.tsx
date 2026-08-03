@@ -1,10 +1,11 @@
+import { useT, type TFunc } from "../../../src/i18n";
 import { LogoBadge } from "./LogoBadge";
 import { Markdown } from "./Markdown";
 import { McpHealthNotice, mcpHealthTagLabel } from "./McpHealthNotice";
 import { ShareActions } from "./ShareActions";
 import { SuggestedActions } from "./SuggestedActions";
 import { ToolCallRow } from "./ToolCallRow";
-import { SOURCE_LABEL, type SessionTurn } from "./session";
+import { formatDuration, sourceLabel, type SessionTurn } from "./session";
 import type { HistoryToolCall } from "./types";
 
 // セッションの 1 ターン(1回のクエリと回答)を描画する共有部品(04 Task 3)。
@@ -23,10 +24,12 @@ function fmtTime(iso: string): string {
 
 const platformName = (p: string) => (p === "central" ? "Central" : p === "mist" ? "Mist" : p);
 
-function callStatusLabel(c: HistoryToolCall): string {
-  if (c.status === "error") return "失敗";
-  if (c.status === "calling") return "未完了";
-  return c.count != null ? `完了・${c.count}件` : "完了";
+function callStatusLabel(t: TFunc, c: HistoryToolCall): string {
+  if (c.status === "error") return t("networkInvestigation.status.error");
+  if (c.status === "calling") return t("networkInvestigation.status.unfinished");
+  return c.count != null
+    ? t("networkInvestigation.status.doneCount", { n: c.count })
+    : t("networkInvestigation.status.done");
 }
 
 export function Turn({
@@ -42,11 +45,12 @@ export function Turn({
   onRunAction: (query: string, site: string | null) => void;
   onLoadQuery?: (turn: SessionTurn) => void;
 }) {
+  const t = useT();
   const single = total <= 1;
   const answer = turn.answer;
   // MCP 接続の警告(09)。回答は返っているので isError とは独立に扱う。
   const healthLevel = turn.mcpHealth && turn.mcpHealth.level !== "ok" ? turn.mcpHealth.level : null;
-  const healthTag = healthLevel ? mcpHealthTagLabel(healthLevel) : null;
+  const healthTag = healthLevel ? mcpHealthTagLabel(t, healthLevel) : null;
 
   return (
     <article
@@ -54,27 +58,40 @@ export function Turn({
       data-ni-turn={turn.id}
     >
       <div className="ni-turn-head">
-        <span className="ni-turn-no ni-mono">{single ? "調査" : `ターン ${index + 1}/${total}`}</span>
+        <span className="ni-turn-no ni-mono">
+          {single
+            ? t("networkInvestigation.turn.single")
+            : t("networkInvestigation.turn.no", { i: index + 1, n: total })}
+        </span>
         <span className="ni-mono ni-dim">{fmtTime(turn.ts)}</span>
-        <span className={`ni-tag ${turn.source}`}>{SOURCE_LABEL[turn.source] ?? "手動"}</span>
+        <span className={`ni-tag ${turn.source}`}>{sourceLabel(t, turn.source)}</span>
         {turn.mcpServers.map((s) => (
           <LogoBadge key={s} target={s} size={16} title={s} />
         ))}
         {turn.site && <span className="ni-mono ni-dim">site={turn.site}</span>}
-        <span className="ni-mono ni-dim">model={turn.model || "(旧・未指定)"}</span>
-        {turn.isError && <span className="ni-tag error">失敗</span>}
+        <span className="ni-mono ni-dim">
+          {t("networkInvestigation.turn.modelLine", {
+            model: turn.model || t("networkInvestigation.turn.modelLegacy"),
+            duration: formatDuration(t, turn.durationMs),
+          })}
+        </span>
+        {turn.isError && <span className="ni-tag error">{t("networkInvestigation.turn.failTag")}</span>}
         {healthTag && (
           <span
             className={`ni-tag mcp-${healthLevel}`}
-            title="narrowing で含めた MCP サーバーのうち、1 度も使われず、直接確認でも到達できなかったものがあります"
+            title={t("networkInvestigation.turn.healthTitle")}
           >
             {healthTag}
           </span>
         )}
         <span className="ni-turn-actions">
           {onLoadQuery && (
-            <button className="ni-btn sm" onClick={() => onLoadQuery(turn)} title="このクエリを入力欄に読み込む">
-              入力欄へ
+            <button
+              className="ni-btn sm"
+              onClick={() => onLoadQuery(turn)}
+              title={t("networkInvestigation.turn.loadQueryTitle")}
+            >
+              {t("networkInvestigation.turn.loadQueryBtn")}
             </button>
           )}
           {/* 単発の共有(03 Task 2)。セッション全体の共有はスレッド見出し側にある。 */}
@@ -97,6 +114,22 @@ export function Turn({
 
       <div className="ni-turn-query">{turn.query}</div>
 
+      {/* この実行の system prompt に注入された承認済みナレッジ(47)。 */}
+      {turn.knowledgeRefs.length > 0 && (
+        <div className="ni-knowledge">
+          <span className="ni-knowledge-icon" aria-hidden>
+            📚
+          </span>
+          <span className="ni-mono ni-knowledge-text">
+            <span className="ni-knowledge-tag">{t("networkInvestigation.sse.knowledgeTag")}</span>
+            {t("networkInvestigation.sse.knowledgeText", {
+              n: turn.knowledgeRefs.length,
+              titles: turn.knowledgeRefs.map((k) => k.title).join(" / "),
+            })}
+          </span>
+        </div>
+      )}
+
       {/* モデル判断による省略(あれば) */}
       {turn.judgments.length > 0 && (
         <div className="ni-turn-judgments">
@@ -107,7 +140,10 @@ export function Turn({
               </span>
               <LogoBadge target={j.platform} size={18} skipped title={platformName(j.platform)} />
               <span className="ni-mono ni-judgment-text">
-                {platformName(j.platform)} は不要と判断: {j.reason}
+                {t("networkInvestigation.sse.judgmentText", {
+                  platform: platformName(j.platform),
+                  reason: j.reason,
+                })}
               </span>
             </div>
           ))}
@@ -117,16 +153,19 @@ export function Turn({
       {/* 呼び出したツール一覧。ターンが複数あるスレッドでは畳んでおく(連続して読めるように)。 */}
       <details className="ni-turn-calls" open={single}>
         <summary className="ni-mono ni-dim">
-          呼び出したツール({turn.calls.length})
-          {turn.platformsUsed.length > 0 && ` ・ ${turn.platformsUsed.map(platformName).join(" / ")}`}
+          {t("networkInvestigation.turn.callsSummary", { n: turn.calls.length })}
+          {turn.platformsUsed.length > 0 &&
+            t("networkInvestigation.turn.callsPlatforms", {
+              platforms: turn.platformsUsed.map(platformName).join(" / "),
+            })}
         </summary>
         {turn.calls.length === 0 ? (
-          <div className="ni-dim sm">この実行のツール呼び出しは記録されていません。</div>
+          <div className="ni-dim sm">{t("networkInvestigation.turn.callsEmpty")}</div>
         ) : (
           <div className="ni-detail-calls">
             {/* 失敗した行はクリックで詳細(ステータス・エラー本文・引数)を展開できる(08 Task 1)。 */}
             {turn.calls.map((c, i) => (
-              <ToolCallRow key={`${c.tool}-${i}`} call={c} badgeSize={20} statusText={callStatusLabel(c)} />
+              <ToolCallRow key={`${c.tool}-${i}`} call={c} badgeSize={20} statusText={callStatusLabel(t, c)} />
             ))}
           </div>
         )}
@@ -137,7 +176,7 @@ export function Turn({
 
       {turn.isError ? (
         <div className="ni-answer error">
-          <div className="ni-answer-body">{turn.reason || "実行に失敗しました"}</div>
+          <div className="ni-answer-body">{turn.reason || t("networkInvestigation.turn.errorDefault")}</div>
         </div>
       ) : answer ? (
         <div className="ni-answer">
@@ -147,7 +186,7 @@ export function Turn({
           <SuggestedActions actions={turn.suggestedActions} onRun={onRunAction} />
         </div>
       ) : (
-        <div className="ni-dim sm">回答が記録されていません。</div>
+        <div className="ni-dim sm">{t("networkInvestigation.turn.noAnswer")}</div>
       )}
     </article>
   );

@@ -26,7 +26,16 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { readFile, appendFile, writeFile, mkdir } from "node:fs/promises";
 import { generateSitePlatformMap, readSiteMap, resolvePlatformForSite } from "./site-map.js";
-import { runInsightAgent, type McpCallEvent, type PlatformJudgmentEvent, type SuggestedAction } from "./insight-agent.js";
+import {
+  runInsightAgent,
+  normalizeAgentLang,
+  DEFAULT_AGENT_LANG,
+  type AgentLang,
+  type McpCallEvent,
+  type PlatformJudgmentEvent,
+  type SuggestedAction,
+} from "./insight-agent.js";
+import { runOllamaAgent } from "./ollama-agent.js";
 import {
   ALL_PLATFORMS,
   PLATFORM_TO_MCP_SERVER,
@@ -73,9 +82,16 @@ type NIEvent =
       runId: string;
       used: string[]; // 使う MCP サーバー名
       skipped: string[]; // スキップした MCP サーバー名
+      /** 日本語の説明文。画面は reasonCode を引くので、ここは互換とログ用のフォールバック。 */
       reason: string;
+      /** 機械可読なルーティング理由(33 Task 4)。画面が networkInvestigation.routing.<code> を引く。 */
+      reasonCode: RoutingReasonCode;
+      reasonParams: Record<string, string>;
       resolvedPlatform: Platform | null;
     }
+  // 承認済みナレッジを system prompt に注入した(47)。何を踏まえて調べているかを
+  // 実行中ログで見せる。注入が無かった実行ではこのイベント自体を流さない。
+  | { type: "knowledge_injected"; runId: string; refs: KnowledgeRef[] }
   | ({ type: "mcp_call"; runId: string } & McpCallEvent)
   | ({ type: "platform_judgment"; runId: string } & PlatformJudgmentEvent)
   | {
@@ -90,6 +106,8 @@ type NIEvent =
       mcpServers: string[];
       /** MCP サーバーの接続健全性(09)。level!=="ok" なら警告表示にする。 */
       mcpHealth: McpHealth | null;
+      /** この実行(runInsightAgent/runOllamaAgent)の所要時間(ミリ秒)(26)。 */
+      durationMs: number;
     }
   | { type: "history"; runId: string; sessionId: string }; // 履歴が1件増えた(タイムラインを refetch させる)
 
@@ -142,11 +160,21 @@ router.post("/site-map/refresh", async (_req, res) => {
 
 // ---- ルーティング判定(= ルーティングスキップの見える化の材料) ----
 
+/**
+ * ルーティング理由の機械可読コード(33 Task 4)。
+ * SSE は「今クエリを投げた人」に向けたイベントだが、サーバは閲覧者の表示言語を持たない。
+ * 文章をここで組み立てず、コード + 値だけを流して画面側の辞書で文にする。
+ */
+export type RoutingReasonCode = "bothNoSite" | "siteUnknown" | "narrowed";
+
 interface RoutingDecision {
   resolvedPlatform: Platform | null;
   used: string[];
   skipped: string[];
+  /** 互換・ログ用の日本語文(画面は reasonCode を使う)。 */
   reason: string;
+  reasonCode: RoutingReasonCode;
+  reasonParams: Record<string, string>;
 }
 
 const ALL_SERVERS = ALL_PLATFORMS.map((p) => PLATFORM_TO_MCP_SERVER[p]);
@@ -163,6 +191,8 @@ async function computeRouting(site?: string): Promise<RoutingDecision> {
       used: [...ALL_SERVERS],
       skipped: [],
       reason: "サイト指定なし — Central / Mist 両方に問い合わせます",
+      reasonCode: "bothNoSite",
+      reasonParams: {},
     };
   }
   const hit = await resolvePlatformForSite(s);
@@ -172,6 +202,8 @@ async function computeRouting(site?: string): Promise<RoutingDecision> {
       used: [...ALL_SERVERS],
       skipped: [],
       reason: `サイト「${s}」が対応表に見つからないため、両プラットフォームに問い合わせます`,
+      reasonCode: "siteUnknown",
+      reasonParams: { site: s },
     };
   }
   const usedP = hit.platform;
@@ -183,6 +215,8 @@ async function computeRouting(site?: string): Promise<RoutingDecision> {
     used: [usedServer],
     skipped: [skippedServer],
     reason: `${hit.entry.siteName} は ${platformLabel(usedP)} 管理のため、${skippedServer} への問い合わせをスキップしました`,
+    reasonCode: "narrowed",
+    reasonParams: { site: hit.entry.siteName, platform: platformLabel(usedP), skipped: skippedServer },
   };
 }
 
@@ -223,6 +257,11 @@ export interface QueryHistoryRecord {
   isError: boolean;
   reason?: string;
   model?: string; // この実行に使ったモデル(旧履歴には無い。未指定なら CORSTACK_NETINV_MODEL → "sonnet")
+  // この実行(runInsightAgent/runOllamaAgent)の所要時間(ミリ秒)(26)。それ以前の履歴には無い。
+  durationMs?: number;
+  // この実行の回答言語(29 Task 4 で system prompt の切替に使っている値)。46 番で追加。
+  // ナレッジの知見候補を「回答と同じ言語」で書かせるために残す。旧履歴には無い(= ja 扱い)。
+  lang?: AgentLang;
   // ---- 詳細ビュー用(Task 4)。古い履歴には無いので View 側はオプショナル扱いにする ----
   answer?: string; // 回答全文(suggested-actions ブロック除去済み)
   calls?: HistoryToolCall[]; // 呼び出したツール一覧(最終状態)
@@ -230,6 +269,9 @@ export interface QueryHistoryRecord {
   suggestedActions?: SuggestedAction[]; // クリック可能な追い質問(Task 1)
   // MCP サーバーの接続健全性(09)。古い履歴には無い。level!=="ok" のターンには警告を出す。
   mcpHealth?: McpHealth;
+  // この実行の system prompt に注入した承認済みナレッジ(47)。注入が無かった実行には無い
+  // (= 存在すれば必ず 1 件以上)。ナレッジ側の参照回数と突き合わせられるように残す。
+  knowledgeRefs?: KnowledgeRef[];
 }
 
 async function readHistory(): Promise<QueryHistoryRecord[]> {
@@ -263,6 +305,90 @@ async function appendHistory(rec: QueryHistoryRecord): Promise<void> {
 // View 側(view/session.ts の sessionKey)と同じ規則にする。
 export function sessionKey(rec: QueryHistoryRecord): string {
   return rec.sessionId && rec.sessionId.trim() ? rec.sessionId : rec.id;
+}
+
+/** 履歴 1 件を id で引く(46: ナレッジの手動抽出が過去の調査を指定するのに使う)。 */
+export async function getHistoryRecord(id: string): Promise<QueryHistoryRecord | null> {
+  return (await readHistory()).find((r) => r.id === id) ?? null;
+}
+
+// ---- 調査完了フック(46)----
+//
+// 1 回の調査(手動 / 定期 / 自動事前調査のいずれも runQuery を通る)が履歴に書かれた直後に
+// 呼ばれる。ナレッジプラグイン(plugins/knowledge)が「知見候補の抽出」をここに繋ぐ。
+//
+// 依存の向きは knowledge → network-investigation の一方向に保つ(こちらは購読者を知らない)。
+// リスナー内の例外は握り潰す。後段の失敗で調査そのものの応答を壊さないため。
+
+type InvestigationCompleteListener = (rec: QueryHistoryRecord) => void;
+
+const completionListeners: InvestigationCompleteListener[] = [];
+
+export function onInvestigationComplete(fn: InvestigationCompleteListener): void {
+  completionListeners.push(fn);
+}
+
+function notifyCompletion(rec: QueryHistoryRecord): void {
+  for (const fn of completionListeners) {
+    try {
+      fn(rec);
+    } catch (err) {
+      console.error("[network-investigation] 調査完了フックでエラー:", err);
+    }
+  }
+}
+
+// ---- ナレッジ注入フック(47)----
+//
+// 調査を始める直前に「関連する既知の情報」を差し込むための口。完了フック
+// (onInvestigationComplete)と対になる入口側で、依存の向きは同じく
+// knowledge → network-investigation の一方向に保つ(こちらは中身を知らない)。
+//
+// 何を関連ありとするか・どんな文面にするか・参照実績をどう数えるかは、
+// すべて plugins/knowledge/retrieve.ts 側の責務。ここは
+// 「文字列が返ってきたら system prompt に足し、返らなければ従来どおり」だけを行う。
+
+/** 注入したナレッジ 1 件の記録(SSE・履歴に載せる。plugins/knowledge の KnowledgeRef と同じ形)。 */
+export interface KnowledgeRef {
+  id: string;
+  title: string;
+  score: number;
+}
+
+export interface KnowledgeInjection {
+  text: string;
+  refs: KnowledgeRef[];
+}
+
+export type KnowledgeProvider = (ctx: {
+  query: string;
+  site: string | null;
+  platform: Platform | null;
+  lang: AgentLang;
+}) => Promise<KnowledgeInjection | null>;
+
+let knowledgeProvider: KnowledgeProvider | null = null;
+
+export function setKnowledgeProvider(fn: KnowledgeProvider | null): void {
+  knowledgeProvider = fn;
+}
+
+/** 注入を取りに行く。失敗しても調査は続ける(ナレッジは補助であって前提ではない)。 */
+async function resolveKnowledge(
+  query: string,
+  site: string | null,
+  platform: Platform | null,
+  lang: AgentLang,
+): Promise<KnowledgeInjection | null> {
+  if (!knowledgeProvider) return null;
+  try {
+    const injection = await knowledgeProvider({ query, site, platform, lang });
+    if (!injection || !injection.text.trim() || injection.refs.length === 0) return null;
+    return injection;
+  } catch (err) {
+    console.error("[network-investigation] ナレッジ注入フックでエラー:", err);
+    return null;
+  }
 }
 
 // View から渡る sessionId の検証。jsonl へ書き、URL パスにも載るので文字種を絞る
@@ -316,6 +442,11 @@ export function normalizeModel(v: unknown): string | undefined {
   return MODEL_RE.test(s) ? s : undefined;
 }
 
+// UI のモデル選択で「Local(Ollama gemma4:12b)」を選んだときに送られてくる値(25)。
+// claude CLI 版(sonnet/opus)とは実行経路がまるごと別(ollama-agent.ts)になるため、
+// ここで分岐する。
+const LOCAL_MODEL_VALUE = "local";
+
 // 1クエリを実行し、進捗を SSE で流し、完了後に履歴へ追記する。
 // 対話(POST /query)とスケジューラ(runScheduledInvestigation)の両方から呼ぶ。
 async function runQuery(
@@ -325,6 +456,9 @@ async function runQuery(
   site: string | null,
   source: "manual" | "scheduled" | "auto",
   model?: string,
+  // 回答言語(29 Task 4)。対話実行は UI の表示言語がそのまま渡ってくる。
+  // 定期実行・自動事前調査は画面を持たないので既定(日本語)のまま。
+  lang: AgentLang = DEFAULT_AGENT_LANG,
 ): Promise<{ result: Awaited<ReturnType<typeof runInsightAgent>>; record: QueryHistoryRecord }> {
   const ts = new Date().toISOString();
   broadcast({ type: "run_start", runId, sessionId, query, site, ts });
@@ -337,14 +471,33 @@ async function runQuery(
     used: routing.used,
     skipped: routing.skipped,
     reason: routing.reason,
+    reasonCode: routing.reasonCode,
+    reasonParams: routing.reasonParams,
     resolvedPlatform: routing.resolvedPlatform,
   });
+
+  // 47: 承認済みナレッジの注入。ルーティングで確定したプラットフォームを渡し、
+  // 関連するものだけを絞り込ませる。該当が無ければ null が返り、以降は従来どおり。
+  // 手動・定期実行・自動事前調査のすべてがこの runQuery を通るので、経路による差は出ない。
+  const knowledge = await resolveKnowledge(query, site, routing.resolvedPlatform, lang);
+  if (knowledge) {
+    broadcast({ type: "knowledge_injected", runId, refs: knowledge.refs });
+  }
 
   // MCP 呼び出しをリアルタイムに配信しつつ、履歴詳細(Task 4)用に呼び出し・判断を蓄積する。
   const callsById = new Map<string, HistoryToolCall>();
   const judgments: PlatformJudgmentEvent[] = [];
-  const result = await runInsightAgent(query, site ?? undefined, {
-    model,
+  const runAgent = model === LOCAL_MODEL_VALUE ? runOllamaAgent : runInsightAgent;
+  // この実行(runInsightAgent/runOllamaAgent)そのものの所要時間(26)。Sonnet/Opus/Local を
+  // 別々に実行してタイムライン上で所要時間を見比べられるようにする。
+  const agentStartedAt = Date.now();
+  const result = await runAgent(query, site ?? undefined, {
+    // ローカルモデルには model を渡さない(Ollama 側のモデル名は OLLAMA_MODEL で決める。
+    // claude CLI 側の --model に "local" という値が渡ってしまう事故を避ける)。
+    model: model === LOCAL_MODEL_VALUE ? undefined : model,
+    lang,
+    // ナレッジ注入(47)。claude CLI 版・Ollama 版のどちらも同じ opts を受ける。
+    ...(knowledge ? { knowledge: knowledge.text } : {}),
     onMcpCall: (e: McpCallEvent) => {
       // 同じ id は calling → done/error と上書きし、最終状態だけを詳細に残す。
       callsById.set(e.id, {
@@ -366,6 +519,7 @@ async function runQuery(
       broadcast({ type: "platform_judgment", runId, ...e });
     },
   });
+  const durationMs = Date.now() - agentStartedAt;
 
   broadcast({
     type: "answer",
@@ -378,6 +532,7 @@ async function runQuery(
     platformsUsed: result.platformsUsed,
     mcpServers: result.mcpServers,
     mcpHealth: result.mcpHealth ?? null,
+    durationMs,
   });
 
   const record: QueryHistoryRecord = {
@@ -394,15 +549,22 @@ async function runQuery(
     isError: result.isError,
     reason: result.reason,
     ...(model ? { model } : {}),
+    durationMs,
+    lang,
     answer: result.answer || "",
     calls: [...callsById.values()],
     judgments,
     suggestedActions: result.suggestedActions,
     // 警告のあった実行だけ残す(ok のときに全履歴を膨らませない)。
     ...(result.mcpHealth && result.mcpHealth.level !== "ok" ? { mcpHealth: result.mcpHealth } : {}),
+    // 注入したナレッジ(47)。注入が無かった実行には載せない。
+    ...(knowledge ? { knowledgeRefs: knowledge.refs } : {}),
   };
   await appendHistory(record);
   broadcast({ type: "history", runId, sessionId });
+  // 46: 知見候補の抽出。購読側(knowledge)がバックグラウンドの直列キューに積むだけなので、
+  // ここで待たされることはない。
+  notifyCompletion(record);
 
   return { result, record };
 }
@@ -433,6 +595,9 @@ router.post("/query", async (req, res) => {
     const query = typeof body.query === "string" ? body.query : "";
     const site = typeof body.site === "string" && body.site.trim() ? body.site.trim() : null;
     const model = normalizeModel(body.model);
+    // UI の表示言語(src/i18n)。回答言語をこれに合わせる(29 Task 4)。
+    // 送ってこないクライアント(旧版・スクリプト)は従来どおり日本語になる。
+    const lang = normalizeAgentLang(body.lang);
     if (!query.trim()) {
       res.status(400).json({ error: "query is required" });
       return;
@@ -442,7 +607,7 @@ router.post("/query", async (req, res) => {
     const sessionId = normalizeSessionId(body.sessionId) ?? randomUUID();
     res.status(202).json({ runId, sessionId });
     // バックグラウンド実行(SSE で進捗が流れる)。失敗しても answer(isError)で通知済み。
-    void runQuery(runId, sessionId, query.trim(), site, "manual", model).catch((err) => {
+    void runQuery(runId, sessionId, query.trim(), site, "manual", model, lang).catch((err) => {
       console.error("[network-investigation] runQuery 失敗:", err);
     });
   } catch (err) {
@@ -686,11 +851,14 @@ router.put("/schedule-config", async (req, res) => {
     try {
       launchd = applySchedule(cfg);
     } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
       launchd = {
         ok: false,
         expression: null,
         loaded: false,
-        detail: err instanceof Error ? err.message : String(err),
+        detail: message,
+        detailCode: "registerFailed" as const,
+        detailParams: { error: message },
       };
     }
     res.json({ config: cfg, launchd });

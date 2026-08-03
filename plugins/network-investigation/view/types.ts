@@ -12,6 +12,7 @@ export interface ModelOption {
 export const MODEL_OPTIONS: ModelOption[] = [
   { value: "sonnet", label: "Sonnet" },
   { value: "opus", label: "Opus" },
+  { value: "local", label: "Local (gemma4:12b)" },
 ];
 // UI の初期選択値。実務のバランスを考慮した既定として Sonnet を選ぶ。
 export const DEFAULT_MODEL = "sonnet";
@@ -89,6 +90,18 @@ export interface McpHealth {
   problems: McpServerHealth[];
 }
 
+/**
+ * この実行の system prompt に注入された承認済みナレッジ 1 件(47)。
+ * サーバ(plugins/knowledge/retrieve.ts)が関連度で選んだもの。
+ * 本文は載せない(タイトルだけ)。中身はナレッジタブで読む。
+ */
+export interface KnowledgeRef {
+  id: string;
+  title: string;
+  /** 関連度(0〜1)。 */
+  score: number;
+}
+
 export interface HistoryRecord {
   id: string;
   // 「続けて調べる」で繋がった一連の実行をまとめるID(04)。旧履歴には無いので
@@ -106,6 +119,8 @@ export interface HistoryRecord {
   isError: boolean;
   reason?: string;
   model?: string; // この実行に使ったモデル(古い履歴には無い)
+  // この実行の所要時間(ミリ秒)(26)。それ以前の履歴には無いのでオプショナル。
+  durationMs?: number;
   // 詳細ビュー(Task 4)用。古い履歴には無いのでオプショナル。
   answer?: string;
   calls?: HistoryToolCall[];
@@ -113,6 +128,8 @@ export interface HistoryRecord {
   suggestedActions?: SuggestedAction[];
   // MCP 接続の警告(09)。ok の実行には載らない = 存在すれば必ず警告対象。
   mcpHealth?: McpHealth;
+  // 注入された承認済みナレッジ(47)。注入が無かった実行には載らない。
+  knowledgeRefs?: KnowledgeRef[];
 }
 
 // ---- 定期実行の設定(Task 5) ----
@@ -152,9 +169,15 @@ export type NIEvent =
       runId: string;
       used: string[];
       skipped: string[];
+      /** サーバの日本語文。reasonCode が未知のときだけフォールバックで表示する。 */
       reason: string;
+      /** 機械可読なルーティング理由(33 Task 4)。networkInvestigation.routing.<code> を引く。 */
+      reasonCode?: RoutingReasonCode;
+      reasonParams?: Record<string, string>;
       resolvedPlatform: Platform | null;
     }
+  // 承認済みナレッジを system prompt に注入した(47)。注入が無かった実行では流れない。
+  | { type: "knowledge_injected"; runId: string; refs: KnowledgeRef[] }
   | ({ type: "mcp_call"; runId: string } & McpCall)
   | { type: "platform_judgment"; runId: string; platform: Platform; reason: string }
   | {
@@ -168,13 +191,20 @@ export type NIEvent =
       platformsUsed: Platform[];
       mcpServers: string[];
       mcpHealth: McpHealth | null;
+      /** この実行の所要時間(ミリ秒)(26)。 */
+      durationMs: number;
     }
   | { type: "history"; runId: string; sessionId: string };
+
+/** ルーティング理由の機械可読コード(サーバ api.ts の RoutingReasonCode と一致させる)。 */
+export type RoutingReasonCode = "bothNoSite" | "siteUnknown" | "narrowed";
 
 // 画面に出す「ルーティング判定」1件分。
 export interface RoutingView {
   used: string[];
   skipped: string[];
   reason: string;
+  reasonCode?: RoutingReasonCode;
+  reasonParams?: Record<string, string>;
   resolvedPlatform: Platform | null;
 }

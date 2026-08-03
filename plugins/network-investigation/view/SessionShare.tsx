@@ -1,5 +1,6 @@
 import { useCallback, useLayoutEffect, useRef, useState, type RefObject } from "react";
 import { createPortal } from "react-dom";
+import { useT, type TFunc } from "../../../src/i18n";
 import { Markdown } from "./Markdown";
 import { fillPrintSessionRichSlots } from "./printClone";
 import { copyText, usePrintOnMount, useTransientMessage } from "./shareUi";
@@ -30,7 +31,9 @@ import {
 //                 並べた要約にし、「詳細はダッシュボードで」を添える(shareText.ts)。
 //   コピー     … 全ターンのプレーンテキスト(こちらは長さ制限なし)。
 
-export function turnToShareReport(turn: SessionTurn): ShareReport {
+// 失敗したターンの注記は「そのターンが失敗した」という事実の説明なので、共有・印刷の
+// 生成時点(= 押した人)の表示言語で出す。サーバ由来の reason があればそれを優先する。
+export function turnToShareReport(t: TFunc, turn: SessionTurn): ShareReport {
   return {
     query: turn.query,
     site: turn.site,
@@ -39,21 +42,23 @@ export function turnToShareReport(turn: SessionTurn): ShareReport {
     tools: turn.calls.map((c) => c.tool),
     platforms: turn.platformsUsed,
     answer: turn.answer,
-    errorNote: turn.isError ? turn.reason || "実行に失敗しました" : null,
+    errorNote: turn.isError ? turn.reason || t("networkInvestigation.turn.errorDefault") : null,
   };
 }
 
-export function toSessionReport(sessionId: string, turns: SessionTurn[]): SessionShareReport {
-  return { sessionId, turns: turns.map(turnToShareReport) };
+export function toSessionReport(t: TFunc, sessionId: string, turns: SessionTurn[]): SessionShareReport {
+  return { sessionId, turns: turns.map((turn) => turnToShareReport(t, turn)) };
 }
 
 // 紙面に出すスレッドレポート。画面には出ない(display:none、@media print でのみ表示)。
 function PrintSessionReport({
   report,
   screenRef,
+  t,
 }: {
   report: SessionShareReport;
   screenRef: RefObject<HTMLElement>;
+  t: TFunc;
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const platforms = sessionPlatforms(report);
@@ -69,61 +74,81 @@ function PrintSessionReport({
     <div id="ni-print-root" ref={rootRef}>
       <div className="ni-print-doc">
         <div className="ni-print-head">
-          <h1 className="ni-print-title">ネットワーク調査レポート(調査スレッド)</h1>
-          <div className="ni-print-sub">Multi Network Dashboard — Central / Mist 横断</div>
+          <h1 className="ni-print-title">{t("networkInvestigation.report.sessionTitle")}</h1>
+          <div className="ni-print-sub">{t("networkInvestigation.report.sub")}</div>
         </div>
 
         <table className="ni-print-meta">
           <tbody>
             <tr>
-              <th>対象サイト</th>
+              <th>{t("networkInvestigation.report.meta.site")}</th>
               <td>{sessionSiteLabel(report)}</td>
             </tr>
             <tr>
-              <th>期間</th>
+              <th>{t("networkInvestigation.report.meta.period")}</th>
               <td>{sessionPeriodLabel(report)}</td>
             </tr>
             <tr>
-              <th>ターン数</th>
+              <th>{t("networkInvestigation.report.meta.turns")}</th>
               <td>{report.turns.length}</td>
             </tr>
             <tr>
-              <th>最初のクエリ</th>
-              <td>{report.turns[0]?.query ?? "—"}</td>
+              <th>{t("networkInvestigation.report.meta.firstQuery")}</th>
+              <td>{report.turns[0]?.query ?? t("networkInvestigation.report.none")}</td>
             </tr>
             <tr>
-              <th>対象基盤</th>
-              <td>{platforms.length > 0 ? platforms.map(platformLabel).join(" / ") : "—"}</td>
+              <th>{t("networkInvestigation.report.meta.platforms")}</th>
+              <td>
+                {platforms.length > 0
+                  ? platforms.map(platformLabel).join(" / ")
+                  : t("networkInvestigation.report.none")}
+              </td>
             </tr>
             <tr>
-              <th>使用ツール</th>
-              <td>{tools.length > 0 ? tools.join(", ") : "(記録なし)"}</td>
+              <th>{t("networkInvestigation.report.meta.tools")}</th>
+              <td>{tools.length > 0 ? tools.join(", ") : t("networkInvestigation.report.toolsNone")}</td>
             </tr>
             <tr>
-              <th>モデル</th>
-              <td>{models.length > 0 ? models.join(", ") : "—"}</td>
+              <th>{t("networkInvestigation.report.meta.model")}</th>
+              <td>{models.length > 0 ? models.join(", ") : t("networkInvestigation.report.none")}</td>
             </tr>
           </tbody>
         </table>
 
-        {report.turns.map((t, i) => (
-          <section className="ni-print-turn" key={`${t.ts}-${i}`} data-ni-turn={t.turnId}>
+        {report.turns.map((turn, i) => (
+          <section className="ni-print-turn" key={`${turn.ts}-${i}`} data-ni-turn={turn.turnId}>
             <h2 className="ni-print-h2">
-              ターン {i + 1}/{report.turns.length} ・ {formatTimestamp(t.ts)} ・ {siteLabel(t.site)}
+              {t("networkInvestigation.report.turnHeading", {
+                i: i + 1,
+                n: report.turns.length,
+                ts: formatTimestamp(turn.ts),
+                site: siteLabel(turn.site),
+              })}
             </h2>
-            <div className="ni-print-turn-query">クエリ: {t.query}</div>
+            <div className="ni-print-turn-query">
+              {t("networkInvestigation.report.turnQuery", { query: turn.query })}
+            </div>
             <div className="ni-print-turn-tools ni-mono">
-              使用ツール: {uniqueTools(t.tools).join(", ") || "(記録なし)"}
-              {t.model ? ` ・ モデル: ${t.model}` : ""}
+              {t("networkInvestigation.report.turnTools", {
+                tools: uniqueTools(turn.tools).join(", ") || t("networkInvestigation.report.toolsNone"),
+              })}
+              {turn.model ? t("networkInvestigation.report.turnModel", { model: turn.model }) : ""}
             </div>
             <div className="ni-print-body">
-              {t.errorNote ? <p>(このターンは失敗しました){t.errorNote}</p> : <Markdown text={t.answer} print />}
+              {turn.errorNote ? (
+                <p>{t("networkInvestigation.report.turnFailed", { note: turn.errorNote })}</p>
+              ) : (
+                <Markdown text={turn.answer} print />
+              )}
             </div>
           </section>
         ))}
 
         <div className="ni-print-foot">
-          出力: {formatTimestamp(new Date().toISOString())} ・ {window.location.origin}
+          {t("networkInvestigation.report.foot", {
+            ts: formatTimestamp(new Date().toISOString()),
+            origin: window.location.origin,
+          })}
         </div>
       </div>
     </div>
@@ -140,6 +165,7 @@ export function SessionShareActions({
   /** 画面に描画済みのスレッド(グラフ / トポロジ図の複製元)のコンテナ */
   screenRef: RefObject<HTMLElement>;
 }) {
+  const t = useT();
   const [printing, setPrinting] = useState(false);
   const [message, showMessage] = useTransientMessage();
 
@@ -148,7 +174,7 @@ export function SessionShareActions({
   // 印刷ツリーはターンと画面側 DOM を data-ni-turn で対応付けるので、runId を持ち回る。
   const report: SessionShareReport = {
     sessionId,
-    turns: turns.map((t) => ({ ...turnToShareReport(t), turnId: t.id })),
+    turns: turns.map((turn) => ({ ...turnToShareReport(t, turn), turnId: turn.id })),
   };
 
   const onPrint = useCallback(() => setPrinting(true), []);
@@ -156,31 +182,43 @@ export function SessionShareActions({
   const onMail = useCallback(() => {
     const { href, truncated } = buildSessionMailtoHref(report, { sourceUrl: window.location.href });
     window.location.href = href;
-    showMessage(truncated ? "メールを作成しました(各ターンの要点のみ)" : "メールを作成しました");
+    showMessage(
+      truncated
+        ? t("networkInvestigation.share.msgMailSummary")
+        : t("networkInvestigation.share.msgMailCreated"),
+    );
     // report は毎描画で作り直す軽い値なので依存に入れない(turns/sessionId が実体)。
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionId, turns, showMessage]);
+  }, [sessionId, turns, showMessage, t]);
 
   const onCopy = useCallback(async () => {
     const ok = await copyText(buildSessionShareText(report, { sourceUrl: window.location.href }));
-    showMessage(ok ? `スレッド全体(${turns.length}ターン)をコピーしました` : "コピーに失敗しました");
+    showMessage(
+      ok
+        ? t("networkInvestigation.share.msgCopiedSession", { n: turns.length })
+        : t("networkInvestigation.share.msgCopyFailed"),
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionId, turns, showMessage]);
+  }, [sessionId, turns, showMessage, t]);
 
   return (
     <div className="ni-share ni-share-session">
-      <span className="ni-share-label ni-mono">スレッド全体を共有</span>
-      <button className="ni-btn sm" onClick={onPrint} title="このスレッドの全ターンを 1 つのレポートとして印刷します(ダイアログで「PDF として保存」を選べば PDF 化できます)">
-        印刷 / PDF
+      <span className="ni-share-label ni-mono">{t("networkInvestigation.share.sessionLabel")}</span>
+      <button className="ni-btn sm" onClick={onPrint} title={t("networkInvestigation.share.printSessionTitle")}>
+        {t("networkInvestigation.share.print")}
       </button>
-      <button className="ni-btn sm" onClick={onMail} title="各ターンの要点をまとめた要約をメール本文にします">
-        メール(要約)
+      <button className="ni-btn sm" onClick={onMail} title={t("networkInvestigation.share.mailSessionTitle")}>
+        {t("networkInvestigation.share.mailSummary")}
       </button>
-      <button className="ni-btn sm" onClick={onCopy} title="このスレッドの全ターンをプレーンテキストでコピーします">
-        コピー
+      <button className="ni-btn sm" onClick={onCopy} title={t("networkInvestigation.share.copySessionTitle")}>
+        {t("networkInvestigation.share.copy")}
       </button>
       {message && <span className="ni-share-msg ni-mono">{message}</span>}
-      {printing && createPortal(<PrintSessionReport report={report} screenRef={screenRef} />, document.body)}
+      {printing &&
+        createPortal(
+          <PrintSessionReport report={report} screenRef={screenRef} t={t} />,
+          document.body,
+        )}
     </div>
   );
 }

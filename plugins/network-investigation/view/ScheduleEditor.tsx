@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
+import { useT, type TFunc } from "../../../src/i18n";
+import { weekdayLabel } from "./session";
 import type { ScheduleConfig, ScheduledQuery, SiteEntry } from "./types";
 import { MODEL_OPTIONS, DEFAULT_MODEL } from "./types";
 import {
@@ -8,7 +10,33 @@ import {
   fetchScheduledQueries,
   updateScheduleConfig,
   updateScheduledQuery,
+  type LaunchdSyncResult,
 } from "./api";
+
+/**
+ * cron 反映結果(サーバの detailCode + detailParams)を表示文にする(33 Task 4)。
+ * detailCode を持たない応答(想定外・旧サーバ)はサーバの日本語文をそのまま出す
+ * = 「何も出ない」より運用しやすい、というのが 29 番以降の一貫した方針。
+ */
+function scheduleDetailText(t: TFunc, r: LaunchdSyncResult): string {
+  if (!r.detailCode) return r.detail;
+  const p = r.detailParams ?? {};
+  if (r.detailCode !== "applied") {
+    return t(`networkInvestigation.schedule.detail.${r.detailCode}`, p);
+  }
+  const weekly = p.frequency === "weekly";
+  const freq = weekly
+    ? t("networkInvestigation.schedule.detail.freqWeekly", {
+        weekday: weekdayLabel(t, Number(p.dayOfWeek)),
+        time: String(p.time ?? ""),
+      })
+    : t("networkInvestigation.schedule.detail.freqDaily", { time: String(p.time ?? "") });
+  return t("networkInvestigation.schedule.detail.applied", {
+    freq,
+    expression: String(p.expression ?? ""),
+    tz: String(p.tz ?? ""),
+  });
+}
 
 // 定期実行のカスタマイズ UI(Task 5)。
 // - 上段: 実行時刻・頻度(daily/weekly)・有効/無効 → 保存でサーバー側の cron ジョブを張り直す
@@ -16,15 +44,21 @@ import {
 // - 下段: 定期実行するクエリの一覧(追加・編集・削除・enable 切替)。
 // CLAUDE.md 原則に従い、View はキャッシュ・楽観的更新を持たず、サーバーが返した「今の値」で置き換える。
 
-const WEEKDAYS = ["日", "月", "火", "水", "木", "金", "土"];
+// 33 L-5: 曜日の並びは 0=日曜 … 6=土曜(cron / launchd と同じ)。ラベルは辞書側
+// (networkInvestigation.schedule.weekday.*)に完全な曜日名を置き、session.ts の
+// weekdayLabel() 経由で引く。Timeline.tsx の定期実行サマリと同じ 1 箇所を共有する。
+const WEEKDAY_VALUES = [0, 1, 2, 3, 4, 5, 6];
 
 const DEFAULT_CONFIG: ScheduleConfig = { hour: 7, minute: 0, frequency: "daily", enabled: true };
 
 export function ScheduleEditor({ entries, onChanged }: { entries: SiteEntry[]; onChanged?: () => void }) {
+  const t = useT();
   const [queries, setQueries] = useState<ScheduledQuery[]>([]);
   const [config, setConfig] = useState<ScheduleConfig>(DEFAULT_CONFIG);
   const [savingConfig, setSavingConfig] = useState(false);
-  const [launchdMsg, setLaunchdMsg] = useState<string | null>(null);
+  // 反映結果は「文にしたもの」ではなく応答そのものを持つ。文にするのは描画時。
+  // 文字列で持つと、保存したあとに表示言語を切り替えてもこの行だけ前の言語で残ってしまう。
+  const [launchdResult, setLaunchdResult] = useState<LaunchdSyncResult | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
   // 新規クエリ入力。
@@ -52,7 +86,7 @@ export function ScheduleEditor({ entries, onChanged }: { entries: SiteEntry[]; o
 
   const siteSelect = (value: string, onChange: (v: string) => void, id?: string) => (
     <select className="ni-select" value={value} onChange={(e) => onChange(e.target.value)} id={id}>
-      <option value="">サイト指定なし(両方)</option>
+      <option value="">{t("networkInvestigation.schedule.siteAny")}</option>
       <optgroup label="Central">
         {central.map((e) => (
           <option key={e.siteId} value={e.siteName}>
@@ -74,7 +108,7 @@ export function ScheduleEditor({ entries, onChanged }: { entries: SiteEntry[]; o
     <select className="ni-select ni-model-select" value={value} onChange={(e) => onChange(e.target.value)}>
       {MODEL_OPTIONS.map((m) => (
         <option key={m.value} value={m.value}>
-          {`モデル: ${m.label}`}
+          {t("networkInvestigation.console.modelOption", { label: m.label })}
         </option>
       ))}
     </select>
@@ -142,13 +176,14 @@ export function ScheduleEditor({ entries, onChanged }: { entries: SiteEntry[]; o
 
   const saveConfig = async () => {
     setSavingConfig(true);
-    setLaunchdMsg(null);
+    setLaunchdResult(null);
     setErr(null);
     try {
       const { config: saved, launchd } = await updateScheduleConfig(config);
       setConfig(saved);
       onChanged?.();
-      setLaunchdMsg(`${launchd.ok ? "反映しました" : "反映に失敗"}: ${launchd.detail}`);
+      // 33 Task 4: サーバは日本語の文章ではなく機械可読な detailCode + params を返す。
+      setLaunchdResult(launchd);
     } catch (e) {
       setErr(String(e));
     } finally {
@@ -167,7 +202,7 @@ export function ScheduleEditor({ entries, onChanged }: { entries: SiteEntry[]; o
       {/* 実行時刻・頻度 */}
       <div className="ni-sched-config">
         <label className="ni-sched-field">
-          <span>頻度</span>
+          <span>{t("networkInvestigation.schedule.frequency")}</span>
           <select
             className="ni-select"
             value={config.frequency}
@@ -179,22 +214,22 @@ export function ScheduleEditor({ entries, onChanged }: { entries: SiteEntry[]; o
               }))
             }
           >
-            <option value="daily">毎日</option>
-            <option value="weekly">毎週</option>
+            <option value="daily">{t("networkInvestigation.schedule.daily")}</option>
+            <option value="weekly">{t("networkInvestigation.schedule.weekly")}</option>
           </select>
         </label>
 
         {config.frequency === "weekly" && (
           <label className="ni-sched-field">
-            <span>曜日</span>
+            <span>{t("networkInvestigation.schedule.dayOfWeek")}</span>
             <select
               className="ni-select"
               value={config.dayOfWeek ?? 1}
               onChange={(e) => setConfig((c) => ({ ...c, dayOfWeek: Number(e.target.value) }))}
             >
-              {WEEKDAYS.map((w, i) => (
+              {WEEKDAY_VALUES.map((i) => (
                 <option key={i} value={i}>
-                  {w}曜
+                  {weekdayLabel(t, i)}
                 </option>
               ))}
             </select>
@@ -202,7 +237,7 @@ export function ScheduleEditor({ entries, onChanged }: { entries: SiteEntry[]; o
         )}
 
         <label className="ni-sched-field">
-          <span>時刻</span>
+          <span>{t("networkInvestigation.schedule.time")}</span>
           <span className="ni-sched-time">
             <input
               className="ni-input ni-time-input"
@@ -230,18 +265,29 @@ export function ScheduleEditor({ entries, onChanged }: { entries: SiteEntry[]; o
             checked={config.enabled}
             onChange={(e) => setConfig((c) => ({ ...c, enabled: e.target.checked }))}
           />
-          <span>定期実行を有効にする</span>
+          <span>{t("networkInvestigation.schedule.enableLabel")}</span>
         </label>
 
         <button className="ni-btn primary sm" onClick={saveConfig} disabled={savingConfig}>
-          {savingConfig ? "反映中…" : "時刻・頻度を保存(cron 反映)"}
+          {savingConfig
+            ? t("networkInvestigation.schedule.savingBtn")
+            : t("networkInvestigation.schedule.saveBtn")}
         </button>
       </div>
-      {launchdMsg && <div className="ni-mono ni-dim ni-launchd-msg">{launchdMsg}</div>}
+      {launchdResult && (
+        <div className="ni-mono ni-dim ni-launchd-msg">
+          {t("networkInvestigation.schedule.applyMsg", {
+            state: t(`networkInvestigation.schedule.apply${launchdResult.ok ? "Ok" : "Fail"}`),
+            detail: scheduleDetailText(t, launchdResult),
+          })}
+        </div>
+      )}
 
       {/* クエリ一覧 */}
       <div className="ni-sched-qlist">
-        {queries.length === 0 && <div className="ni-dim sm">定期実行するクエリはまだありません。下で追加してください。</div>}
+        {queries.length === 0 && (
+          <div className="ni-dim sm">{t("networkInvestigation.schedule.emptyList")}</div>
+        )}
         {queries.map((q) => (
           <div className={`ni-sched-qrow${q.enabled ? "" : " off"}`} key={q.id}>
             {editId === q.id ? (
@@ -256,30 +302,44 @@ export function ScheduleEditor({ entries, onChanged }: { entries: SiteEntry[]; o
                   {siteSelect(editSite, setEditSite)}
                   {modelSelect(editModel, setEditModel)}
                   <button className="ni-btn primary sm" onClick={saveEdit}>
-                    保存
+                    {t("networkInvestigation.schedule.save")}
                   </button>
                   <button className="ni-btn sm" onClick={() => setEditId(null)}>
-                    取消
+                    {t("networkInvestigation.schedule.cancel")}
                   </button>
                 </div>
               </div>
             ) : (
               <>
-                <label className="ni-sched-toggle" title={q.enabled ? "有効" : "無効"}>
+                <label
+                  className="ni-sched-toggle"
+                  title={t(`networkInvestigation.schedule.toggle${q.enabled ? "On" : "Off"}`)}
+                >
                   <input type="checkbox" checked={q.enabled} onChange={() => onToggle(q)} />
                 </label>
                 <div className="ni-sched-qbody">
                   <div className="ni-sched-qtext">{q.query}</div>
                   <div className="ni-mono ni-dim sm">
-                    {q.site ? `site=${q.site}` : "site=未指定(両方)"} ・ {q.model ? `model=${q.model}` : "model=(旧・未指定)"}
+                    {t("networkInvestigation.schedule.qmeta", {
+                      site: q.site
+                        ? t("networkInvestigation.schedule.siteValue", { site: q.site })
+                        : t("networkInvestigation.schedule.siteUnset"),
+                      model: q.model
+                        ? t("networkInvestigation.schedule.modelValue", { model: q.model })
+                        : t("networkInvestigation.schedule.modelLegacy"),
+                    })}
                   </div>
                 </div>
                 <div className="ni-sched-qactions">
                   <button className="ni-btn sm" onClick={() => startEdit(q)}>
-                    編集
+                    {t("networkInvestigation.schedule.edit")}
                   </button>
-                  <button className="ni-btn sm" onClick={() => onDelete(q)} title="削除">
-                    削除
+                  <button
+                    className="ni-btn sm"
+                    onClick={() => onDelete(q)}
+                    title={t("networkInvestigation.schedule.deleteTitle")}
+                  >
+                    {t("networkInvestigation.schedule.delete")}
                   </button>
                 </div>
               </>
@@ -293,7 +353,7 @@ export function ScheduleEditor({ entries, onChanged }: { entries: SiteEntry[]; o
         <textarea
           className="ni-input"
           rows={2}
-          placeholder="定期実行するクエリを追加(例: 全サイトの健全性を確認して)"
+          placeholder={t("networkInvestigation.schedule.addPlaceholder")}
           value={newQuery}
           onChange={(e) => setNewQuery(e.target.value)}
         />
@@ -301,7 +361,7 @@ export function ScheduleEditor({ entries, onChanged }: { entries: SiteEntry[]; o
           {siteSelect(newSite, setNewSite)}
           {modelSelect(newModel, setNewModel)}
           <button className="ni-btn sm" onClick={onAdd} disabled={!newQuery.trim()}>
-            クエリを追加
+            {t("networkInvestigation.schedule.addBtn")}
           </button>
         </div>
       </div>

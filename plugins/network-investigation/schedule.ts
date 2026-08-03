@@ -193,7 +193,18 @@ export interface ScheduleSyncResult {
   expression: string | null;
   /** cron ジョブが動いているか */
   loaded: boolean;
+  /**
+   * 起動ログ・フォールバック表示用の日本語文。画面はこれを直接出さず detailCode を引く
+   * (33 Task 4: 「保存」を押した本人の表示言語で出したいが、サーバは閲覧者の言語を持たない)。
+   */
   detail: string;
+  /**
+   * 機械可読な結果コード。画面側が networkInvestigation.schedule.detail.<code> を引く。
+   * 文章をサーバで組み立てないのは CLAUDE.md の i18n 方針(言語非依存の値を渡す)に合わせるため。
+   */
+  detailCode: "disabled" | "invalid" | "applied" | "registerFailed";
+  /** detailCode のテンプレートに埋める値。 */
+  detailParams: Record<string, string | number>;
 }
 
 /**
@@ -210,12 +221,26 @@ export function applySchedule(cfg: ScheduleConfig): ScheduleSyncResult {
   }
 
   if (!cfg.enabled) {
-    return { ok: true, expression: null, loaded: false, detail: "定期実行は無効(cron ジョブを停止しました)" };
+    return {
+      ok: true,
+      expression: null,
+      loaded: false,
+      detail: "定期実行は無効(cron ジョブを停止しました)",
+      detailCode: "disabled",
+      detailParams: {},
+    };
   }
 
   const expression = buildCronExpression(cfg);
   if (!cron.validate(expression)) {
-    return { ok: false, expression, loaded: false, detail: `cron 式が不正です: ${expression}` };
+    return {
+      ok: false,
+      expression,
+      loaded: false,
+      detail: `cron 式が不正です: ${expression}`,
+      detailCode: "invalid",
+      detailParams: { expression },
+    };
   }
 
   try {
@@ -236,22 +261,35 @@ export function applySchedule(cfg: ScheduleConfig): ScheduleSyncResult {
       { timezone: CRON_TZ },
     );
     currentExpression = expression;
-    const freqNote =
-      cfg.frequency === "weekly"
-        ? `毎週 曜日=${cfg.dayOfWeek ?? 1}(0=日) ${String(cfg.hour).padStart(2, "0")}:${String(cfg.minute).padStart(2, "0")}`
-        : `毎日 ${String(cfg.hour).padStart(2, "0")}:${String(cfg.minute).padStart(2, "0")}`;
+    const hhmm = `${String(cfg.hour).padStart(2, "0")}:${String(cfg.minute).padStart(2, "0")}`;
+    const weekly = cfg.frequency === "weekly";
+    const freqNote = weekly
+      ? `毎週 曜日=${cfg.dayOfWeek ?? 1}(0=日) ${hhmm}`
+      : `毎日 ${hhmm}`;
     return {
       ok: true,
       expression,
       loaded: true,
       detail: `${freqNote}(cron "${expression}" / TZ=${CRON_TZ})で定期実行を設定しました`,
+      detailCode: "applied",
+      detailParams: {
+        // 曜日は番号のまま渡し、ラベル化(「月曜」/「Monday」)は画面側の辞書に任せる。
+        frequency: weekly ? "weekly" : "daily",
+        dayOfWeek: weekly ? (cfg.dayOfWeek ?? 1) : -1,
+        time: hhmm,
+        expression,
+        tz: CRON_TZ,
+      },
     };
   } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
     return {
       ok: false,
       expression,
       loaded: false,
-      detail: `cron ジョブの登録に失敗: ${err instanceof Error ? err.message : String(err)}`,
+      detail: `cron ジョブの登録に失敗: ${message}`,
+      detailCode: "registerFailed",
+      detailParams: { error: message },
     };
   }
 }

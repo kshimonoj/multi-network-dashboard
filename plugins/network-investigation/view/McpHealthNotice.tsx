@@ -1,3 +1,4 @@
+import { useT, type TFunc } from "../../../src/i18n";
 import { LogoBadge } from "./LogoBadge";
 import type { McpHealth, McpServerHealth } from "./types";
 
@@ -13,19 +14,23 @@ import type { McpHealth, McpServerHealth } from "./types";
 //   - warn        … 到達確認ができなかった / claude 側だけが失敗と言っている。アンバー。
 // 回答自体は返っているので「失敗」ではなく警告に留める(誤検知の実害を小さくする)。
 
-const platformName = (p: string | null) => (p === "central" ? "Central" : p === "mist" ? "Mist" : "不明");
+const platformName = (t: TFunc, p: string | null) =>
+  p === "central" ? "Central" : p === "mist" ? "Mist" : t("networkInvestigation.mcpHealth.platformUnknown");
 
-function serverLine(s: McpServerHealth): string {
-  return s.level === "unreachable" ? "接続できませんでした" : "接続状態を確認できませんでした";
+function serverLine(t: TFunc, s: McpServerHealth): string {
+  return s.level === "unreachable"
+    ? t("networkInvestigation.mcpHealth.stateUnreachable")
+    : t("networkInvestigation.mcpHealth.stateUnknown");
 }
 
-export function mcpHealthTagLabel(level: McpHealth["level"]): string | null {
-  if (level === "unreachable") return "MCP未接続";
-  if (level === "warn") return "要確認";
+export function mcpHealthTagLabel(t: TFunc, level: McpHealth["level"]): string | null {
+  if (level === "unreachable") return t("networkInvestigation.mcpHealth.tagUnreachable");
+  if (level === "warn") return t("networkInvestigation.mcpHealth.tagWarn");
   return null;
 }
 
 export function McpHealthNotice({ health }: { health: McpHealth | null | undefined }) {
+  const t = useT();
   if (!health || health.level === "ok" || health.problems.length === 0) return null;
 
   const unreachable = health.level === "unreachable";
@@ -35,8 +40,8 @@ export function McpHealthNotice({ health }: { health: McpHealth | null | undefin
         <span aria-hidden>⚠</span>
         <span>
           {unreachable
-            ? "一部の MCP サーバーに接続できませんでした(認証切れの可能性があります)"
-            : "一部の MCP サーバーの接続状態を確認できませんでした"}
+            ? t("networkInvestigation.mcpHealth.headUnreachable")
+            : t("networkInvestigation.mcpHealth.headWarn")}
         </span>
       </div>
       {health.problems.map((s) => (
@@ -44,15 +49,22 @@ export function McpHealthNotice({ health }: { health: McpHealth | null | undefin
           <div className="ni-mcp-health-item-head">
             <LogoBadge target={s.server} size={18} skipped title={s.server} />
             <span className="ni-mono">
-              {s.server}({platformName(s.platform)})
+              {t("networkInvestigation.mcpHealth.serverLine", {
+                server: s.server,
+                platform: platformName(t, s.platform),
+              })}
             </span>
-            <span className={`ni-mcp-health-state ${s.level}`}>{serverLine(s)}</span>
+            <span className={`ni-mcp-health-state ${s.level}`}>{serverLine(t, s)}</span>
           </div>
           {s.reason && <div className="ni-mono ni-mcp-health-reason">{s.reason}</div>}
           <div className="ni-mono ni-dim ni-mcp-health-note">
-            この実行では {s.server} のツールが 1 度も使われていません
-            {s.initStatus !== "unknown" && `(claude 初期化時の状態: ${s.initStatus})`}。
-            回答は残りのデータだけで組み立てられている可能性があります。
+            {t("networkInvestigation.mcpHealth.note", {
+              server: s.server,
+              init:
+                s.initStatus !== "unknown"
+                  ? t("networkInvestigation.mcpHealth.noteInit", { status: s.initStatus })
+                  : "",
+            })}
           </div>
         </div>
       ))}

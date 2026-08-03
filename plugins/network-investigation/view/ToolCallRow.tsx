@@ -1,3 +1,4 @@
+import { useT } from "../../../src/i18n";
 import { LogoBadge } from "./LogoBadge";
 import { toolLabel } from "./toolLabels";
 import type { ToolCallFailure } from "./types";
@@ -37,6 +38,9 @@ export function ToolCallRow({
   statusText: string;
   showDot?: boolean;
 }) {
+  // useT() は表示言語の Context を購読する。toolLabel() は getLang() を直接読む純関数なので、
+  // ここで購読しておかないと言語切替でツールラベルだけ古い言語のまま残る。
+  const t = useT();
   const label = toolLabel(call.tool);
   const showRaw = label !== call.tool; // ラベルがある時だけ生ツール名を併記
 
@@ -60,7 +64,7 @@ export function ToolCallRow({
 
   return (
     <details className="ni-call-fail">
-      <summary className="ni-call-row" title="クリックで失敗の詳細を表示">
+      <summary className="ni-call-row" title={t("networkInvestigation.toolCall.failTitle")}>
         {body}
       </summary>
       <div className="ni-call-fail-body">
@@ -68,14 +72,16 @@ export function ToolCallRow({
           {call.errorStatus != null ? (
             <span className="ni-err-code">HTTP {call.errorStatus}</span>
           ) : (
-            <span className="ni-err-code none">ステータスコードなし</span>
+            <span className="ni-err-code none">{t("networkInvestigation.toolCall.noStatusCode")}</span>
           )}
-          <span className="ni-dim sm">MCP サーバー({call.server})が返したエラー</span>
+          <span className="ni-dim sm">
+            {t("networkInvestigation.toolCall.serverError", { server: call.server })}
+          </span>
         </div>
         {call.error && <pre className="ni-err-text">{call.error}</pre>}
         {call.input && (
           <>
-            <div className="ni-err-label ni-dim">呼び出し引数</div>
+            <div className="ni-err-label ni-dim">{t("networkInvestigation.toolCall.args")}</div>
             <pre className="ni-err-text">{call.input}</pre>
           </>
         )}

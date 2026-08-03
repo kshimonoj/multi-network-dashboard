@@ -292,17 +292,15 @@ export function mcpServerSourceStatus(): { source: "live" | "fallback" | "unavai
 }
 
 /**
- * 指定プラットフォームに対応する MCP サーバーだけを含む一時 mcp-config を書き出し、
- * その絶対パスを返す。これが「ルーティングスキップ」の実体。
+ * 指定プラットフォームに対応する MCP サーバー定義だけを取り出す(= narrowing の実体)。
+ * claude CLI 用の一時 config 書き出し(writeNarrowedMcpConfig)と、Ollama 版が直接
+ * @modelcontextprotocol/sdk で繋ぐ経路(ollama-mcp-client.ts)の両方から呼ぶ共通ロジック。
  *
  * - platforms が ["central"] なら central-mcp だけ、["mist"] なら mist-cloud だけを含める。
  * - 両方指定(プラットフォーム不明時)なら両方含める。
- * - claude 側は --strict-mcp-config と併用して「この config のサーバーだけ使う」を強制する。
+ * - Docker 内ではループバック宛(central-mcp)を host.docker.internal へ差し替える。
  */
-export async function writeNarrowedMcpConfig(platforms: Platform[]): Promise<{
-  path: string;
-  serverNames: string[];
-}> {
+export async function getNarrowedServerDefs(platforms: Platform[]): Promise<Record<string, McpServerDef>> {
   const all = await readGlobalMcpServers();
   const wanted = platforms.length ? platforms : ALL_PLATFORMS;
 
@@ -315,9 +313,21 @@ export async function writeNarrowedMcpConfig(platforms: Platform[]): Promise<{
         `MCP サーバー "${name}"(platform=${p})が ~/.claude.json に見つかりません`,
       );
     }
-    // Docker 内ではループバック宛(central-mcp)を host.docker.internal へ差し替える。
     mcpServers[name] = rewriteServerDefHost(def);
   }
+  return mcpServers;
+}
+
+/**
+ * 指定プラットフォームに対応する MCP サーバーだけを含む一時 mcp-config を書き出し、
+ * その絶対パスを返す。claude CLI の --mcp-config 用。
+ * claude 側は --strict-mcp-config と併用して「この config のサーバーだけ使う」を強制する。
+ */
+export async function writeNarrowedMcpConfig(platforms: Platform[]): Promise<{
+  path: string;
+  serverNames: string[];
+}> {
+  const mcpServers = await getNarrowedServerDefs(platforms);
 
   // ディレクトリは owner のみ(0700)、ファイルは owner read/write のみ(0600)で書く。
   await mkdir(MCP_CONFIG_DIR, { recursive: true, mode: 0o700 });

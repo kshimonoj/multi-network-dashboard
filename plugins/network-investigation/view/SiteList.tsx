@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useT } from "../../../src/i18n";
 import { LogoBadge } from "./LogoBadge";
 import type { SiteEntry, SiteStatusFile } from "./types";
 
@@ -30,6 +31,7 @@ export function SiteList({
   selectedSite: string;
   onSelectSite: (siteName: string) => void;
 }) {
+  const t = useT();
   // Central → Mist、その中はサイト名昇順で並べる。
   const sorted = useMemo(() => {
     const order: Record<string, number> = { central: 0, mist: 1 };
@@ -41,7 +43,7 @@ export function SiteList({
   }, [entries]);
 
   if (sorted.length === 0) {
-    return <div className="ni-empty">サイト対応表がまだありません。</div>;
+    return <div className="ni-empty">{t("networkInvestigation.sitePanel.empty")}</div>;
   }
 
   return (
@@ -56,7 +58,11 @@ export function SiteList({
             role="listitem"
             className={`ni-site-row${selected ? " selected" : ""}`}
             onClick={() => onSelectSite(e.siteName)}
-            title={`${e.siteName}(${platformName(e.platform)} 管理 / siteId=${e.siteId})をクエリ対象にする`}
+            title={t("networkInvestigation.sitePanel.rowTitle", {
+              site: e.siteName,
+              platform: platformName(e.platform),
+              siteId: e.siteId,
+            })}
           >
             <LogoBadge target={e.platform} size={18} title={platformName(e.platform)} />
             <span className="ni-site-name">{e.siteName}</span>
@@ -70,7 +76,7 @@ export function SiteList({
                 <span className={st.alerts ? "ni-site-alerts" : "ni-dim"}>alert {st.alerts ?? "–"}</span>
               </span>
             ) : (
-              <span className="ni-site-metrics ni-mono ni-dim">状態未取得</span>
+              <span className="ni-site-metrics ni-mono ni-dim">{t("networkInvestigation.sitePanel.notFetched")}</span>
             )}
           </button>
         );

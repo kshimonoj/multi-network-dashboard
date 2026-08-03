@@ -1,5 +1,5 @@
 {
-  "$note": "MCP ツール名 → 人間向けの短い日本語ラベル。SSE ログ・スレッド表示でツールの生名(central_get_alerts 等)の代わりに表示する。未登録のツールはツール名をそのままフォールバック表示するので、全ツールを網羅する必要はない(よく出るものだけでよい)。View(SseLog / Turn)と共通で使う。",
+  "$note": "MCP ツール名 → 人間向けの短い日本語ラベル。SSE ログ・スレッド表示でツールの生名(central_get_alerts 等)の代わりに表示する。未登録のツールはツール名をそのままフォールバック表示するので、全ツールを網羅する必要はない(よく出るものだけでよい)。View(SseLog / Turn)と共通で使う。 33 番で英語ラベル(labelsEn)を追加した。view/toolLabels.ts が表示言語で引き分ける。",
   "labels": {
     "central_get_summary": "サイト概要を取得",
     "central_get_sites": "サイト詳細を取得",
@@ -33,5 +33,39 @@
     "search_mist_data": "データを検索",
     "find_mist_entity": "エンティティを検索",
     "get_mist_constants": "定数情報を取得"
+  },
+  "labelsEn": {
+    "central_get_summary": "Get site summary",
+    "central_get_sites": "Get site details",
+    "central_get_alerts": "Check alerts",
+    "central_get_events": "Check events",
+    "central_get_events_count": "Count events",
+    "central_get_devices": "Get device list",
+    "central_get_aps": "Check access points",
+    "central_get_ap_details": "Get AP details",
+    "central_get_ap_trends": "Get AP trends",
+    "central_get_switches": "Check switches",
+    "central_get_switch_details": "Get switch details",
+    "central_get_switch_trends": "Get switch trends",
+    "central_get_gateways": "Check gateways",
+    "central_get_gateway_details": "Get gateway details",
+    "central_get_gateway_trends": "Get gateway trends",
+    "central_get_gateway_cluster": "Check gateway cluster",
+    "central_get_cluster_capacity_trends": "Get cluster capacity trends",
+    "central_get_clients": "Check connected clients",
+    "central_find_client": "Find a client",
+    "central_find_device": "Find a device",
+    "central_get_wlans": "Check WLAN config",
+    "central_get_wlan_stats": "Get WLAN stats",
+    "central_run_network_test": "Run a network test",
+    "central_run_show_commands": "Run show commands",
+    "central_bounce_port": "Bounce a port",
+    "get_mist_self": "Get account info",
+    "get_mist_stats": "Get stats",
+    "get_mist_config": "Get config",
+    "get_mist_insights": "Get insights",
+    "search_mist_data": "Search data",
+    "find_mist_entity": "Find an entity",
+    "get_mist_constants": "Get constants"
   }
 }

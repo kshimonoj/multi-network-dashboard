@@ -1,3 +1,4 @@
+import { useT } from "../../../src/i18n";
 import type { SuggestedAction } from "./types";
 
 // 回答の下に出す「クリック可能な追い質問」チップ(Task 1)。
@@ -10,10 +11,11 @@ export function SuggestedActions({
   actions: SuggestedAction[] | undefined;
   onRun: (query: string, site: string | null) => void;
 }) {
+  const t = useT();
   if (!actions || actions.length === 0) return null;
   return (
     <div className="ni-suggested">
-      <div className="ni-suggested-label">続けて調べる</div>
+      <div className="ni-suggested-label">{t("networkInvestigation.suggested.label")}</div>
       <div className="ni-suggested-chips">
         {actions.map((a, i) => (
           <button

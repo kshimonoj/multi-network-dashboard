@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { InvestigationRequest, PendingHistoryFocus, PluginEntry } from "../../../src/shell";
 import type {
   HistoryRecord,
+  KnowledgeRef,
   McpCall,
   McpHealth,
   NIEvent,
@@ -15,6 +16,7 @@ import type {
 } from "./types";
 import { MODEL_OPTIONS, DEFAULT_MODEL } from "./types";
 import { useSetTopbarModel, topbarModelLabel } from "../../../src/shell";
+import { formatDateTime, useLanguage } from "../../../src/i18n";
 import {
   fetchHistory,
   fetchScheduleConfig,
@@ -48,6 +50,10 @@ interface RunState {
   suggestedActions: SuggestedAction[];
   /** MCP サーバーの接続健全性(09)。answer イベントと一緒に届く。 */
   mcpHealth: McpHealth | null;
+  /** この実行の所要時間(ミリ秒)(26)。answer イベントと一緒に届く。 */
+  durationMs: number | null;
+  /** system prompt に注入された承認済みナレッジ(47)。注入が無かった実行では空のまま。 */
+  knowledgeRefs: KnowledgeRef[];
 }
 
 function emptyRun(): RunState {
@@ -63,6 +69,8 @@ function emptyRun(): RunState {
     platformsUsed: [],
     suggestedActions: [],
     mcpHealth: null,
+    durationMs: null,
+    knowledgeRefs: [],
   };
 }
 
@@ -93,6 +101,8 @@ export function NetworkInvestigation({
   pendingHistoryFocus?: PendingHistoryFocus | null;
   onConsumePendingHistoryFocus?: () => void;
 }) {
+  // 言語は t() だけでなく日時整形(formatDateTime)にも渡すので lang も受け取る。
+  const { lang, t } = useLanguage();
   const [entries, setEntries] = useState<SiteEntry[]>([]);
   const [siteStatus, setSiteStatus] = useState<SiteStatusFile>({ statuses: {}, updatedAt: null });
   const [history, setHistory] = useState<HistoryRecord[]>([]);
@@ -206,11 +216,12 @@ export function NetworkInvestigation({
   useEffect(() => {
     if (!pendingHistoryFocus) return;
     const timer = setTimeout(() => {
-      setError("この調査結果は見つかりませんでした(履歴に反映されるまで少し時間がかかることがあります)");
+      setError(t("networkInvestigation.console.historyNotFound"));
       onConsumePendingHistoryFocusRef.current?.();
     }, 5000);
     return () => clearTimeout(timer);
-  }, [pendingHistoryFocus]);
+    // t は言語切替時にだけ変わる。タイマーを張り直しても救済の意味は変わらないので依存に含める。
+  }, [pendingHistoryFocus, t]);
 
   // SSE 購読。イベントは runId ごとにバッファへ反映し、表示中の run のときだけ再描画する。
   useEffect(() => {
@@ -237,7 +248,14 @@ export function NetworkInvestigation({
           s.ts = ev.ts;
           break;
         case "routing_decision":
-          s.routing = { used: ev.used, skipped: ev.skipped, reason: ev.reason, resolvedPlatform: ev.resolvedPlatform };
+          s.routing = {
+            used: ev.used,
+            skipped: ev.skipped,
+            reason: ev.reason,
+            reasonCode: ev.reasonCode,
+            reasonParams: ev.reasonParams,
+            resolvedPlatform: ev.resolvedPlatform,
+          };
           break;
         case "mcp_call": {
           const idx = s.calls.findIndex((c) => c.id === ev.id);
@@ -258,6 +276,10 @@ export function NetworkInvestigation({
           else s.calls.push(call);
           break;
         }
+        case "knowledge_injected":
+          // 承認済みナレッジの注入(47)。実行開始直後に 1 回だけ届く。
+          s.knowledgeRefs = ev.refs ?? [];
+          break;
         case "platform_judgment":
           if (!s.judgments.some((j) => j.platform === ev.platform)) {
             s.judgments.push({ platform: ev.platform, reason: ev.reason });
@@ -269,6 +291,8 @@ export function NetworkInvestigation({
           s.suggestedActions = ev.suggestedActions ?? [];
           // MCP 接続の警告(09)。ここを忘れると実行直後のターンにだけ警告が出ない。
           s.mcpHealth = ev.mcpHealth ?? null;
+          // この実行の所要時間(26)。
+          s.durationMs = ev.durationMs ?? null;
           break;
       }
       if (ev.runId === displayRunIdRef.current) setTick((t) => t + 1);
@@ -277,6 +301,7 @@ export function NetworkInvestigation({
 
   const display: RunState = (displayRunId && runsRef.current.get(displayRunId)) || emptyRun();
   const running = Boolean(displayRunId) && display.answer == null;
+  const isBusy = running;
   // tick を参照して「バッファ変更で再描画」を確実にする(display は ref 由来のため)。
   void tick;
 
@@ -358,10 +383,13 @@ export function NetworkInvestigation({
   }, []);
 
   // 地図ピン選択・タイムラインカード選択 → クエリ欄に流し込む。
-  const onSelectSite = useCallback((siteName: string) => {
-    setSelectedSite(siteName);
-    setQueryText((prev) => prev || `${siteName} サイトの障害・アラートと端末状況を確認して`);
-  }, []);
+  const onSelectSite = useCallback(
+    (siteName: string) => {
+      setSelectedSite(siteName);
+      setQueryText((prev) => prev || t("networkInvestigation.console.siteQuerySeed", { site: siteName }));
+    },
+    [t],
+  );
 
   // スレッドの「このクエリを入力欄へ」。スレッドを閉じてクエリ欄へ流し込む。
   const onLoadQuery = useCallback((rec: HistoryRecord) => {
@@ -444,7 +472,7 @@ export function NetworkInvestigation({
           <div className="ni-form">
             <textarea
               className="ni-input"
-              placeholder="調査クエリ(例: 全サイトの健全性を確認して / Home サイトの障害を確認して)"
+              placeholder={t("networkInvestigation.console.queryPlaceholder")}
               value={queryText}
               onChange={(e) => setQueryText(e.target.value)}
               onKeyDown={(e) => {
@@ -457,9 +485,9 @@ export function NetworkInvestigation({
                 className="ni-select"
                 value={selectedSite}
                 onChange={(e) => setSelectedSite(e.target.value)}
-                title="サイトを指定すると、そのサイトのプラットフォームだけに MCP を絞り込みます(ルーティングスキップ)"
+                title={t("networkInvestigation.console.siteSelectTitle")}
               >
-                <option value="">サイト指定なし(両方に問い合わせ)</option>
+                <option value="">{t("networkInvestigation.console.siteAny")}</option>
                 <optgroup label="Central">
                   {grouped.central.map((e) => (
                     <option key={e.siteId} value={e.siteName}>
@@ -479,30 +507,32 @@ export function NetworkInvestigation({
                 className="ni-select ni-model-select"
                 value={selectedModel}
                 onChange={(e) => setSelectedModel(e.target.value)}
-                title="このクエリを実行するモデル(未選択なら既定モデル)"
+                title={t("networkInvestigation.console.modelSelectTitle")}
               >
                 {MODEL_OPTIONS.map((m) => (
                   <option key={m.value} value={m.value}>
-                    {`モデル: ${m.label}`}
+                    {t("networkInvestigation.console.modelOption", { label: m.label })}
                   </option>
                 ))}
               </select>
-              <button className="ni-btn primary" onClick={onRun} disabled={running || !queryText.trim()}>
-                {running ? "実行中…" : "実行(⌘/Ctrl+Enter)"}
+              <button className="ni-btn primary" onClick={onRun} disabled={isBusy || !queryText.trim()}>
+                {t(`networkInvestigation.console.runBtn${isBusy ? "Busy" : ""}`)}
               </button>
             </div>
-            {/* 実行ボタンは既定で新しい調査(セッション)を始める。今のスレッドの続きにしたい
-                ときだけ明示的に選ばせる(「続けて調べる」チップは常に続きになる)。 */}
-            {consoleTurns.length > 0 && (
-              <label className="ni-continue" title="チェックすると、この実行を今の調査スレッドの次のターンとして記録します">
-                <input
-                  type="checkbox"
-                  checked={continueSession}
-                  onChange={(e) => setContinueSession(e.target.checked)}
-                />
-                <span className="ni-mono ni-dim">このスレッドの続きとして実行する</span>
-              </label>
-            )}
+            <div className="ni-form-row ni-form-row-options">
+              {/* 実行ボタンは既定で新しい調査(セッション)を始める。今のスレッドの続きにしたい
+                  ときだけ明示的に選ばせる(「続けて調べる」チップは常に続きになる)。 */}
+              {consoleTurns.length > 0 && (
+                <label className="ni-continue" title={t("networkInvestigation.console.continueTitle")}>
+                  <input
+                    type="checkbox"
+                    checked={continueSession}
+                    onChange={(e) => setContinueSession(e.target.checked)}
+                  />
+                  <span className="ni-mono ni-dim">{t("networkInvestigation.console.continueLabel")}</span>
+                </label>
+              )}
+            </div>
           </div>
 
           {/* 今の調査スレッド(04 Task 3)。「続けて調べる」でターンが積み上がっていく。 */}
@@ -510,7 +540,10 @@ export function NetworkInvestigation({
             <div className="ni-console-session">
               <div className="ni-console-session-head">
                 <span className="ni-panel-title">
-                  この調査スレッド ・ {consoleTurns.length} ターン
+                  {t(
+                    `networkInvestigation.console.threadHead${consoleTurns.length === 1 ? "One" : "Other"}`,
+                    { n: consoleTurns.length },
+                  )}
                 </span>
                 <div className="ni-console-session-actions">
                   {sessionId && consoleTurns.length > 1 && (
@@ -520,8 +553,12 @@ export function NetworkInvestigation({
                       screenRef={consoleThreadRef}
                     />
                   )}
-                  <button className="ni-btn sm" onClick={onNewSession} title="表示中のスレッドを畳んで、新しい調査を始めます(履歴は残ります)">
-                    新しい調査を始める
+                  <button
+                    className="ni-btn sm"
+                    onClick={onNewSession}
+                    title={t("networkInvestigation.console.newSessionTitle")}
+                  >
+                    {t("networkInvestigation.console.newSessionBtn")}
                   </button>
                 </div>
               </div>
@@ -543,6 +580,7 @@ export function NetworkInvestigation({
           {(running || consoleTurns.length === 0) && (
             <SseLog
               routing={display.routing}
+              knowledgeRefs={display.knowledgeRefs}
               calls={display.calls}
               judgments={display.judgments}
               running={running}
@@ -555,9 +593,14 @@ export function NetworkInvestigation({
         {/* 右: サイト一覧(旧・地図の置き換え。Task 3) */}
         <div className="ni-sitepanel">
           <div className="ni-sitepanel-head">
-            <span className="ni-panel-title">サイト一覧</span>
-            <button className="ni-btn sm" onClick={onRefreshStatus} disabled={statusRefreshing} title="Central/Mist から各サイトの health 等を取得して一覧に反映します(時間がかかります)">
-              {statusRefreshing ? "更新中…" : "状態を更新"}
+            <span className="ni-panel-title">{t("networkInvestigation.sitePanel.title")}</span>
+            <button
+              className="ni-btn sm"
+              onClick={onRefreshStatus}
+              disabled={statusRefreshing}
+              title={t("networkInvestigation.sitePanel.refreshTitle")}
+            >
+              {t(`networkInvestigation.sitePanel.refreshBtn${statusRefreshing ? "Busy" : ""}`)}
             </button>
           </div>
           <SiteList
@@ -567,8 +610,18 @@ export function NetworkInvestigation({
             onSelectSite={onSelectSite}
           />
           <div className="ni-mono ni-dim ni-sitepanel-foot">
-            {entries.length} サイト ・ Central {grouped.central.length} / Mist {grouped.mist.length}
-            {siteStatus.updatedAt ? ` ・ 状態取得 ${new Date(siteStatus.updatedAt).toLocaleString()}` : " ・ 状態未取得"}
+            {t("networkInvestigation.sitePanel.foot", {
+              n: entries.length,
+              central: grouped.central.length,
+              mist: grouped.mist.length,
+            })}
+            {/* 33 L-10: 以前はロケール無しの toLocaleString() でブラウザ既定に依存していた。
+                表示言語に合わせて ja-JP / en-US を選ぶ共通ヘルパへ寄せる。 */}
+            {siteStatus.updatedAt
+              ? t("networkInvestigation.sitePanel.statusFetched", {
+                  when: formatDateTime(siteStatus.updatedAt, lang),
+                })
+              : t("networkInvestigation.sitePanel.statusNotFetched")}
           </div>
         </div>
       </div>

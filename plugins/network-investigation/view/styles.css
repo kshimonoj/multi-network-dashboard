@@ -844,6 +844,11 @@
   cursor: pointer;
 }
 
+.ni-form-row-options {
+  flex-wrap: wrap;
+  align-items: center;
+}
+
 /* ---- Task 5: 定期実行の設定エディタ ---- */
 .ni-timeline-head-right {
   display: flex;
@@ -1319,4 +1324,36 @@
   @page {
     margin: 15mm 14mm;
   }
+}
+
+/* ---- 47: 承認済みナレッジの注入 ----
+   モデル判断による省略(ni-judgment)と同じ 1 行の見た目にし、色だけアクセント側にする。
+   「省略した(アンバー)」と「踏まえた(アクセント)」を色で区別する。 */
+.ni-knowledge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  padding: 7px 10px;
+  border: 1px dashed var(--accent);
+  border-radius: var(--radius);
+  background: rgba(90, 169, 230, 0.08);
+}
+.ni-knowledge-icon {
+  font-size: 14px;
+  line-height: 1;
+}
+.ni-knowledge-text {
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ni-knowledge-tag {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 9px;
+  padding: 1px 7px;
+  margin-right: 6px;
 }
