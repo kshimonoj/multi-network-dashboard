@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "cross-env": "^7.0.3",
     "express": "^4.21.2",
     "googleapis": "^173.0.0",
@@ -33,6 +34,7 @@
     "@types/react-dom": "^18.3.5",
     "@types/ws": "^8.18.1",
     "@vitejs/plugin-react": "^4.3.4",
+    "playwright": "^1.62.0",
     "typescript": "^5.7.3",
     "vite": "^6.0.7"
   }

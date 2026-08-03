@@ -41,6 +41,12 @@ services:
       CLAUDE_CODE_OAUTH_TOKEN: ${CLAUDE_CODE_OAUTH_TOKEN:-}
       # claude CLI の既定モデル(移植元の CORSTACK_NETINV_MODEL 相当)。
       NETINV_MODEL: ${NETINV_MODEL:-sonnet}
+      # ---- ローカルLLM(Ollama)経由のモデル選択肢(25) ----
+      # ホストで起動している Ollama(:11434)へ host.docker.internal 経由で到達する
+      # (central-mcp の CENTRAL_MCP_HOST と同じ考え方。コンテナ内の 127.0.0.1 はコンテナ自身を指す)。
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-gemma4:12b}
+      OLLAMA_MAX_TOOL_TURNS: ${OLLAMA_MAX_TOOL_TURNS:-6}
       # MCP サーバー定義の供給元(read-only マウントしたホストの ~/.claude.json)。
       NETINV_CLAUDE_JSON: /host/claude.json
       # 上記から読んだ定義のうち、ループバック宛(central-mcp)を書き換える先。
@@ -71,6 +77,13 @@ services:
       # 画面から変更した値は data/webhook-feed/settings.json に永続化される。
       WEBHOOK_FEED_POLL_MS: ${WEBHOOK_FEED_POLL_MS:-300000}
       WEBHOOK_FEED_MIN_REFRESH_MS: ${WEBHOOK_FEED_MIN_REFRESH_MS:-30000}
+      # 42: 「表示」と「保存」の分離。
+      #   WEBHOOK_FEED_MAX_ITEMS … 一覧(feed.json / メモリ)に載せる直近件数。**表示だけの上限**。
+      #   保存は data/webhook-feed/daily/YYYY-MM-DD.jsonl に日付ごとの追記で、件数上限を持たない
+      #   (1 日に何件来ても欠落しない = 日次レポートの件数が正確になる)。
+      # 保持日数の既定値だけ env で与え、以後は画面 → data/webhook-feed/settings.json が優先。
+      WEBHOOK_FEED_MAX_ITEMS: ${WEBHOOK_FEED_MAX_ITEMS:-3000}
+      WEBHOOK_FEED_ARCHIVE_RETENTION_DAYS: ${WEBHOOK_FEED_ARCHIVE_RETENTION_DAYS:-90}
       # 重大アラートの自動事前調査(Task 4)/ 関連情報の先読み(Task 5)のコスト上限。
       WEBHOOK_FEED_AUTO_ENABLED: ${WEBHOOK_FEED_AUTO_ENABLED:-1}
       WEBHOOK_FEED_AUTO_MAX_PER_CYCLE: ${WEBHOOK_FEED_AUTO_MAX_PER_CYCLE:-3}
@@ -82,6 +95,51 @@ services:
       # 既定は「停止中」なので、起動しただけでは Central へ接続しない。
       CENTRAL_STREAMING_PURGE_MS: ${CENTRAL_STREAMING_PURGE_MS:-600000}
       CENTRAL_STREAMING_API_MAX: ${CENTRAL_STREAMING_API_MAX:-1000}
+      # ---- 日次レポート(41)----
+      # 生成時刻・保持期間・使用モデルは画面/API から変更し、data/reports/settings.json に永続化される
+      # (既定: 毎日 9:00 に前日分 / 無期限保持 / モデルは NETINV_MODEL)。env は運用パラメータのみ。
+      # 起動時の後追い生成は、他プラグインの初回ポーリングを待つためこの秒数だけ遅らせる。
+      REPORTS_CATCHUP_DELAY_MS: ${REPORTS_CATCHUP_DELAY_MS:-90000}
+      # 分析 1 回あたりの claude CLI タイムアウト(1 日分のデータを 1 回で渡すので長め)。
+      REPORTS_LLM_TIMEOUT_MS: ${REPORTS_LLM_TIMEOUT_MS:-300000}
+      # 再発性の判定に遡る日数(過去の日次レポートの問題一覧を照合する範囲)。
+      REPORTS_HISTORY_DAYS: ${REPORTS_HISTORY_DAYS:-14}
+      # Retention ジョブの実行間隔(既定 24 時間)。日次・サンプル・週次・月次をまとめて掃除する。
+      REPORTS_PURGE_MS: ${REPORTS_PURGE_MS:-86400000}
+      # ---- 45: 週次 / 月次レポート ----
+      # 蓄積済みの日次レポート(data/reports/daily/*.json)を集計して作るので、
+      # LLM も外部 API も使わない = 追加のコスト・環境変数は無い。
+      # 生成タイミング(既定 週次: 毎週月曜 9:30 / 月次: 毎月 1 日 9:40)と保持期間は
+      # data/reports/settings.json(API から変更)に永続化される。
+      # 保存先: data/reports/weekly/YYYY-Www.json ・data/reports/monthly/YYYY-MM.json
+      #   週は ISO 8601(月曜始まり)。週キーの年は「その週の木曜が属する年」で決まる。
+      # ---- 44: 重大な問題の自動事前調査(MCP 込みの本格調査を先回りで実行)----
+      # 有効/無効と 1 レポートあたりの上限は data/reports/settings.json が優先される
+      # (env は settings.json にその項目がまだ無い初回のみ効く)。
+      REPORTS_AUTO_ENABLED: ${REPORTS_AUTO_ENABLED:-1}
+      REPORTS_AUTO_MAX_PER_REPORT: ${REPORTS_AUTO_MAX_PER_REPORT:-2}
+      # 対象日がこれより古いレポートでは発火しない(起動時の後追い生成でまとめて走らせない)。
+      REPORTS_AUTO_MAX_AGE_DAYS: ${REPORTS_AUTO_MAX_AGE_DAYS:-2}
+      # 対象にする再発性。既定は「新規」と「継続」(間が空いた再発 recurring は対象外)。
+      REPORTS_AUTO_RECURRENCE: ${REPORTS_AUTO_RECURRENCE:-new,continuing}
+      # ---- 46: ナレッジ(調査結果からの知見候補の抽出)----
+      # 調査(手動 / 自動事前調査)が 1 件終わるたびに、その回答本文だけを材料に
+      # claude CLI を 1 回起こして知見候補を作る(MCP には繋がない = ライブ取得なし)。
+      # 有効/無効・対象経路・上限・類似しきい値は data/knowledge/settings.json が優先される
+      # (env は settings.json にその項目がまだ無い初回のみ効く。Webhook / レポートと同じ扱い)。
+      KNOWLEDGE_EXTRACT_ENABLED: ${KNOWLEDGE_EXTRACT_ENABLED:-1}
+      # 対象にする実行経路。定期実行(scheduled)は毎日同じ観点の定点観測で同じ知見が
+      # 繰り返し出るため既定では対象外にしてある。
+      KNOWLEDGE_SOURCE_MANUAL: ${KNOWLEDGE_SOURCE_MANUAL:-1}
+      KNOWLEDGE_SOURCE_AUTO: ${KNOWLEDGE_SOURCE_AUTO:-1}
+      KNOWLEDGE_SOURCE_SCHEDULED: ${KNOWLEDGE_SOURCE_SCHEDULED:-0}
+      # 回答がこの文字数に満たない調査は抽出にかけない(「データが取れませんでした」を弾く)。
+      KNOWLEDGE_MIN_ANSWER_CHARS: ${KNOWLEDGE_MIN_ANSWER_CHARS:-200}
+      # 1 調査から作る候補の上限 / 重複とみなす一致度のしきい値(0〜1)。
+      KNOWLEDGE_MAX_PER_RUN: ${KNOWLEDGE_MAX_PER_RUN:-2}
+      KNOWLEDGE_SIMILARITY_THRESHOLD: ${KNOWLEDGE_SIMILARITY_THRESHOLD:-0.35}
+      # 抽出 1 回あたりの claude CLI タイムアウト(回答 1 件を読むだけなので短め)。
+      KNOWLEDGE_LLM_TIMEOUT_MS: ${KNOWLEDGE_LLM_TIMEOUT_MS:-180000}
     volumes:
       # ホストの claude 設定(read-only)。コンテナはここから MCP 定義を読むだけ。
       #

@@ -45,7 +45,11 @@ RUN npm run build
 # バインドマウントする(.dockerignore で除外済み)。
 # data/ は docker-compose がホストの ./data をバインドマウントする。
 # イメージ側にも作っておき、マウントしない場合でも書き込めるようにする。
-RUN mkdir -p /app/data/network-investigation /app/data/global-overview /app/data/webhook-feed /app/data/central-streaming && chown -R node:node /app
+RUN mkdir -p /app/data/network-investigation /app/data/global-overview /app/data/webhook-feed \
+      /app/data/webhook-feed/daily /app/data/central-streaming \
+      /app/data/reports/daily /app/data/reports/samples \
+      /app/data/reports/weekly /app/data/reports/monthly \
+  && chown -R node:node /app
 
 USER node
 ENV HOME=/home/node
