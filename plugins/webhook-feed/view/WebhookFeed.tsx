@@ -15,10 +15,10 @@ import {
   fetchWebhookFeed,
   fetchWebhookSettings,
   refreshWebhookFeed,
+  updateWebhookArchiveRetention,
   updateWebhookPollInterval,
 } from "./api";
 import {
-  SEVERITY_LABEL,
   SOURCE_ORDER,
   SOURCE_SHORT,
   type WebhookFeedEnvelope,
@@ -29,6 +29,9 @@ import {
 } from "./types";
 import { buildFollowUpQuery, buildWebhookInvestigationQuery } from "./investigate";
 import type { InvestigationRequest } from "../../../src/shell";
+import { useT } from "../../../src/i18n/LanguageContext";
+import type { TFunc } from "../../../src/i18n/LanguageContext";
+import { formatDateTime, formatNumber, formatRelative } from "../../../src/i18n";
 import "../../global-overview/view/styles.css";
 import "./styles.css";
 
@@ -39,24 +42,33 @@ const PAGE_SIZE = 200;
 const VIEW_POLL_MS = 15_000;
 
 function fmtTime(iso: string | null): string {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? "—" : d.toLocaleString("ja-JP", { hour12: false });
+  // 33 L-10: toLocaleString("ja-JP") のハードコードをやめ、表示言語に追従させる
+  // (ja のときの出力は従来と同じ)。
+  return formatDateTime(iso);
 }
 
-function fmtAge(ms: number | null): string {
+function fmtAge(t: TFunc, ms: number | null): string {
   if (ms === null || !Number.isFinite(ms)) return "—";
-  const s = Math.max(0, Math.round(ms / 1000));
-  if (s < 60) return `${s} 秒前`;
-  const m = Math.floor(s / 60);
-  if (m < 60) return `${m} 分前`;
-  return `${Math.floor(m / 60)} 時間前`;
+  // 33 L-11: 分岐は src/i18n/format.ts に集約した(4 タブの重複実装を 1 箇所へ)。
+  // このタブは 30〜32 の時点で日をまたいでも「n 時間前」だったので maxUnit で踏襲する。
+  return formatRelative(t, ms, { maxUnit: "hour" });
 }
 
-function fmtInterval(ms: number): string {
-  if (ms % 3_600_000 === 0) return `${ms / 3_600_000} 時間`;
-  if (ms % 60000 === 0) return `${ms / 60000} 分`;
-  return `${Math.round(ms / 1000)} 秒`;
+/** 保存サイズ。単位記号はロケール非依存なので数値だけ表示言語に合わせる。 */
+function fmtBytes(n: number): string {
+  if (!Number.isFinite(n) || n <= 0) return "0 KB";
+  if (n < 1024 * 1024) return `${formatNumber(Math.max(1, Math.round(n / 1024)))} KB`;
+  return `${(n / 1048576).toFixed(1)} MB`;
+}
+
+function fmtInterval(t: TFunc, ms: number): string {
+  if (ms % 3_600_000 === 0) return t("webhookFeed.footer.hours", { n: ms / 3_600_000 });
+  if (ms % 60000 === 0) return t("webhookFeed.footer.minutes", { n: ms / 60000 });
+  return t("webhookFeed.footer.seconds", { n: Math.round(ms / 1000) });
+}
+
+function sevLabel(t: TFunc, s: WebhookSeverity): string {
+  return s === "unknown" ? "—" : t(`webhookFeed.severity.${s}`);
 }
 
 export function WebhookFeed({
@@ -71,11 +83,13 @@ export function WebhookFeed({
    * スレッドをネットワーク調査タブで直接開く。タブ切り替えは呼び出し側(main.tsx)が行う */
   onOpenHistoryFocus?: (runId: string) => void;
 }) {
+  const t = useT();
   const [feed, setFeed] = useState<WebhookFeedEnvelope | null>(null);
   const [settings, setSettings] = useState<WebhookPollSettings | null>(null);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [savingInterval, setSavingInterval] = useState(false);
+  const [savingRetention, setSavingRetention] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const mounted = useRef(true);
@@ -176,6 +190,20 @@ export function WebhookFeed({
     [load],
   );
 
+  // 42: 保存(日別アーカイブ)の保持日数。一覧の表示件数とは別枠の設定。
+  const onChangeRetention = useCallback(async (days: number) => {
+    setSavingRetention(true);
+    try {
+      const s = await updateWebhookArchiveRetention(days);
+      if (!mounted.current) return;
+      setSettings(s);
+    } catch (err) {
+      if (mounted.current) setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      if (mounted.current) setSavingRetention(false);
+    }
+  }, []);
+
   const items = feed?.items ?? [];
 
   const siteNames = useMemo(
@@ -238,28 +266,27 @@ export function WebhookFeed({
     <div className="go-root">
       <div className="go-head">
         <div className="go-head-main">
-          <h1 className="go-h1">Webhook ログ</h1>
+          <h1 className="go-h1">{t("webhookFeed.title")}</h1>
           <span className="go-head-sub">
-            New Central / Classic Central / Mist — Google スプレッドシート
-            {feed?.spreadsheetTitle ? `「${feed.spreadsheetTitle}」` : ""}経由
+            {feed?.spreadsheetTitle
+              ? t("webhookFeed.headerSubWithTitle", { title: feed.spreadsheetTitle })
+              : t("webhookFeed.headerSubNoTitle")}
           </span>
         </div>
         <div className="go-head-meta">
           <div className="go-updated">
-            <span className="go-updated-label">最終取得</span>
+            <span className="go-updated-label">{t("webhookFeed.lastFetched")}</span>
             <span className="go-updated-value">{fmtTime(feed?.generatedAt ?? null)}</span>
-            <span className="go-updated-age">({fmtAge(ageMs)})</span>
-            {feed?.stale && <span className="go-tag go-tag-dim">次の巡回待ち</span>}
+            <span className="go-updated-age">({fmtAge(t, ageMs)})</span>
+            {feed?.stale && <span className="go-tag go-tag-dim">{t("webhookFeed.staleTag")}</span>}
           </div>
           <button
             className="go-refresh"
             onClick={() => void onRefresh()}
             disabled={refreshing}
-            title={`スプレッドシートから新規行を取り直します(最短間隔 ${Math.round(
-              (feed?.minRefreshMs ?? 30000) / 1000,
-            )} 秒)`}
+            title={t("webhookFeed.refresh.title", { s: Math.round((feed?.minRefreshMs ?? 30000) / 1000) })}
           >
-            {refreshing ? "取得中…" : "更新"}
+            {refreshing ? t("webhookFeed.refresh.running") : t("webhookFeed.refresh.button")}
           </button>
         </div>
       </div>
@@ -267,18 +294,19 @@ export function WebhookFeed({
       {error && <div className="go-error">{error}</div>}
       {feed && !feed.configured && feed.configError && (
         <div className="go-error">
-          Webhook ログを取得できません: {feed.configError}
+          {t("webhookFeed.error.configPrefix")}
+          {feed.configError}
         </div>
       )}
-      {loading && !feed && <div className="go-loading">Webhook ログを読み込み中…</div>}
+      {loading && !feed && <div className="go-loading">{t("webhookFeed.loading")}</div>}
 
       {feed && (
         <>
           {/* 取得元シートごとの読み取り位置と成否 */}
           <section className="go-panel">
             <header className="go-panel-head">
-              <span className="go-panel-title">取得元シート</span>
-              <span className="go-panel-note">全 {items.length} 件</span>
+              <span className="go-panel-title">{t("webhookFeed.sheets.title")}</span>
+              <span className="go-panel-note">{t("webhookFeed.sheets.totalCount", { n: items.length })}</span>
             </header>
             <div className="go-src-list">
               {feed.sheets.map((s) => (
@@ -289,15 +317,15 @@ export function WebhookFeed({
                     {s.status === "ok" ? (
                       <span className="go-src-count">{s.items}</span>
                     ) : (
-                      <span className="go-tag go-tag-bad">失敗</span>
+                      <span className="go-tag go-tag-bad">{t("webhookFeed.sheets.failedTag")}</span>
                     )}
                     <span className="go-src-req go-mono">
-                      読取済み {Math.max(0, s.lastRow - 1)} 行
-                      {s.newRows > 0 ? ` (前回 +${s.newRows})` : ""}
+                      {t("webhookFeed.sheets.readCount", { n: Math.max(0, s.lastRow - 1) })}
+                      {s.newRows > 0 ? t("webhookFeed.sheets.readCountDelta", { n: s.newRows }) : ""}
                     </span>
                   </div>
                   <div className="go-src-note">
-                    差分取得: 次回は {s.lastRow + 1} 行目から読みます
+                    {t("webhookFeed.sheets.nextRowNote", { n: s.lastRow + 1 })}
                   </div>
                   {s.error && <div className="go-src-err">{s.error}</div>}
                 </div>
@@ -308,10 +336,15 @@ export function WebhookFeed({
           {/* フィルタ */}
           <section className="go-panel">
             <header className="go-panel-head">
-              <span className="go-panel-title">フィルタ</span>
+              <span className="go-panel-title">{t("webhookFeed.filter.title")}</span>
               <span className="go-panel-note">
-                {filtered.length} / {items.length} 件(重大 {counts.critical} · 警告 {counts.warning} ·
-                自動調査あり {counts.auto})
+                {t("webhookFeed.filter.summary", {
+                  filtered: filtered.length,
+                  total: items.length,
+                  critical: counts.critical,
+                  warning: counts.warning,
+                  auto: counts.auto,
+                })}
               </span>
               <button
                 className="go-chip"
@@ -323,36 +356,40 @@ export function WebhookFeed({
                   setQ("");
                   setAutoOnly(false);
                 }}
-                title="すべてのフィルタを解除する"
+                title={t("webhookFeed.filter.clearTitle")}
               >
-                クリア
+                {t("webhookFeed.filter.clear")}
               </button>
             </header>
             <div className="go-fbar">
               <div className="go-fgroup">
-                <span className="go-flabel">ソース</span>
+                <span className="go-flabel">{t("webhookFeed.filter.source")}</span>
                 {(["all", ...SOURCE_ORDER] as const).map((s) => (
                   <button
                     key={s}
                     className={`go-chip${source === s ? " go-chip-on" : ""}`}
                     onClick={() => setSource(s as "all" | WebhookSource)}
                   >
-                    {s === "all" ? "すべて" : SOURCE_SHORT[s as WebhookSource]}
+                    {s === "all" ? t("webhookFeed.filter.all") : SOURCE_SHORT[s as WebhookSource]}
                   </button>
                 ))}
               </div>
               <div className="go-fgroup">
-                <span className="go-flabel">重要度</span>
+                <span className="go-flabel">{t("webhookFeed.filter.severity")}</span>
                 {(["all", "critical", "warning", "info", "unknown"] as const).map((s) => (
                   <button key={s} className={`go-chip${sev === s ? " go-chip-on" : ""}`} onClick={() => setSev(s)}>
-                    {s === "all" ? "すべて" : s === "unknown" ? "なし" : SEVERITY_LABEL[s]}
+                    {s === "all"
+                      ? t("webhookFeed.filter.all")
+                      : s === "unknown"
+                        ? t("webhookFeed.filter.severityNone")
+                        : sevLabel(t, s)}
                   </button>
                 ))}
               </div>
               <div className="go-fgroup">
-                <span className="go-flabel">サイト</span>
+                <span className="go-flabel">{t("webhookFeed.filter.site")}</span>
                 <select className="go-fsel" value={site} onChange={(e) => setSite(e.target.value)}>
-                  <option value="all">すべて({siteNames.length})</option>
+                  <option value="all">{t("webhookFeed.filter.allWithCount", { n: siteNames.length })}</option>
                   {siteNames.map((n) => (
                     <option key={n} value={n}>
                       {n}
@@ -361,9 +398,9 @@ export function WebhookFeed({
                 </select>
               </div>
               <div className="go-fgroup">
-                <span className="go-flabel">カテゴリ</span>
+                <span className="go-flabel">{t("webhookFeed.filter.category")}</span>
                 <select className="go-fsel" value={category} onChange={(e) => setCategory(e.target.value)}>
-                  <option value="all">すべて({categories.length})</option>
+                  <option value="all">{t("webhookFeed.filter.allWithCount", { n: categories.length })}</option>
                   {categories.map((c) => (
                     <option key={c} value={c}>
                       {c}
@@ -375,9 +412,9 @@ export function WebhookFeed({
                 <button
                   className={`go-chip${autoOnly ? " go-chip-on" : ""}`}
                   onClick={() => setAutoOnly((v) => !v)}
-                  title="AI による自動事前調査が走った行だけを表示します"
+                  title={t("webhookFeed.filter.autoOnlyTitle")}
                 >
-                  自動調査ありのみ
+                  {t("webhookFeed.filter.autoOnly")}
                 </button>
               </div>
               <div className="go-fgroup go-fgroup-grow">
@@ -385,7 +422,7 @@ export function WebhookFeed({
                   className="go-fsearch"
                   value={q}
                   onChange={(e) => setQ(e.target.value)}
-                  placeholder="本文 / 種別 / デバイス / サイトで絞り込み"
+                  placeholder={t("webhookFeed.filter.searchPlaceholder")}
                 />
               </div>
             </div>
@@ -394,23 +431,23 @@ export function WebhookFeed({
           {/* 一覧 */}
           <section className="go-panel go-table-panel">
             <header className="go-panel-head">
-              <span className="go-panel-title">タイムライン</span>
+              <span className="go-panel-title">{t("webhookFeed.table.title")}</span>
               <span className="go-panel-note">
-                受信の新しい順 · {shown.length} / {filtered.length} 件を表示
+                {t("webhookFeed.table.summary", { shown: shown.length, filtered: filtered.length })}
               </span>
             </header>
             <div className="go-table-scroll">
               <table className="go-table go-feed-table wf-table">
                 <thead>
                   <tr>
-                    <th className="wf-c-exp" aria-label="展開" />
-                    <th className="go-fc-time">受信時刻</th>
-                    <th className="go-fc-sev">重要度</th>
-                    <th className="wf-c-src">ソース</th>
-                    <th className="go-fc-site">サイト</th>
-                    <th className="go-fc-cat">カテゴリ</th>
-                    <th>内容</th>
-                    <th className="go-fc-act" aria-label="操作" />
+                    <th className="wf-c-exp" aria-label={t("webhookFeed.table.col.expand")} />
+                    <th className="go-fc-time">{t("webhookFeed.table.col.time")}</th>
+                    <th className="go-fc-sev">{t("webhookFeed.table.col.severity")}</th>
+                    <th className="wf-c-src">{t("webhookFeed.table.col.source")}</th>
+                    <th className="go-fc-site">{t("webhookFeed.table.col.site")}</th>
+                    <th className="go-fc-cat">{t("webhookFeed.table.col.category")}</th>
+                    <th>{t("webhookFeed.table.col.content")}</th>
+                    <th className="go-fc-act" aria-label={t("webhookFeed.table.col.action")} />
                   </tr>
                 </thead>
                 <tbody>
@@ -427,7 +464,7 @@ export function WebhookFeed({
                   {filtered.length === 0 && (
                     <tr>
                       <td className="go-empty-row" colSpan={8}>
-                        条件に一致する Webhook ログはありません
+                        {t("webhookFeed.table.empty")}
                       </td>
                     </tr>
                   )}
@@ -437,7 +474,7 @@ export function WebhookFeed({
             {shown.length < filtered.length && (
               <div className="go-feed-more">
                 <button className="go-chip" onClick={() => setLimit((v) => v + PAGE_SIZE)}>
-                  さらに {Math.min(PAGE_SIZE, filtered.length - shown.length)} 件を表示
+                  {t("webhookFeed.table.showMore", { n: Math.min(PAGE_SIZE, filtered.length - shown.length) })}
                 </button>
               </div>
             )}
@@ -448,13 +485,13 @@ export function WebhookFeed({
       {/* 取得方式・自動更新間隔。Global Overview のフッタと対になる位置に置くが、設定は別物。 */}
       <div className="go-foot go-mono">
         <span className="go-foot-interval">
-          <b>Webhook ログの自動更新間隔</b>
+          <b>{t("webhookFeed.footer.pollInterval")}</b>
           <select
             className="go-interval-select"
             value={intervalMs}
             disabled={savingInterval || !settings}
             onChange={(e) => void onChangeInterval(Number(e.target.value))}
-            title="このタブ専用の設定です。サーバに保存され、コンテナ再作成後も保持されます。Global Overview の間隔設定とは別に管理されます。"
+            title={t("webhookFeed.footer.intervalTitle")}
           >
             {(
               settings?.optionsMs ?? [
@@ -462,26 +499,70 @@ export function WebhookFeed({
               ]
             ).map((ms) => (
               <option key={ms} value={ms}>
-                {fmtInterval(ms)}
+                {fmtInterval(t, ms)}
               </option>
             ))}
           </select>
-          {savingInterval && <span className="go-interval-saving"> 保存中…</span>}
-          <span
-            className="go-foot-hint"
-            title="この設定は Webhook ログ(Google スプレッドシート)の取得間隔だけを変えます。Global Overview の Central / Mist ポーリング間隔とは別に保存されます。"
-          >
-            (この設定は Webhook ログの取得のみ / Global Overview のポーリング間隔とは別設定です)
+          {savingInterval && <span className="go-interval-saving"> {t("webhookFeed.footer.saving")}</span>}
+          <span className="go-foot-hint" title={t("webhookFeed.footer.hintTitle")}>
+            {t("webhookFeed.footer.hintNote")}
           </span>
         </span>
         {feed && (
           <>
-            {" / "}手動更新の最短間隔 {Math.round(feed.minRefreshMs / 1000)} 秒 ・ 自動事前調査:{" "}
+            {" / "}
+            {t("webhookFeed.footer.minRefresh", { s: Math.round(feed.minRefreshMs / 1000) })}
+            {" ・ "}
+            {t("webhookFeed.footer.autoLabel")}:{" "}
             {feed.auto.enabled
-              ? `重大(Critical)のみ・最大 ${feed.auto.maxPerCycle} 件/巡・受信から ${Math.round(
-                  feed.auto.maxAgeMs / 60000,
-                )} 分以内・同一アラートは 1 回のみ(実行済み ${feed.auto.investigatedCount} 件)`
-              : "無効"}
+              ? t("webhookFeed.footer.autoEnabledDetail", {
+                  max: feed.auto.maxPerCycle,
+                  age: Math.round(feed.auto.maxAgeMs / 60000),
+                  done: feed.auto.investigatedCount,
+                })
+              : t("webhookFeed.footer.autoDisabled")}
+          </>
+        )}
+      </div>
+
+      {/* 42: 「表示している量」と「保存している量」は別物であることを明示する。
+          一覧は直近 N 件しか読まないが、保存は日別ファイルなので上限で欠落しない。 */}
+      <div className="go-foot go-mono">
+        <span className="go-foot-interval">
+          <b>{t("webhookFeed.footer.storageLabel")}</b>
+          <select
+            className="go-interval-select"
+            value={settings?.archiveRetentionDays ?? 90}
+            disabled={savingRetention || !settings}
+            onChange={(e) => void onChangeRetention(Number(e.target.value))}
+            title={t("webhookFeed.footer.retentionTitle")}
+          >
+            {(settings?.archiveRetentionOptionsDays ?? [0, 30, 90, 180, 365]).map((d) => (
+              <option key={d} value={d}>
+                {d === 0 ? t("webhookFeed.footer.retentionForever") : t("webhookFeed.footer.retentionDays", { n: d })}
+              </option>
+            ))}
+          </select>
+          {savingRetention && <span className="go-interval-saving"> {t("webhookFeed.footer.saving")}</span>}
+        </span>
+        {feed?.storage && (
+          <>
+            {" "}
+            {t("webhookFeed.footer.storageStored", {
+              days: feed.storage.days,
+              items: formatNumber(feed.storage.items),
+              size: fmtBytes(feed.storage.bytes),
+              from: feed.storage.oldestDay ?? "—",
+              to: feed.storage.newestDay ?? "—",
+            })}
+            {" / "}
+            {t("webhookFeed.footer.storageShown", {
+              items: formatNumber(feed.storage.viewItems),
+              max: formatNumber(feed.storage.viewMaxItems),
+            })}
+            <span className="go-foot-hint" title={t("webhookFeed.footer.storageTitle")}>
+              {t("webhookFeed.footer.storageNote")}
+            </span>
           </>
         )}
       </div>
@@ -502,6 +583,7 @@ function Row({
   onInvestigate?: (req: InvestigationRequest) => void;
   onOpenHistoryFocus?: (runId: string) => void;
 }) {
+  const t = useT();
   const hasDetail = Boolean(item.auto || item.siteContext || Object.keys(item.raw).length > 0);
   const hasHistoryResult = Boolean(
     onOpenHistoryFocus && item.auto?.status === "done" && item.auto.runId,
@@ -511,7 +593,13 @@ function Row({
       <tr
         className={`${open ? "wf-row-open" : ""}${hasDetail ? " wf-row-click" : ""}`.trim()}
         onClick={hasDetail ? onToggle : undefined}
-        title={hasDetail ? (open ? "クリックで閉じる" : "クリックで生データ・自動調査・サイト状況を表示する") : undefined}
+        title={
+          hasDetail
+            ? open
+              ? t("webhookFeed.row.trCloseTitle")
+              : t("webhookFeed.row.trOpenTitle")
+            : undefined
+        }
       >
         <td className="wf-c-exp">
           <button
@@ -521,7 +609,7 @@ function Row({
               onToggle();
             }}
             aria-expanded={open}
-            title={open ? "閉じる" : "生データ・自動調査・サイト状況を表示する"}
+            title={open ? t("webhookFeed.row.btnCloseTitle") : t("webhookFeed.row.btnOpenTitle")}
             disabled={!hasDetail}
           >
             {open ? "▾" : "▸"}
@@ -531,9 +619,13 @@ function Row({
         <td className="go-fc-sev">
           <span
             className={`go-fsev wf-sev-${item.severity}`}
-            title={item.severityRaw ? `シート上の値: ${item.severityRaw}` : "この通知は重要度を持ちません"}
+            title={
+              item.severityRaw
+                ? t("webhookFeed.row.sevRawTitle", { v: item.severityRaw })
+                : t("webhookFeed.row.sevNoneTitle")
+            }
           >
-            {SEVERITY_LABEL[item.severity]}
+            {sevLabel(t, item.severity)}
           </span>
         </td>
         <td className="wf-c-src">
@@ -552,10 +644,10 @@ function Row({
             {item.auto && (
               <span className={`wf-auto-tag wf-auto-${item.auto.status}`}>
                 {item.auto.status === "running"
-                  ? "AI 自動調査中…"
+                  ? t("webhookFeed.row.autoTag.running")
                   : item.auto.status === "done"
-                    ? "AI 自動事前調査あり"
-                    : "AI 自動調査に失敗"}
+                    ? t("webhookFeed.row.autoTag.done")
+                    : t("webhookFeed.row.autoTag.error")}
               </span>
             )}
           </div>
@@ -565,13 +657,13 @@ function Row({
             {hasHistoryResult && (
               <button
                 className="wf-history-btn"
-                title="自動事前調査が実際に実行された過去の履歴(スレッド)を、ネットワーク調査タブで直接開きます"
+                title={t("webhookFeed.row.historyBtnTitle")}
                 onClick={(e) => {
                   e.stopPropagation();
                   onOpenHistoryFocus!(item.auto!.runId!);
                 }}
               >
-                調査結果を見る
+                {t("webhookFeed.row.historyBtn")}
               </button>
             )}
             {onInvestigate && (
@@ -579,8 +671,8 @@ function Row({
                 className="go-investigate-btn"
                 title={
                   item.auto?.status === "done"
-                    ? "自動事前調査の結果を踏まえた追加質問のクエリ文を、ネットワーク調査タブへ渡します(実行はされません)"
-                    : "この通知の要約をクエリ文にして、ネットワーク調査タブへ渡します(実行はされません)"
+                    ? t("webhookFeed.row.investigateBtnTitleFollowUp")
+                    : t("webhookFeed.row.investigateBtnTitleNew")
                 }
                 onClick={(e) => {
                   e.stopPropagation();
@@ -591,7 +683,7 @@ function Row({
                   );
                 }}
               >
-                調査する
+                {t("webhookFeed.row.investigateBtn")}
               </button>
             )}
           </div>
@@ -604,7 +696,9 @@ function Row({
               {item.auto && <AutoPanel item={item} />}
               {item.siteContext && <SitePanel item={item} />}
               <div className="wf-dsec">
-                <div className="wf-dsec-title">生データ({item.sheet} の {item.rowIndex} 行目)</div>
+                <div className="wf-dsec-title">
+                  {t("webhookFeed.detail.rawTitle", { sheet: item.sheet, row: item.rowIndex })}
+                </div>
                 <dl className="wf-raw">
                   {Object.entries(item.raw).map(([k, v]) => (
                     <div className="wf-raw-row" key={k}>
@@ -623,32 +717,35 @@ function Row({
 }
 
 function AutoPanel({ item }: { item: WebhookFeedItem }) {
+  const t = useT();
   const a = item.auto!;
   return (
     <div className="wf-dsec wf-dsec-auto">
       <div className="wf-dsec-title">
-        AI による自動事前調査
+        {t("webhookFeed.auto.title")}
         <span className={`wf-auto-tag wf-auto-${a.status}`}>
-          {a.status === "running" ? "実行中" : a.status === "done" ? "完了" : "失敗"}
+          {a.status === "running"
+            ? t("webhookFeed.auto.status.running")
+            : a.status === "done"
+              ? t("webhookFeed.auto.status.done")
+              : t("webhookFeed.auto.status.error")}
         </span>
         <span className="go-mono wf-dim">
           {fmtTime(a.startedAt)}
           {a.finishedAt ? ` → ${fmtTime(a.finishedAt)}` : ""}
         </span>
       </div>
-      <div className="wf-auto-query go-mono">クエリ: {a.query}</div>
-      {a.status === "running" && (
-        <div className="wf-auto-body wf-dim">
-          Insight Agent が調査しています。完了すると自動でここに要約が出ます(この画面は 15 秒ごとに更新されます)。
-        </div>
+      <div className="wf-auto-query go-mono">{t("webhookFeed.auto.queryLabel", { query: a.query })}</div>
+      {a.status === "running" && <div className="wf-auto-body wf-dim">{t("webhookFeed.auto.runningBody")}</div>}
+      {a.status === "error" && (
+        <div className="go-src-err">{a.error ?? t("webhookFeed.auto.errorDefault")}</div>
       )}
-      {a.status === "error" && <div className="go-src-err">{a.error ?? "実行に失敗しました"}</div>}
-      {a.status === "done" && <div className="wf-auto-body">{a.summary || "(回答が空でした)"}</div>}
+      {a.status === "done" && (
+        <div className="wf-auto-body">{a.summary || t("webhookFeed.auto.emptyAnswer")}</div>
+      )}
       {a.runId && (
         <div className="wf-auto-foot go-mono wf-dim">
-          ネットワーク調査タブのタイムラインに「自動調査」タグ付きで記録されています(runId: {a.runId})。
-          右の「調査結果を見る」でその実行結果を直接開けます。さらに詳しく聞きたい場合は
-          「調査する」から追加質問できます。
+          {t("webhookFeed.auto.footNote", { runId: a.runId })}
         </div>
       )}
     </div>
@@ -656,29 +753,33 @@ function AutoPanel({ item }: { item: WebhookFeedItem }) {
 }
 
 function SitePanel({ item }: { item: WebhookFeedItem }) {
+  const t = useT();
   const s = item.siteContext!;
   if (s.status === "unavailable") {
     return (
       <div className="wf-dsec">
-        <div className="wf-dsec-title">関連情報(サイト状況)</div>
-        <div className="wf-dim">{s.error ?? "サイトを特定できないため先読みしていません"}</div>
+        <div className="wf-dsec-title">{t("webhookFeed.site.title")}</div>
+        <div className="wf-dim">{s.error ?? t("webhookFeed.site.unavailableDefault")}</div>
       </div>
     );
   }
   if (s.status === "error") {
     return (
       <div className="wf-dsec">
-        <div className="wf-dsec-title">関連情報(サイト状況)</div>
-        <div className="go-src-err">先読みに失敗しました: {s.error}</div>
+        <div className="wf-dsec-title">{t("webhookFeed.site.title")}</div>
+        <div className="go-src-err">
+          {t("webhookFeed.site.fetchFailedPrefix")}
+          {s.error}
+        </div>
       </div>
     );
   }
   return (
     <div className="wf-dsec wf-dsec-site">
       <div className="wf-dsec-title">
-        関連情報(サイト状況)
+        {t("webhookFeed.site.title")}
         <span className="go-mono wf-dim">
-          {s.siteName} · 取得 {fmtTime(s.fetchedAt)}
+          {t("webhookFeed.site.meta", { site: s.siteName ?? "", time: fmtTime(s.fetchedAt) })}
         </span>
       </div>
       <div className="wf-kpis">
@@ -687,17 +788,17 @@ function SitePanel({ item }: { item: WebhookFeedItem }) {
           <span className="wf-kpi-value">{s.healthScore === null ? "—" : s.healthScore}</span>
         </div>
         <div className="wf-kpi">
-          <span className="wf-kpi-label">デバイス</span>
+          <span className="wf-kpi-label">{t("webhookFeed.site.kpi.devices")}</span>
           <span className="wf-kpi-value">
             {s.devicesTotal === null ? "—" : `${s.devicesUp ?? 0} / ${s.devicesTotal}`}
           </span>
         </div>
         <div className="wf-kpi">
-          <span className="wf-kpi-label">クライアント</span>
+          <span className="wf-kpi-label">{t("webhookFeed.site.kpi.clients")}</span>
           <span className="wf-kpi-value">{s.clients ?? "—"}</span>
         </div>
         <div className="wf-kpi">
-          <span className="wf-kpi-label">未解決アラート</span>
+          <span className="wf-kpi-label">{t("webhookFeed.site.kpi.openAlerts")}</span>
           <span className="wf-kpi-value">{s.openAlerts ?? "—"}</span>
         </div>
       </div>
@@ -724,7 +825,12 @@ function SitePanel({ item }: { item: WebhookFeedItem }) {
           ))}
         </ul>
       )}
-      {s.alertsNote && <div className="wf-dim go-mono">アラートの母集団: {s.alertsNote}</div>}
+      {s.alertsNote && (
+        <div className="wf-dim go-mono">
+          {t("webhookFeed.site.alertsNotePrefix")}
+          {s.alertsNote}
+        </div>
+      )}
     </div>
   );
 }

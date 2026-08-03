@@ -167,6 +167,28 @@ export interface WebhookFeedEnvelope {
     /** これまでに自動調査を発火した(または初回バックフィルで抑止した)アラート数 */
     investigatedCount: number;
   };
+  /**
+   * 42: 「表示」と「保存」の分離。
+   * items は viewMaxItems で頭打ちになるが、保存(日別 jsonl)は日数でしか制限されない。
+   */
+  storage: WebhookStorageInfo;
+}
+
+export interface WebhookStorageInfo {
+  /** 一覧に載せる上限件数(= items の最大長)。保存の上限ではない */
+  viewMaxItems: number;
+  /** いま一覧に載っている件数 */
+  viewItems: number;
+  /** 日別アーカイブの保持日数(0 = 無期限) */
+  retentionDays: number;
+  /** 保存済みの日数 */
+  days: number;
+  /** 保存済みの総件数 */
+  items: number;
+  /** 保存済みの総バイト数 */
+  bytes: number;
+  oldestDay: string | null;
+  newestDay: string | null;
 }
 
 export interface WebhookPollSettings {
@@ -175,4 +197,9 @@ export interface WebhookPollSettings {
   minMs: number;
   maxMs: number;
   optionsMs: number[];
+  /** 42: 日別アーカイブの保持日数(0 = 無期限)。表示上限とは別枠 */
+  archiveRetentionDays: number;
+  archiveRetentionOptionsDays: number[];
+  /** 表示上限(参考値。変更は env のみ) */
+  viewMaxItems: number;
 }

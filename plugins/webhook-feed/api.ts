@@ -11,23 +11,32 @@
 
 import { Router } from "express";
 import {
+  getArchiveSummary,
   getCachedFeed,
   getSettings,
+  initArchiveStore,
   loadPersisted,
   loadSettings,
   refresh,
+  setArchiveRetentionDays,
   setPollInterval,
   startPolling,
 } from "./poller.js";
+import { dayStats, getMeta, readDay } from "./archive.js";
 import { getServiceAccountEmail, resolveKeyFile } from "./sheets-client.js";
 import { AUTO_ENABLED, AUTO_MAX_AGE_MS, AUTO_MAX_PER_CYCLE } from "./enrich.js";
+import { isDateKey } from "../reports/time.js";
 
 export const router = Router();
 
-/** 起動時の初期化。永続キャッシュ + 設定を読み戻してからポーリングを始める。 */
+/**
+ * 起動時の初期化。永続キャッシュ + 設定を読み戻し、日別アーカイブを初期化(必要なら移行)
+ * してからポーリングを始める。
+ */
 export async function initWebhookFeed(): Promise<void> {
   await loadPersisted();
   await loadSettings();
+  await initArchiveStore();
   startPolling();
 }
 
@@ -48,14 +57,56 @@ router.get("/settings", (_req, res) => {
 });
 
 router.post("/settings", async (req, res) => {
-  const raw = (req.body ?? {}) as { pollIntervalMs?: unknown };
+  const raw = (req.body ?? {}) as { pollIntervalMs?: unknown; archiveRetentionDays?: unknown };
+  const hasInterval = raw.pollIntervalMs !== undefined;
+  const hasRetention = raw.archiveRetentionDays !== undefined;
+  if (!hasInterval && !hasRetention) {
+    res.status(400).json({ error: "pollIntervalMs または archiveRetentionDays を指定してください" });
+    return;
+  }
   const ms = Number(raw.pollIntervalMs);
-  if (!Number.isFinite(ms)) {
+  if (hasInterval && !Number.isFinite(ms)) {
     res.status(400).json({ error: "pollIntervalMs に数値を指定してください(ミリ秒)" });
     return;
   }
+  const days = Number(raw.archiveRetentionDays);
+  if (hasRetention && !Number.isFinite(days)) {
+    res.status(400).json({ error: "archiveRetentionDays に数値を指定してください(日。0 = 無期限)" });
+    return;
+  }
   try {
-    res.json(await setPollInterval(ms));
+    let out = getSettings();
+    if (hasInterval) out = await setPollInterval(ms);
+    if (hasRetention) out = await setArchiveRetentionDays(days);
+    res.json(out);
+  } catch (err) {
+    res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
+  }
+});
+
+/**
+ * 42: 日別アーカイブ(保存の正本)の状況。
+ *   GET /archive            … 日ごとの件数・サイズ一覧
+ *   GET /archive?date=YYYY-MM-DD … その日の保存件数(件数のみ。生データは返さない)
+ */
+router.get("/archive", async (req, res) => {
+  try {
+    const date = typeof req.query.date === "string" ? req.query.date : null;
+    if (date) {
+      if (!isDateKey(date)) {
+        res.status(400).json({ error: "date は YYYY-MM-DD 形式で指定してください" });
+        return;
+      }
+      const day = await readDay(date);
+      res.json({ dateKey: date, exists: day.exists, items: day.items.length, corrupt: day.corrupt });
+      return;
+    }
+    res.json({
+      summary: getArchiveSummary(),
+      meta: getMeta(),
+      days: await dayStats(),
+      view: { maxItems: getSettings().viewMaxItems, items: getCachedFeed().items.length },
+    });
   } catch (err) {
     res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
   }
@@ -85,6 +136,8 @@ router.get("/status", async (_req, res) => {
       minRefreshMs: env.minRefreshMs,
       items: env.items.length,
     },
+    // 42: 一覧に見えている件数(cache.items)とは別に、保存の実態を出す。
+    storage: env.storage,
     sheets: env.sheets,
     auto: {
       enabled: AUTO_ENABLED,

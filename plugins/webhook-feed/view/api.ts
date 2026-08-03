@@ -46,3 +46,19 @@ export async function updateWebhookPollInterval(pollIntervalMs: number): Promise
     }),
   );
 }
+
+/**
+ * 42: 日別アーカイブ(保存の正本)の保持日数。0 = 無期限。
+ * 一覧の表示件数(viewMaxItems)とは別物で、短くすると古い日のファイルがその場で消える。
+ */
+export async function updateWebhookArchiveRetention(
+  archiveRetentionDays: number,
+): Promise<WebhookPollSettings> {
+  return json<WebhookPollSettings>(
+    await fetch(`${BASE}/settings`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ archiveRetentionDays }),
+    }),
+  );
+}

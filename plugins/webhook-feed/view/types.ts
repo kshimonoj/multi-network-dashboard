@@ -82,6 +82,20 @@ export interface WebhookFeedEnvelope {
   sheets: WebhookSheetState[];
   items: WebhookFeedItem[];
   auto: { enabled: boolean; maxPerCycle: number; maxAgeMs: number; investigatedCount: number };
+  /** 42: 「表示している件数」と「保存している件数」は別物。フッタで両方を出す */
+  storage?: WebhookStorageInfo;
+}
+
+export interface WebhookStorageInfo {
+  viewMaxItems: number;
+  viewItems: number;
+  /** 日別アーカイブの保持日数(0 = 無期限) */
+  retentionDays: number;
+  days: number;
+  items: number;
+  bytes: number;
+  oldestDay: string | null;
+  newestDay: string | null;
 }
 
 export interface WebhookPollSettings {
@@ -90,6 +104,9 @@ export interface WebhookPollSettings {
   minMs: number;
   maxMs: number;
   optionsMs: number[];
+  archiveRetentionDays: number;
+  archiveRetentionOptionsDays: number[];
+  viewMaxItems: number;
 }
 
 /** ソースのバッジ表示名。 */
@@ -104,13 +121,6 @@ export const SOURCE_SHORT: Record<WebhookSource, string> = {
   "new-central": "New Central",
   "classic-central": "Classic",
   mist: "Mist",
-};
-
-export const SEVERITY_LABEL: Record<WebhookSeverity, string> = {
-  critical: "重大",
-  warning: "警告",
-  info: "情報",
-  unknown: "—",
 };
 
 export const SOURCE_ORDER: WebhookSource[] = ["new-central", "classic-central", "mist"];

@@ -33,6 +33,16 @@ import {
   annotateSite,
   trigger,
 } from "./enrich.js";
+import {
+  ARCHIVE_RETENTION_ENV_DEFAULT,
+  ARCHIVE_RETENTION_OPTIONS_DAYS,
+  appendItems,
+  clampRetention,
+  initArchive,
+  prune,
+  summarize,
+  type ArchiveSummary,
+} from "./archive.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DATA_DIR =
@@ -49,8 +59,14 @@ export const POLL_OPTIONS_MS = [
   60_000, 180_000, 300_000, 600_000, 900_000, 1_800_000, 3_600_000, 86_400_000,
 ];
 
-/** メモリ・feed.json に保持する行数の上限(古いものから捨てる)。 */
-const MAX_ITEMS = Math.max(200, Number(process.env.WEBHOOK_FEED_MAX_ITEMS ?? 3000));
+/**
+ * **表示用**にメモリ・feed.json へ持つ行数の上限(古いものから捨てる)。
+ *
+ * 42 番以降、これは「見せる量」の制限でしかない。**保存の上限ではない。**
+ * 受信した行は必ず archive.ts が data/webhook-feed/daily/YYYY-MM-DD.jsonl へ
+ * 追記しているので、ここから溢れた行も日次レポートからは正しく数えられる。
+ */
+const VIEW_MAX_ITEMS = Math.max(200, Number(process.env.WEBHOOK_FEED_MAX_ITEMS ?? 3000));
 
 function clampPoll(ms: number): number {
   if (!Number.isFinite(ms)) return 300_000;
@@ -65,7 +81,22 @@ export const MIN_REFRESH_MS = Math.max(
 );
 
 let pollIntervalMs = POLL_ENV_DEFAULT_MS;
+/** 日別アーカイブの保持日数(0 = 無期限)。表示上限とは完全に別枠(42)。 */
+let archiveRetentionDays = ARCHIVE_RETENTION_ENV_DEFAULT;
 let timer: NodeJS.Timeout | null = null;
+
+/** /snapshot は 15 秒ごとに叩かれるので、アーカイブの集計結果はキャッシュして返す。 */
+let archiveSummary: ArchiveSummary | null = null;
+/** 保持期間の整理を最後に実行した時刻(日単位の判定なので毎巡は回さない)。 */
+let lastPrunedAt = 0;
+
+async function refreshArchiveSummary(): Promise<void> {
+  try {
+    archiveSummary = await summarize(archiveRetentionDays);
+  } catch (err) {
+    console.warn("[webhook-feed] アーカイブ集計に失敗:", err);
+  }
+}
 
 // ---- 状態(差分検知 + 自動調査の実行済みキー) ----
 
@@ -234,19 +265,39 @@ export function getSettings(): WebhookPollSettings {
     minMs: POLL_MIN_MS,
     maxMs: POLL_MAX_MS,
     optionsMs: POLL_OPTIONS_MS,
+    archiveRetentionDays,
+    archiveRetentionOptionsDays: ARCHIVE_RETENTION_OPTIONS_DAYS,
+    viewMaxItems: VIEW_MAX_ITEMS,
   };
+}
+
+async function persistSettings(): Promise<void> {
+  await atomicWrite(
+    SETTINGS_PATH,
+    JSON.stringify({ pollIntervalMs, archiveRetentionDays }, null, 2) + "\n",
+  );
 }
 
 export async function loadSettings(): Promise<void> {
   try {
-    const parsed = JSON.parse(await readFile(SETTINGS_PATH, "utf-8")) as { pollIntervalMs?: unknown };
+    const parsed = JSON.parse(await readFile(SETTINGS_PATH, "utf-8")) as {
+      pollIntervalMs?: unknown;
+      archiveRetentionDays?: unknown;
+    };
     const n = Number(parsed?.pollIntervalMs);
     if (Number.isFinite(n)) {
       pollIntervalMs = clampPoll(n);
       console.log(`[webhook-feed] ポーリング間隔を settings.json から復元: ${pollIntervalMs / 1000}s`);
     }
+    if (parsed?.archiveRetentionDays !== undefined) {
+      archiveRetentionDays = clampRetention(parsed.archiveRetentionDays);
+      console.log(
+        `[webhook-feed] アーカイブ保持日数を settings.json から復元: ` +
+          `${archiveRetentionDays === 0 ? "無期限" : `${archiveRetentionDays} 日`}`,
+      );
+    }
   } catch {
-    /* 無ければ env 既定(5 分)*/
+    /* 無ければ env 既定(5 分 / 90 日)*/
   }
 }
 
@@ -255,7 +306,7 @@ export async function setPollInterval(ms: number): Promise<WebhookPollSettings> 
   const changed = next !== pollIntervalMs;
   pollIntervalMs = next;
   try {
-    await atomicWrite(SETTINGS_PATH, JSON.stringify({ pollIntervalMs }, null, 2) + "\n");
+    await persistSettings();
   } catch (err) {
     console.warn("[webhook-feed] 設定の保存に失敗:", err);
   }
@@ -266,6 +317,52 @@ export async function setPollInterval(ms: number): Promise<WebhookPollSettings> 
     console.log(`[webhook-feed] ポーリング間隔を変更: ${pollIntervalMs / 1000}s`);
   }
   return getSettings();
+}
+
+/** 日別アーカイブの保持日数を変える。短くした場合はその場で古い日を消す。 */
+export async function setArchiveRetentionDays(days: number): Promise<WebhookPollSettings> {
+  archiveRetentionDays = clampRetention(days);
+  try {
+    await persistSettings();
+  } catch (err) {
+    console.warn("[webhook-feed] 設定の保存に失敗:", err);
+  }
+  await prune(archiveRetentionDays);
+  await refreshArchiveSummary();
+  console.log(
+    `[webhook-feed] アーカイブ保持日数を変更: ${archiveRetentionDays === 0 ? "無期限" : `${archiveRetentionDays} 日`}`,
+  );
+  return getSettings();
+}
+
+export function getArchiveRetentionDays(): number {
+  return archiveRetentionDays;
+}
+
+export function getArchiveSummary(): ArchiveSummary | null {
+  return archiveSummary;
+}
+
+/**
+ * 起動時のアーカイブ初期化(移行 + 整理)。loadPersisted / loadSettings の後に呼ぶ。
+ * 移行元は feed.json から読み戻した表示用キャッシュ = 旧方式で残っていた全件。
+ */
+export async function initArchiveStore(): Promise<void> {
+  try {
+    await initArchive(items);
+    await prune(archiveRetentionDays);
+    await refreshArchiveSummary();
+    const s = archiveSummary;
+    if (s) {
+      console.log(
+        `[webhook-feed] アーカイブ: ${s.days} 日分 / ${s.items} 件 / ${(s.bytes / 1048576).toFixed(1)}MB ` +
+          `(${s.oldestDay ?? "-"} 〜 ${s.newestDay ?? "-"} / 保持 ${s.retentionDays === 0 ? "無期限" : `${s.retentionDays} 日`}` +
+          ` / 表示は直近 ${VIEW_MAX_ITEMS} 件)`,
+      );
+    }
+  } catch (err) {
+    console.warn("[webhook-feed] アーカイブの初期化に失敗:", err);
+  }
 }
 
 // ---- 封筒 ----
@@ -289,6 +386,17 @@ function envelope(): WebhookFeedEnvelope {
       maxAgeMs: AUTO_MAX_AGE_MS,
       investigatedCount: Object.keys(state.autoInvestigated).length,
     },
+    // 42: 「表示している件数」と「保存している件数」は別物。画面のフッタで両方を出す。
+    storage: {
+      viewMaxItems: VIEW_MAX_ITEMS,
+      viewItems: items.length,
+      retentionDays: archiveRetentionDays,
+      days: archiveSummary?.days ?? 0,
+      items: archiveSummary?.items ?? 0,
+      bytes: archiveSummary?.bytes ?? 0,
+      oldestDay: archiveSummary?.oldestDay ?? null,
+      newestDay: archiveSummary?.newestDay ?? null,
+    },
   };
 }
 
@@ -308,7 +416,8 @@ function sortItems(): void {
     if (!bv) return -1;
     return av < bv ? 1 : -1;
   });
-  if (items.length > MAX_ITEMS) items = items.slice(0, MAX_ITEMS);
+  // 表示用キャッシュの頭打ち。ここで捨てた行は archive(日別 jsonl)に残っている。
+  if (items.length > VIEW_MAX_ITEMS) items = items.slice(0, VIEW_MAX_ITEMS);
   itemById = new Map(items.map((i) => [i.id, i]));
 }
 
@@ -418,6 +527,15 @@ async function doRefresh(): Promise<void> {
     });
   }
 
+  // 42: 表示用キャッシュを頭打ちにする **前に**、取り込んだ行を日別アーカイブへ追記する。
+  // ここが保存の正本であり、以降の切り捨てはあくまで「見せる量」の話になる。
+  let archived = { appended: 0, skipped: 0 };
+  try {
+    archived = await appendItems(newItems);
+  } catch (err) {
+    console.warn("[webhook-feed] アーカイブへの追記に失敗:", err);
+  }
+
   sortItems();
   for (const s of nextSheetStates) {
     s.items = items.filter((i) => i.source === s.source).length;
@@ -466,10 +584,20 @@ async function doRefresh(): Promise<void> {
   await persistState();
   await persistFeed();
 
+  // 保持期間の整理は 1 時間に 1 回でよい(日単位の話なので毎巡やる意味が無い)。
+  if (Date.now() - lastPrunedAt > 3_600_000) {
+    lastPrunedAt = Date.now();
+    await prune(archiveRetentionDays).catch((err) =>
+      console.warn("[webhook-feed] アーカイブの整理に失敗:", err),
+    );
+  }
+  if (archived.appended || !archiveSummary) await refreshArchiveSummary();
+
   const totalNew = newItems.length;
   console.log(
-    `[webhook-feed] refresh 完了: 新規 ${totalNew} 行 / 保持 ${items.length} 件 ` +
-      `(${sheetStates.map((s) => `${s.label}=${s.newRows}`).join(" ")}) HTTP ${read.requests} 本` +
+    `[webhook-feed] refresh 完了: 新規 ${totalNew} 行 / 表示 ${items.length} 件 ` +
+      `/ 保存 ${archived.appended} 行追記(累計 ${archiveSummary?.items ?? "?"} 件 / ${archiveSummary?.days ?? "?"} 日分)` +
+      ` (${sheetStates.map((s) => `${s.label}=${s.newRows}`).join(" ")}) HTTP ${read.requests} 本` +
       (fired.fired ? ` / 自動調査 ${fired.fired} 件を起動` : "") +
       (fired.suppressed ? ` / 初回バックフィルのため ${fired.suppressed} 件は抑止` : ""),
   );
