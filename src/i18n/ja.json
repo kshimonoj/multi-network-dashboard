@@ -1,0 +1,1573 @@
+{
+  "app": {
+    "title": "Multi Network Dashboard",
+    "tabsAriaLabel": "画面切替",
+    "modelPrefix": "model:"
+  },
+  "plugin": {
+    "networkInvestigation": {
+      "name": "ネットワーク調査",
+      "sub": "Central / Mist 横断"
+    }
+  },
+  "tabs": {
+    "globalOverview": {
+      "label": "Global Overview",
+      "sub": "Central / Mist 直接 API"
+    },
+    "eventFeed": {
+      "label": "Event / Alert",
+      "sub": "全サイト横断・オンデマンド取得"
+    },
+    "webhookFeed": {
+      "label": "Webhook ログ",
+      "sub": "New Central / Classic Central / Mist(スプレッドシート経由)"
+    },
+    "centralStreaming": {
+      "label": "Streaming(Central)",
+      "sub": "New Central Streaming API(WSS 常時接続)"
+    },
+    "reports": {
+      "label": "レポート",
+      "sub": "日次 / 週次 / 月次のふりかえり"
+    },
+    "knowledge": {
+      "label": "ナレッジ",
+      "sub": "調査結果から蓄積した知見"
+    },
+    "networkInvestigation": {
+      "label": "ネットワーク調査",
+      "sub": "Central / Mist 横断"
+    },
+    "bestPractice": {
+      "label": "ベストプラクティス",
+      "sub": "セキュリティ / RF 推奨設定チェック"
+    }
+  },
+  "theme": {
+    "light": "ライト",
+    "dark": "ダーク",
+    "toggleTitle": "{next}モードに切り替える(選択はこのブラウザに保存されます)",
+    "toggleAria": "{next}モードに切り替える"
+  },
+  "language": {
+    "ja": "日本語",
+    "en": "English",
+    "switchTitle": "表示言語を切り替える(選択はこのブラウザに保存されます。調査アシスタントの回答言語も連動します)",
+    "switchAria": "表示言語"
+  },
+  "model": {
+    "unspecified": "(旧・未指定)"
+  },
+  "time": {
+    "relative": {
+      "secondsAgoOne": "{n} 秒前",
+      "secondsAgoOther": "{n} 秒前",
+      "minutesAgoOne": "{n} 分前",
+      "minutesAgoOther": "{n} 分前",
+      "hoursAgoOne": "{n} 時間前",
+      "hoursAgoOther": "{n} 時間前",
+      "daysAgoOne": "{n} 日前",
+      "daysAgoOther": "{n} 日前"
+    }
+  },
+  "globalOverview": {
+    "headerSub": "HPE Aruba Central / Juniper Mist — 直接 API",
+    "updatedLabel": "最終更新",
+    "staleTag": "古い可能性",
+    "loading": "読み込み中…",
+    "refresh": {
+      "button": "更新",
+      "running": "更新中…",
+      "countdown": "更新 ({s}s)",
+      "titleCooldown": "サーバ側の最短取得間隔({s} 秒)を待っています",
+      "titleReady": "Central / Mist から取り直します"
+    },
+    "error": {
+      "snapshotMissing": "スナップショットがまだありません。",
+      "refreshFailed": "取得に失敗しました。"
+    },
+    "cards": {
+      "totalSites": "総サイト数",
+      "totalDevices": "総デバイス数",
+      "connectedClients": "接続クライアント数",
+      "totalAlerts": "アラート合計"
+    },
+    "alertNote": {
+      "prefix": "アラートは定義が異なるため単純合算では比較できません — Central は ",
+      "centralSuffix": "(未解消)、Mist は ",
+      "mistPart": "直近 24 時間",
+      "mistSuffix": "のアラーム(解消済みを含む)です。"
+    },
+    "platformPanel": {
+      "connectedOk": "接続 OK",
+      "fetchFailed": "取得失敗",
+      "sites": "サイト",
+      "clients": "クライアント",
+      "alerts": "アラート",
+      "devicesUp": "デバイス Up"
+    },
+    "siteTable": {
+      "title": "サイト別内訳",
+      "count": "{n} サイト",
+      "filterAll": "すべて",
+      "sortHint": "クリックで並び替え",
+      "col": {
+        "site": "サイト",
+        "devices": "デバイス計",
+        "clients": "クライアント",
+        "alerts": "アラート",
+        "health": "健全性"
+      },
+      "noteAlerts": "Central=Active / Mist=過去24h",
+      "noteHealth": "Central のみ / Mist は未取得",
+      "unregisteredTag": "未登録",
+      "unregisteredTitle": "サイト対応表(site-platform-map.json)に未登録",
+      "healthUnavailableTitle": "このプラットフォームでは健全性スコアを取得していません(値なし)",
+      "empty": "該当するサイトがありません"
+    },
+    "map": {
+      "title": "サイトマップ",
+      "locatedCount": "{n} / {total} サイトに位置情報",
+      "fitAll": "全体表示",
+      "fitAllTitle": "全サイトが入る範囲に戻す",
+      "legendBorder": "枠 =",
+      "legendFill": "塗り =",
+      "popup": {
+        "devicesLabel": "デバイス",
+        "clientsLabel": "クライアント",
+        "alertsLabel": "アラート",
+        "healthLabel": "健全性",
+        "unavailableNote": "(未取得)",
+        "devicesValue": "{total} 台 (Up {up} / Down {down})"
+      }
+    },
+    "siteMapOnlyNote": "サイト対応表にあるが今回の API 応答に現れなかったサイト({n} 件): {list}",
+    "footer": {
+      "pollInterval": "ポーリング間隔",
+      "savingInterval": "保存中…",
+      "minutes": "{n} 分",
+      "seconds": "{n} 秒",
+      "intervalTitle": "定期ポーリングの間隔を変更します(サーバに保存され、コンテナ再作成後も保持されます)",
+      "eventTabHint": "Event / Alert タブは自動更新されず、タブを開いたとき・「更新」を押したときだけ取得します(サーバ側 60 秒キャッシュ)。",
+      "eventTabNote": "(この設定は Global Overview の自動更新のみ / Event / Alert タブには適用されません)",
+      "minRefresh": "手動更新の最短間隔 {s} 秒",
+      "httpCount": "直近取得の HTTP 本数: Central {c} / Mist {m}"
+    },
+    "alertLabel": {
+      "central": "Active",
+      "mist": "過去24h"
+    },
+    "alertDesc": {
+      "central": "Central: status = Active のアラート件数(未解消のもの)",
+      "mist": "Mist: 直近 24 時間に発生したアラーム件数(解消済みを含む)"
+    },
+    "stateLabel": {
+      "down": "Down あり",
+      "alert": "アラートあり",
+      "ok": "正常",
+      "empty": "デバイス未登録"
+    },
+    "donut": {
+      "unit": "{v} 台"
+    },
+    "detail": {
+      "backToList": "← 一覧に戻る",
+      "backToListTitle": "Global Overview の一覧に戻る (Esc)",
+      "deviceCount": "デバイス {up}/{total}",
+      "clientCount": "クライアント {n}",
+      "alertCount": "アラート {n}",
+      "fetched": "取得 {time}",
+      "cached": "(キャッシュ)",
+      "httpCount": " · HTTP {n} 本",
+      "loading": "詳細を取得中…",
+      "noSiteId": "このサイトには siteId が無いため詳細を取得できません(未割り当てデバイス等)。",
+      "fetchFailedPrefix": "取得に失敗しました — ",
+      "unavailableDefault": "このプラットフォームでは取得できません",
+      "none": "なし",
+      "investigateBtn": "調査する",
+      "investigateBtnTitle": "この事案の要約をクエリ文にして、ネットワーク調査タブへ渡します(実行はされません)",
+      "health": {
+        "mistSource": "Mist SLE(指標平均)",
+        "centralSource": "Central 健全性",
+        "noBreakdown": "内訳なし"
+      },
+      "sections": {
+        "health": "Health / SLE",
+        "devices": "デバイス",
+        "clients": "接続クライアント",
+        "alerts": "アラート",
+        "events": "イベント"
+      },
+      "devices": {
+        "empty": "デバイスなし",
+        "kindOther": "その他",
+        "col": {
+          "name": "名前",
+          "model": "モデル",
+          "status": "状態",
+          "uptime": "稼働"
+        }
+      },
+      "clients": {
+        "empty": "接続クライアントなし",
+        "rowTitle": "クリックでイベント履歴を表示",
+        "col": {
+          "client": "クライアント",
+          "bandCh": "帯域/CH",
+          "connectedTo": "接続先"
+        },
+        "eventHistory": "イベント履歴",
+        "loading": "取得中…",
+        "noRecentEvents": "直近のイベントはありません"
+      },
+      "alerts": {
+        "empty": "アラートなし"
+      },
+      "events": {
+        "empty": "イベントなし"
+      }
+    }
+  },
+  "eventFeed": {
+    "headerSub": "全サイト横断 — 直近 {hours}h・オンデマンド取得",
+    "lastFetched": "最終取得",
+    "cachedTag": "キャッシュ",
+    "noAutoUpdateTag": "自動更新なし",
+    "noAutoUpdateTitle": "このタブは自動更新されません。タブを開いたとき・「更新」を押したときだけ Central / Mist から取得し、サーバ側で {ttl} 秒キャッシュします(Global Overview のポーリング間隔設定は適用されません)。",
+    "refreshBtn": "更新",
+    "refreshBtnLoading": "取得中…",
+    "refreshBtnTitle": "Central / Mist から取り直します(定期ポーリングには含まれません)",
+    "loading": "Event / Alert を取得中…(Central はサイト単位で取得するため数秒かかります)",
+    "sources": {
+      "title": "取得元",
+      "summary": "HTTP {n} 本 · 全 {total} 件",
+      "ofTotal": " / 全 {n}",
+      "failed": "失敗",
+      "empty": "取得元がありません(Central / Mist の資格情報が未設定です)"
+    },
+    "filter": {
+      "title": "フィルタ",
+      "summary": "{filtered} / {total} 件(アラート {alert} · イベント {event} · 重大 {critical} · 警告 {warning})",
+      "clear": "クリア",
+      "clearTitle": "すべてのフィルタを解除する",
+      "kind": "種別",
+      "kindAll": "すべて",
+      "kindAlert": "アラート",
+      "kindEvent": "イベント",
+      "severity": "重要度",
+      "site": "サイト",
+      "siteAllOption": "すべて({n})",
+      "category": "カテゴリ",
+      "categoryAllOption": "すべて({n})",
+      "searchPlaceholder": "本文 / 種別 / デバイスで絞り込み"
+    },
+    "timeline": {
+      "title": "タイムライン",
+      "summary": "新しい順 · {shown} / {total} 件を表示",
+      "col": {
+        "time": "時刻",
+        "severity": "重要度",
+        "kind": "種別",
+        "site": "サイト",
+        "category": "カテゴリ",
+        "content": "内容",
+        "action": "操作"
+      },
+      "empty": "条件に一致する Event / Alert はありません",
+      "showMore": "さらに {n} 件を表示"
+    },
+    "footer": "このタブはタブを開いたとき・「更新」を押したときだけ Central / Mist から取得し、サーバ側で {ttl} 秒キャッシュします(Global Overview のポーリング間隔設定は適用されません)。",
+    "footerCentralNote": " Central のイベントのみサイト単位で取得しています。",
+    "row": {
+      "apiValueTitle": "API の値: {v}",
+      "noSeverityTitle": "この API は重要度を返しません"
+    },
+    "severity": {
+      "critical": "重大",
+      "warning": "警告",
+      "info": "情報"
+    },
+    "investigateBtn": "調査する",
+    "investigateBtnTitle": "この事案の要約をクエリ文にして、ネットワーク調査タブへ渡します(実行はされません)",
+    "investigateQuery": {
+      "kindAlert": "アラート",
+      "kindEvent": "イベント",
+      "template": "{site}({platform})で発生した以下の{kind}について、原因や影響範囲を調査して: {tag}{text}({time})"
+    }
+  },
+  "webhookFeed": {
+    "title": "Webhook ログ",
+    "headerSubWithTitle": "New Central / Classic Central / Mist — Google スプレッドシート「{title}」経由",
+    "headerSubNoTitle": "New Central / Classic Central / Mist — Google スプレッドシート経由",
+    "lastFetched": "最終取得",
+    "staleTag": "次の巡回待ち",
+    "refresh": {
+      "button": "更新",
+      "running": "取得中…",
+      "title": "スプレッドシートから新規行を取り直します(最短間隔 {s} 秒)"
+    },
+    "error": {
+      "configPrefix": "Webhook ログを取得できません: "
+    },
+    "loading": "Webhook ログを読み込み中…",
+    "sheets": {
+      "title": "取得元シート",
+      "totalCount": "全 {n} 件",
+      "failedTag": "失敗",
+      "readCount": "読取済み {n} 行",
+      "readCountDelta": " (前回 +{n})",
+      "nextRowNote": "差分取得: 次回は {n} 行目から読みます"
+    },
+    "filter": {
+      "title": "フィルタ",
+      "summary": "{filtered} / {total} 件(重大 {critical} · 警告 {warning} · 自動調査あり {auto})",
+      "clear": "クリア",
+      "clearTitle": "すべてのフィルタを解除する",
+      "source": "ソース",
+      "all": "すべて",
+      "severity": "重要度",
+      "severityNone": "なし",
+      "site": "サイト",
+      "allWithCount": "すべて({n})",
+      "category": "カテゴリ",
+      "autoOnly": "自動調査ありのみ",
+      "autoOnlyTitle": "AI による自動事前調査が走った行だけを表示します",
+      "searchPlaceholder": "本文 / 種別 / デバイス / サイトで絞り込み"
+    },
+    "table": {
+      "title": "タイムライン",
+      "summary": "受信の新しい順 · {shown} / {filtered} 件を表示",
+      "col": {
+        "expand": "展開",
+        "time": "受信時刻",
+        "severity": "重要度",
+        "source": "ソース",
+        "site": "サイト",
+        "category": "カテゴリ",
+        "content": "内容",
+        "action": "操作"
+      },
+      "empty": "条件に一致する Webhook ログはありません",
+      "showMore": "さらに {n} 件を表示"
+    },
+    "footer": {
+      "pollInterval": "Webhook ログの自動更新間隔",
+      "hours": "{n} 時間",
+      "minutes": "{n} 分",
+      "seconds": "{n} 秒",
+      "saving": "保存中…",
+      "intervalTitle": "このタブ専用の設定です。サーバに保存され、コンテナ再作成後も保持されます。Global Overview の間隔設定とは別に管理されます。",
+      "hintTitle": "この設定は Webhook ログ(Google スプレッドシート)の取得間隔だけを変えます。Global Overview の Central / Mist ポーリング間隔とは別に保存されます。",
+      "hintNote": "(この設定は Webhook ログの取得のみ / Global Overview のポーリング間隔とは別設定です)",
+      "minRefresh": "手動更新の最短間隔 {s} 秒",
+      "autoLabel": "自動事前調査",
+      "autoDisabled": "無効",
+      "autoEnabledDetail": "重大(Critical)のみ・最大 {max} 件/巡・受信から {age} 分以内・同一アラートは 1 回のみ(実行済み {done} 件)",
+      "storageLabel": "生ログの保存期間",
+      "retentionDays": "{n} 日",
+      "retentionForever": "無期限",
+      "retentionTitle": "受信した Webhook を日付ごとのファイル(daily/YYYY-MM-DD.jsonl)に保存する日数です。ここを短くすると古い日のファイルが削除されます。日次レポートはこの保存データを集計します。",
+      "storageStored": "保存 {days} 日分 / {items} 件 / {size}({from} 〜 {to})",
+      "storageShown": "表示 {items} / 最大 {max} 件",
+      "storageNote": "(保存は日付ごと・件数上限なし / 表示だけ直近に絞っています)",
+      "storageTitle": "保存は日付ごとのファイルに分かれているため、1 日の件数がどれだけ多くても欠落しません。一覧は表示を速くするために直近の件数だけを読み込みます(この上限は表示だけの制限で、保存には影響しません)。"
+    },
+    "row": {
+      "trCloseTitle": "クリックで閉じる",
+      "trOpenTitle": "クリックで生データ・自動調査・サイト状況を表示する",
+      "btnCloseTitle": "閉じる",
+      "btnOpenTitle": "生データ・自動調査・サイト状況を表示する",
+      "sevRawTitle": "シート上の値: {v}",
+      "sevNoneTitle": "この通知は重要度を持ちません",
+      "autoTag": {
+        "running": "AI 自動調査中…",
+        "done": "AI 自動事前調査あり",
+        "error": "AI 自動調査に失敗"
+      },
+      "historyBtn": "調査結果を見る",
+      "historyBtnTitle": "自動事前調査が実際に実行された過去の履歴(スレッド)を、ネットワーク調査タブで直接開きます",
+      "investigateBtn": "調査する",
+      "investigateBtnTitleFollowUp": "自動事前調査の結果を踏まえた追加質問のクエリ文を、ネットワーク調査タブへ渡します(実行はされません)",
+      "investigateBtnTitleNew": "この通知の要約をクエリ文にして、ネットワーク調査タブへ渡します(実行はされません)"
+    },
+    "detail": {
+      "rawTitle": "生データ({sheet} の {row} 行目)"
+    },
+    "auto": {
+      "title": "AI による自動事前調査",
+      "status": {
+        "running": "実行中",
+        "done": "完了",
+        "error": "失敗"
+      },
+      "queryLabel": "クエリ: {query}",
+      "runningBody": "Insight Agent が調査しています。完了すると自動でここに要約が出ます(この画面は 15 秒ごとに更新されます)。",
+      "errorDefault": "実行に失敗しました",
+      "emptyAnswer": "(回答が空でした)",
+      "footNote": "ネットワーク調査タブのタイムラインに「自動調査」タグ付きで記録されています(runId: {runId})。右の「調査結果を見る」でその実行結果を直接開けます。さらに詳しく聞きたい場合は「調査する」から追加質問できます。"
+    },
+    "site": {
+      "title": "関連情報(サイト状況)",
+      "unavailableDefault": "サイトを特定できないため先読みしていません",
+      "fetchFailedPrefix": "先読みに失敗しました: ",
+      "meta": "{site} · 取得 {time}",
+      "kpi": {
+        "devices": "デバイス",
+        "clients": "クライアント",
+        "openAlerts": "未解決アラート"
+      },
+      "alertsNotePrefix": "アラートの母集団: "
+    },
+    "severity": {
+      "critical": "重大",
+      "warning": "警告",
+      "info": "情報"
+    },
+    "investigateQuery": {
+      "timeUnknown": "時刻不明",
+      "template": "{where}の Webhook 通知について、原因や影響範囲を調査して: {tag}{message}({when})。{device}",
+      "deviceSuffix": " 対象デバイス: {device}。",
+      "followUpSuffix": "\n\nなお、このアラートについては既に以下の自動事前調査の結果があります。重複する説明は省き、まだ分かっていない点(根本原因・再発の有無・影響範囲・次に取るべき対処)を掘り下げてください。\n---\n{summary}\n---"
+    }
+  },
+  "centralStreaming": {
+    "title": "Streaming(Central)",
+    "headerSub": "New Central Streaming API — WSS 常時接続 / CloudEvents + protobuf 二段デコード",
+    "stored": {
+      "label": "保存済み",
+      "value": "{n} 件",
+      "age": "(更新 {age})"
+    },
+    "masterToggle": {
+      "onTitle": "すべてのストリームを切断します(設定は保持されます)",
+      "offTitle": "選択済みのストリームへ WSS 接続を開始します",
+      "on": "受信中 — 停止する",
+      "off": "停止中 — 開始する"
+    },
+    "error": {
+      "configPrefix": "Streaming API に接続できません: "
+    },
+    "loading": "接続状態を読み込み中…",
+    "connPanel": {
+      "title": "接続状態",
+      "note": "全体トグルが「停止中」のあいだは、個別に選んでいても接続しません"
+    },
+    "conn": {
+      "received": "受信 {n} 件",
+      "last": "最終 {age}",
+      "typesAll": "全イベント({n} 種別すべて)",
+      "typesSelected": "{selected} / {total} 種別を選択",
+      "edit": "種別を選ぶ",
+      "close": "閉じる",
+      "nextRetry": "次の再接続: {countdown}",
+      "disconnectTest": "切断テスト",
+      "disconnectTestTitle": "意図的に切断して、再接続ロジックが働くことを確認します"
+    },
+    "retry": {
+      "inSecondsOne": "{n} 秒後",
+      "inSecondsOther": "{n} 秒後",
+      "inMinutesOne": "{n} 分後",
+      "inMinutesOther": "{n} 分後"
+    },
+    "picker": {
+      "title": "{label} — 購読するイベント種別",
+      "note": "何も選ばない = そのエンドポイントの全イベントを受け取る(event-types を付けない)",
+      "selectNone": "全解除(= 全イベント)",
+      "selectAll": "すべて選択",
+      "close": "閉じる",
+      "footer": "wss://<Central>/{path} · proto: {protoFile}"
+    },
+    "retention": {
+      "title": "保存と Retention",
+      "noteBase": "保存先 data/central-streaming/events.jsonl · 保持 {n} 件",
+      "lastPurge": " · 最終削除 {time}({n} 件)",
+      "noPurgeYet": " · まだ削除は走っていません",
+      "daysLabel": "保持期間",
+      "daysOption": "{n} 日",
+      "daysTitle": "この日数より古いイベントは定期ジョブ(10 分ごと)で削除されます",
+      "maxEventsLabel": "保持件数",
+      "maxEventsOption": "{n} 件",
+      "maxEventsTitle": "保持期間より先にこちらの上限に当たった場合は、古いものから捨てられます",
+      "purgeNow": "今すぐ整理",
+      "purgeNowTitle": "Retention の判定を今すぐ実行します",
+      "clearAll": "すべて削除",
+      "clearAllTitle": "保存済みイベントをすべて削除します(設定は消えません)",
+      "hint": "Location / RSSI は秒あたり数件が流れ続けます。長時間有効にする場合は保持件数を確認してください。"
+    },
+    "filter": {
+      "title": "フィルタ",
+      "summary": "{filtered} / {total} 件(表示は最新 {total} 件まで)",
+      "clear": "クリア",
+      "streamLabel": "ストリーム",
+      "all": "すべて",
+      "decodeErrorsOnly": "デコード失敗のみ",
+      "decodeErrorsOnlyTitle": "protobuf のデコードに失敗した行だけを表示します",
+      "searchPlaceholder": "要約 / 種別 / デバイス / サイト / 実行者で絞り込み"
+    },
+    "table": {
+      "title": "受信イベント",
+      "summary": "受信の新しい順 · {shown} / {filtered} 件を表示",
+      "col": {
+        "expand": "展開",
+        "time": "受信時刻",
+        "stream": "ストリーム",
+        "type": "種別",
+        "site": "サイト / デバイス",
+        "content": "内容",
+        "action": "操作"
+      },
+      "emptyEnabled": "まだイベントを受信していません(接続状態を確認してください)",
+      "emptyDisabled": "受信は停止中です。上の「開始する」で購読を始めてください",
+      "showMore": "さらに {n} 件を表示"
+    },
+    "footer": {
+      "body": "接続は{server}が保持します(ブラウザから Central へは繋ぎません)。アクセストークンは有効期限の 5 分前に取り直して張り直し、予期しない切断時は指数バックオフ(最大 60 秒)で再接続します。Central は切断後 15 分間イベントをキューするため、その範囲で復帰すれば取りこぼしません。",
+      "serverLabel": "サーバ側",
+      "tokenExpiry": " / 現在のトークン期限 {time}",
+      "noAutoInvestigate": " / 自動調査は実装していません(各イベントに重要度に相当するフィールドが無いため)。"
+    },
+    "row": {
+      "trCloseTitle": "クリックで閉じる",
+      "trOpenTitle": "クリックでデコード結果(生データ)を表示する",
+      "btnCloseTitle": "閉じる",
+      "btnOpenTitle": "デコード結果を表示する",
+      "actor": "実行者 {actor}",
+      "investigate": "調査する",
+      "investigateTitle": "このイベントを題材にネットワーク調査タブでクエリを組み立てます(自動実行はしません)",
+      "cloudEventId": "CloudEvent id: {id}",
+      "type": "type: {type}",
+      "eventAt": "発生時刻: {time}"
+    },
+    "investigateQuery": {
+      "timeUnknown": "時刻不明",
+      "siteIdFallback": "サイト ID {id}",
+      "template": "New Central の Streaming API で受信した以下のイベントについて、背景・影響範囲・対応の要否を調査して: [{tags}] {summary}({when})。{siteSuffix}{deviceSuffix}{actorSuffix}",
+      "siteSuffix": "対象サイト: {site}。",
+      "deviceSuffix": "関連デバイス: {device}。",
+      "actorSuffix": "実行者: {actor}。"
+    },
+    "state": {
+      "disabled": "未接続",
+      "connecting": "接続中…",
+      "open": "接続済み",
+      "reconnecting": "再接続中",
+      "error": "エラー"
+    },
+    "volume": {
+      "low": "流量: 小",
+      "medium": "流量: 中",
+      "high": "流量: 大"
+    },
+    "endpoint": {
+      "audit-trail": {
+        "label": "Audit Trail(監査証跡)",
+        "note": "Central 上の設定変更・操作の記録。20 サブカテゴリから選べる。流量は低く、設定変更をすると即座に流れてくる。"
+      },
+      "ap-monitoring": {
+        "label": "AP Monitoring(AP 監視)",
+        "note": "AP の状態(state.*)と統計(stats.*)。stats.* は AP 台数 × 周期で流れるため流量が大きい。まずは state.* だけを選ぶのが無難。"
+      },
+      "geofence": {
+        "label": "Geofence(ジオフェンス)",
+        "note": "ゾーンの入退出。フロアプランでゾーンを定義していないと流れてこない。"
+      },
+      "location": {
+        "label": "Location(位置情報)",
+        "note": "測位結果。クライアント数に比例して秒あたり数件〜が流れ続ける。長時間の有効化は Retention 設定に注意。"
+      },
+      "location-analytics": {
+        "label": "Location Analytics(RSSI)",
+        "note": "AP が観測した生 RSSI / 近接 RSSI。Location よりさらに流量が大きい。"
+      }
+    },
+    "auditSubtype": {
+      "device-monitoring": "デバイス監視",
+      "configuration": "コンフィグ",
+      "certificate-management": "証明書管理",
+      "alert-management": "アラート管理",
+      "system-management": "システム管理",
+      "central-nac": "Central NAC",
+      "overlay-tunnel-orchestrator": "オーバーレイトンネル",
+      "reporting": "レポート",
+      "firmware-management": "ファームウェア管理",
+      "security": "セキュリティ",
+      "gcis": "GCIS",
+      "troubleshooting": "トラブルシューティング",
+      "subscription": "サブスクリプション",
+      "floorplan-manager": "フロアプラン",
+      "configuration-validation": "コンフィグ検証",
+      "extension": "拡張",
+      "service-config-bridge": "サービス設定ブリッジ",
+      "configuration-distribution": "コンフィグ配信",
+      "configuration-import": "コンフィグ取り込み",
+      "configuration-health": "コンフィグ健全性"
+    },
+    "apEventType": {
+      "state-device": "状態: デバイス",
+      "state-radio": "状態: 無線",
+      "state-port": "状態: ポート",
+      "state-vap": "状態: VAP",
+      "state-wlan": "状態: WLAN",
+      "state-tunnel": "状態: トンネル",
+      "stats-device": "統計: デバイス",
+      "stats-radio": "統計: 無線",
+      "stats-vap": "統計: VAP",
+      "stats-port": "統計: ポート",
+      "stats-modem": "統計: モデム",
+      "stats-tunnel": "統計: トンネル",
+      "stats-ip-probe": "統計: IP プローブ",
+      "stats-user-role": "統計: ユーザーロール",
+      "stats-ssid": "統計: SSID",
+      "stats-vlan": "統計: VLAN"
+    },
+    "geofenceEventType": {
+      "wifi-client": "Wi-Fi クライアント",
+      "asset-tag": "アセットタグ"
+    },
+    "locationEventType": {
+      "wifi-client": "Wi-Fi クライアント位置",
+      "asset-tag": "アセットタグ最終位置"
+    },
+    "rssiEventType": {
+      "raw": "Raw RSSI",
+      "proximity": "Proximity RSSI"
+    }
+  },
+  "networkInvestigation": {
+    "console": {
+      "queryPlaceholder": "調査クエリ(例: 全サイトの健全性を確認して / Home サイトの障害を確認して)",
+      "siteSelectTitle": "サイトを指定すると、そのサイトのプラットフォームだけに MCP を絞り込みます(ルーティングスキップ)",
+      "siteAny": "サイト指定なし(両方に問い合わせ)",
+      "modelSelectTitle": "このクエリを実行するモデル(未選択なら既定モデル)",
+      "modelOption": "モデル: {label}",
+      "runBtn": "実行(⌘/Ctrl+Enter)",
+      "runBtnBusy": "実行中…",
+      "continueTitle": "チェックすると、この実行を今の調査スレッドの次のターンとして記録します",
+      "continueLabel": "このスレッドの続きとして実行する",
+      "threadHeadOne": "この調査スレッド ・ {n} ターン",
+      "threadHeadOther": "この調査スレッド ・ {n} ターン",
+      "newSessionBtn": "新しい調査を始める",
+      "newSessionTitle": "表示中のスレッドを畳んで、新しい調査を始めます(履歴は残ります)",
+      "siteQuerySeed": "{site} サイトの障害・アラートと端末状況を確認して",
+      "historyNotFound": "この調査結果は見つかりませんでした(履歴に反映されるまで少し時間がかかることがあります)"
+    },
+    "sitePanel": {
+      "title": "サイト一覧",
+      "refreshBtn": "状態を更新",
+      "refreshBtnBusy": "更新中…",
+      "refreshTitle": "Central/Mist から各サイトの health 等を取得して一覧に反映します(時間がかかります)",
+      "foot": "{n} サイト ・ Central {central} / Mist {mist}",
+      "statusFetched": " ・ 状態取得 {when}",
+      "statusNotFetched": " ・ 状態未取得",
+      "empty": "サイト対応表がまだありません。",
+      "rowTitle": "{site}({platform} 管理 / siteId={siteId})をクエリ対象にする",
+      "notFetched": "状態未取得"
+    },
+    "sse": {
+      "headQuery": "クエリ: 「{query}」",
+      "headDefault": "MCP 呼び出しログ",
+      "siteUnspecified": "site=未指定",
+      "empty": "クエリを実行すると、MCP 呼び出しがここにリアルタイムで流れます。",
+      "used": "{server} 使用",
+      "skippedTitle": "{server}(スキップ)",
+      "judgmentTag": "モデル判断",
+      "judgmentTitle": "{platform}(モデル判断で省略)",
+      "judgmentText": "{platform} は不要と判断: {reason}",
+      "thinking": "エージェントが回答を組み立てています…",
+      "legendSkipped": "スキップ(グレースケール)",
+      "knowledgeTag": "ナレッジ参照",
+      "knowledgeText": "承認済みナレッジ {n} 件を前提に調べています: {titles}"
+    },
+    "status": {
+      "calling": "問い合わせ中…",
+      "unfinished": "未完了",
+      "error": "失敗",
+      "done": "完了",
+      "doneCount": "完了・{n}件"
+    },
+    "toolCall": {
+      "failTitle": "クリックで失敗の詳細を表示",
+      "noStatusCode": "ステータスコードなし",
+      "serverError": "MCP サーバー({server})が返したエラー",
+      "args": "呼び出し引数"
+    },
+    "turn": {
+      "single": "調査",
+      "no": "ターン {i}/{n}",
+      "modelLine": "model={model} ・ {duration}",
+      "modelLegacy": "Sonnet(推定・旧履歴)",
+      "failTag": "失敗",
+      "healthTitle": "narrowing で含めた MCP サーバーのうち、1 度も使われず、直接確認でも到達できなかったものがあります",
+      "loadQueryBtn": "入力欄へ",
+      "loadQueryTitle": "このクエリを入力欄に読み込む",
+      "callsSummary": "呼び出したツール({n})",
+      "callsPlatforms": " ・ {platforms}",
+      "callsEmpty": "この実行のツール呼び出しは記録されていません。",
+      "errorDefault": "実行に失敗しました",
+      "noAnswer": "回答が記録されていません。"
+    },
+    "timeline": {
+      "title": "実行タイムライン",
+      "editorOpen": "定期実行を設定",
+      "editorClose": "定期実行の設定を閉じる",
+      "empty": "まだ実行履歴がありません。クエリを実行するか、定期実行を待つと、ここに時系列で並びます。",
+      "cardTitleMulti": "クリックでこの調査スレッド(全ターン)を表示",
+      "cardTitleSingle": "クリックでこの実行の詳細を表示",
+      "threadTagOne": "{n} ターン",
+      "threadTagOther": "{n} ターン",
+      "lastQuery": "└ 最後: {query}",
+      "mcpTagTitle": "一部の MCP サーバーに接続できていませんでした(認証切れの可能性)",
+      "scheduleLoading": "定期実行: 読み込み中…",
+      "scheduleSummary": "定期実行: {state} ・ {when} ・ 対象 {n} 件",
+      "scheduleEnabled": "有効",
+      "scheduleDisabled": "無効",
+      "scheduleWeekly": "毎週{weekday} {time}",
+      "scheduleDaily": "毎日 {time}"
+    },
+    "thread": {
+      "backBtn": "← タイムラインへ",
+      "loading": "読み込み中…",
+      "loadFailed": "スレッドの読み込みに失敗しました: {error}",
+      "loadLastBtn": "最後のクエリを入力欄へ",
+      "loadLastTitle": "このスレッドの最後のクエリを入力欄に読み込む",
+      "periodTail": " 〜 {time}"
+    },
+    "schedule": {
+      "frequency": "頻度",
+      "daily": "毎日",
+      "weekly": "毎週",
+      "dayOfWeek": "曜日",
+      "time": "時刻",
+      "enableLabel": "定期実行を有効にする",
+      "saveBtn": "時刻・頻度を保存(cron 反映)",
+      "savingBtn": "反映中…",
+      "applyOk": "反映しました",
+      "applyFail": "反映に失敗",
+      "applyMsg": "{state}: {detail}",
+      "emptyList": "定期実行するクエリはまだありません。下で追加してください。",
+      "save": "保存",
+      "cancel": "取消",
+      "edit": "編集",
+      "delete": "削除",
+      "deleteTitle": "削除",
+      "toggleOn": "有効",
+      "toggleOff": "無効",
+      "siteAny": "サイト指定なし(両方)",
+      "siteUnset": "site=未指定(両方)",
+      "siteValue": "site={site}",
+      "modelValue": "model={model}",
+      "modelLegacy": "model=(旧・未指定)",
+      "qmeta": "{site} ・ {model}",
+      "addPlaceholder": "定期実行するクエリを追加(例: 全サイトの健全性を確認して)",
+      "addBtn": "クエリを追加",
+      "weekday": {
+        "0": "日曜",
+        "1": "月曜",
+        "2": "火曜",
+        "3": "水曜",
+        "4": "木曜",
+        "5": "金曜",
+        "6": "土曜"
+      },
+      "detail": {
+        "disabled": "定期実行は無効(cron ジョブを停止しました)",
+        "invalid": "cron 式が不正です: {expression}",
+        "applied": "{freq}(cron \"{expression}\" / TZ={tz})で定期実行を設定しました",
+        "registerFailed": "cron ジョブの登録に失敗: {error}",
+        "freqDaily": "毎日 {time}",
+        "freqWeekly": "毎週 {weekday} {time}"
+      }
+    },
+    "mcpHealth": {
+      "tagUnreachable": "MCP未接続",
+      "tagWarn": "要確認",
+      "headUnreachable": "一部の MCP サーバーに接続できませんでした(認証切れの可能性があります)",
+      "headWarn": "一部の MCP サーバーの接続状態を確認できませんでした",
+      "stateUnreachable": "接続できませんでした",
+      "stateUnknown": "接続状態を確認できませんでした",
+      "serverLine": "{server}({platform})",
+      "platformUnknown": "不明",
+      "note": "この実行では {server} のツールが 1 度も使われていません{init}。回答は残りのデータだけで組み立てられている可能性があります。",
+      "noteInit": "(claude 初期化時の状態: {status})"
+    },
+    "suggested": {
+      "label": "続けて調べる"
+    },
+    "source": {
+      "manual": "手動",
+      "scheduled": "定期",
+      "auto": "自動調査"
+    },
+    "duration": {
+      "none": "—",
+      "ms": "{n}ms",
+      "sec": "{n}秒"
+    },
+    "routing": {
+      "bothNoSite": "サイト指定なし — Central / Mist 両方に問い合わせます",
+      "siteUnknown": "サイト「{site}」が対応表に見つからないため、両プラットフォームに問い合わせます",
+      "narrowed": "{site} は {platform} 管理のため、{skipped} への問い合わせをスキップしました"
+    },
+    "share": {
+      "label": "共有",
+      "sessionLabel": "スレッド全体を共有",
+      "print": "印刷 / PDF",
+      "printTitle": "印刷用レイアウトで印刷します(ダイアログで「PDF として保存」を選べば PDF 化できます)",
+      "printSessionTitle": "このスレッドの全ターンを 1 つのレポートとして印刷します(ダイアログで「PDF として保存」を選べば PDF 化できます)",
+      "mail": "メール",
+      "mailSummary": "メール(要約)",
+      "mailTitle": "この調査結果を本文に入れたメールを作成します",
+      "mailSessionTitle": "各ターンの要点をまとめた要約をメール本文にします",
+      "copy": "コピー",
+      "copyTitle": "この調査結果をプレーンテキストでコピーします",
+      "copySessionTitle": "このスレッドの全ターンをプレーンテキストでコピーします",
+      "msgMailCreated": "メールを作成しました",
+      "msgMailTruncated": "メールを作成しました(本文が長いため冒頭のみ引用)",
+      "msgMailSummary": "メールを作成しました(各ターンの要点のみ)",
+      "msgCopied": "クリップボードにコピーしました",
+      "msgCopyFailed": "コピーに失敗しました",
+      "msgCopiedSession": "スレッド全体({n}ターン)をコピーしました"
+    },
+    "report": {
+      "title": "ネットワーク調査レポート",
+      "sessionTitle": "ネットワーク調査レポート(調査スレッド)",
+      "sub": "Multi Network Dashboard — Central / Mist 横断",
+      "resultHeading": "調査結果",
+      "turnHeading": "ターン {i}/{n} ・ {ts} ・ {site}",
+      "turnQuery": "クエリ: {query}",
+      "turnTools": "使用ツール: {tools}",
+      "turnModel": " ・ モデル: {model}",
+      "turnFailed": "(このターンは失敗しました){note}",
+      "foot": "出力: {ts} ・ {origin}",
+      "none": "—",
+      "toolsNone": "(記録なし)",
+      "missingChart": "(グラフは省略。ダッシュボードで表示できます)",
+      "missingTopology": "(トポロジ図は省略。ダッシュボードで表示できます)",
+      "meta": {
+        "site": "対象サイト",
+        "ts": "実行日時",
+        "query": "調査クエリ",
+        "platforms": "対象基盤",
+        "tools": "使用ツール",
+        "model": "モデル",
+        "period": "期間",
+        "turns": "ターン数",
+        "firstQuery": "最初のクエリ"
+      }
+    },
+    "shareText": {
+      "siteAny": "指定なし(全サイト横断)",
+      "docTitle": "【ネットワーク調査レポート】",
+      "sessionDocTitle": "【ネットワーク調査レポート(調査スレッド)】",
+      "resultDivider": "── 調査結果 ──",
+      "summaryDivider": "── 調査サマリ ──",
+      "truncatedNote": "…(以下省略)\n\n※本文が長いため冒頭のみ引用しています。詳細はダッシュボードでご確認ください。",
+      "truncatedShort": "…(以下省略)",
+      "dashboard": "ダッシュボード: {url}",
+      "seeDashboard": "詳細はダッシュボードでご確認ください{url}",
+      "urlSuffix": ": {url}",
+      "subject": "[ネットワーク調査] {site} {ts}",
+      "sessionSubject": "[ネットワーク調査] {site} {ts}({n}ターン)",
+      "sessionSiteOther": "{sites} ほか({any})",
+      "periodRange": "{first} 〜 {last}",
+      "turnDivider": "── ターン {i}/{n} ・ {ts} ・ {site} ──",
+      "turnQuery": "■ クエリ: {query}",
+      "turnFailed": "(このターンは失敗しました){note}",
+      "omittedTurns": "…(中間の {n} ターンは省略)",
+      "failedPoint": "(失敗){summary}",
+      "mailFooter": "全 {n} ターンの回答全文・グラフ・トポロジ図はダッシュボードでご確認ください{url}",
+      "chartNote": "(グラフはダッシュボード上で表示されます)",
+      "topologyNote": "(トポロジ図はダッシュボード上で表示されます)",
+      "bullet": "・",
+      "header": {
+        "site": "■ 対象サイト : {value}",
+        "ts": "■ 実行日時   : {value}",
+        "query": "■ 調査クエリ : {value}",
+        "platforms": "■ 対象基盤   : {value}",
+        "tools": "■ 使用ツール : {value}",
+        "model": "■ モデル     : {value}",
+        "period": "■ 期間       : {value}",
+        "turns": "■ ターン数   : {value}"
+      },
+      "mailHeader": {
+        "site": "対象サイト: {value}",
+        "ts": "実行日時: {value}",
+        "query": "調査クエリ: {value}",
+        "period": "期間: {value}({n}ターン)"
+      }
+    }
+  },
+  "reports": {
+    "title": "レポート",
+    "headerSub": "蓄積した日次レポートを暦から選んで確認する",
+    "periodAria": "期間を切り替える",
+    "period": {
+      "daily": "日次",
+      "weekly": "週次",
+      "monthly": "月次"
+    },
+    "reload": "更新",
+    "reloading": "更新中…",
+    "loading": "読み込み中…",
+    "pickDay": "カレンダーから日付を選んでください。",
+    "noSummary": "総括はありません。",
+    "partial": "未完成",
+    "generatedAt": "生成 {at}",
+    "generatedBy": {
+      "schedule": "定期実行",
+      "manual": "手動生成",
+      "catchup": "後追い生成"
+    },
+    "analysisFailed": "この日の分析は失敗しています({reason})。数値の集計だけが残っています。",
+    "langNote": "レポート本文は生成時の言語({lang})のまま表示しています。実行時の記録なので翻訳しません。",
+    "error": {
+      "notGenerated": "{date} のレポートはまだ生成されていません。"
+    },
+    "weekday": {
+      "sun": "日",
+      "mon": "月",
+      "tue": "火",
+      "wed": "水",
+      "thu": "木",
+      "fri": "金",
+      "sat": "土"
+    },
+    "picker": {
+      "prevMonth": "前の月",
+      "nextMonth": "次の月",
+      "prevYear": "前の年",
+      "nextYear": "次の年",
+      "latest": "最新",
+      "latestTitle": "最新のレポート({date})へ移動する",
+      "weekColumn": "週",
+      "weekTitle": "{key}({from} 〜 {to})— 週次レポート未生成 / 日次 {n} 日",
+      "dayTitle": "{date} — 問題 {issues} 件(うち重大 {critical} 件)",
+      "dayEmpty": "{date} — レポートなし",
+      "monthTitle": "{month} — 月次レポート未生成 / 日次 {n} 日",
+      "daysCount": "{n} 日",
+      "legendOk": "問題なし",
+      "legendWarn": "問題あり",
+      "legendBad": "重大な問題",
+      "legendNone": "薄い日付 = レポート未生成",
+      "weekReportTitle": "{key}({from} 〜 {to})— 日次 {n}/{of} 日を集計 ・問題 {issues} 件(うち重大 {critical} 件)",
+      "monthReportTitle": "{month} — 日次 {n}/{of} 日を集計 ・問題 {issues} 件(うち重大 {critical} 件)",
+      "daysCountPending": "{n} 日(未集計)",
+      "legendPending": "薄い点 = 日次はあるが未集計"
+    },
+    "kpi": {
+      "events": "総イベント数",
+      "eventsSub": "Webhook ログ(全ソース)",
+      "eventsUnavailable": "この日は未取得",
+      "critical": "重大アラート数",
+      "criticalSub": "警告 {n} 件",
+      "clients": "接続端末数",
+      "clientsSub": "当日 最小 {min} / 最大 {max}",
+      "clientsSnapshot": "当日のサンプルが無く、生成時点の値",
+      "newIssues": "新規の問題数",
+      "newIssuesSub": "継続・再発 {n} 件"
+    },
+    "charts": {
+      "healthTitle": "健全性 / SLE トレンド",
+      "clientsTitle": "利用量トレンド(接続端末数)",
+      "rangeNote": "直近 {n} 日ぶんの日次レポート",
+      "noData": "グラフに出せるデータがありません。",
+      "centralHealth": "Central 平均健全性",
+      "mistSle": "Mist 平均 SLE",
+      "clients": "接続端末数",
+      "siteDetailNote": "サイト別・詳細な内訳は各サイト詳細ページで確認できます(クリックで Global Overview のサイト詳細を開きます)。",
+      "siteDetailLinkTitle": "{site} のサイト詳細ページを開く",
+      "trafficNote": "トラフィック量(バイト / bps)は、このアプリが使っている取得経路に該当 API が無いため未計測です。"
+    },
+    "highlights": {
+      "title": "この期間に起きたこと",
+      "count": "{n} 件",
+      "hint": "クリックでネットワーク調査タブへ",
+      "empty": "特筆すべき出来事は記録されていません。",
+      "source": "出典: {source}"
+    },
+    "issues": {
+      "title": "検出された問題",
+      "count": "{n} 件",
+      "hint": "行クリックでネットワーク調査タブへ / ▸ で詳細",
+      "empty": "この日に検出された問題はありません。",
+      "rowTitle": "この問題をネットワーク調査タブで調べる",
+      "expand": "詳細を開く",
+      "collapse": "詳細を閉じる",
+      "prevDays": "過去 {n} 日",
+      "colName": "問題",
+      "colDevice": "対象機器",
+      "colSite": "サイト",
+      "colFirstSeen": "初回発生",
+      "colPlatform": "プラットフォーム",
+      "colSeverity": "重要度",
+      "colRecurrence": "再発性",
+      "colNextAction": "次のアクション",
+      "rootCause": "根本原因(推定)",
+      "impact": "影響範囲",
+      "occurrences": "当日の発生回数",
+      "firstSeenDate": "初出日",
+      "recurrenceNote": "再発性の補足",
+      "previousDates": "過去に検出された日",
+      "key": "名寄せキー"
+    },
+    "investigateBtn": "調査",
+    "investigateBtnTitle": "この内容でネットワーク調査タブを開く(実行はしません)",
+    "auto": {
+      "tag": {
+        "running": "調査中",
+        "done": "調査済み",
+        "error": "調査失敗"
+      },
+      "tagTitle": "{date} のレポート生成時に自動事前調査を実行しました",
+      "resultBtn": "調査結果を見る",
+      "resultBtnTitle": "{date} に自動実行した調査の結果(ネットワーク調査タブのスレッド)を開く",
+      "rowTitleResult": "自動事前調査の結果をネットワーク調査タブで開く",
+      "runningCount": "自動事前調査 {n} 件を実行中",
+      "panelTitle": "自動事前調査(MCP 込み)",
+      "meta": "{date} のレポート生成時に実行 ・ 開始 {at}",
+      "queryLabel": "クエリ: {query}",
+      "runningBody": "MCP 経由で Central / Mist に問い合わせています。完了すると「調査結果を見る」から開けます。",
+      "errorDefault": "自動事前調査に失敗しました。",
+      "emptyAnswer": "回答が空でした。"
+    },
+    "severity": {
+      "critical": "重大",
+      "warning": "警告",
+      "info": "情報"
+    },
+    "platform": {
+      "central": "Central",
+      "mist": "Mist",
+      "glp": "GLP",
+      "other": "その他"
+    },
+    "recurrence": {
+      "new": "新規",
+      "recurring": "再発",
+      "continuing": "継続"
+    },
+    "footer": "対象日 {date}({tz})・イベント {events} 件・調査実行 {investigations} 件",
+    "investigateQuery": {
+      "unknown": "不明",
+      "highlight": "{date} の日次レポートより。{time} に サイト「{site}」/ 対象機器「{device}」({platform})で「{title}」が発生しました(重要度: {severity})。内容: {detail} この事象の原因・影響範囲・必要な対応を調べてください。",
+      "issue": "{date} の日次レポートで検出された問題「{name}」について調べてください。対象機器: {device} / サイト: {site} / プラットフォーム: {platform} / 重要度: {severity} / 再発性: {recurrence}(初出 {firstSeen}、当日 {occurrences} 回)。レポートの推定根本原因: {rootCause} 影響範囲: {impact} 次のアクション: {nextAction} この内容が現時点でも妥当か、現在の状態はどうかを確認してください。",
+      "periodHighlight": "{period}レポート({from} 〜 {to})より。サイト「{site}」/ 対象機器「{device}」({platform})で「{title}」が発生しました(重要度: {severity}、{days} 日で発生: {dates})。内容: {detail} この事象の原因・影響範囲・必要な対応を調べてください。",
+      "periodIssue": "{period}レポート({from} 〜 {to})で検出された問題「{name}」について調べてください。対象機器: {device} / サイト: {site} / プラットフォーム: {platform} / 重要度: {severity} / 期間内の位置づけ: {status}(初出 {firstSeen})。この期間では {days} 日で発生し(発生日: {dates})、延べ {occurrences} 回、最長 {streak} 日連続でした。レポートの推定根本原因: {rootCause} 影響範囲: {impact} 次のアクション: {nextAction} 慢性的な問題なのか一過性なのか、現時点でも継続しているかを確認してください。"
+    },
+    "periodIssue": {
+      "status": {
+        "new": "期間内で新規",
+        "carried": "前期間から継続"
+      }
+    },
+    "periodNote": {
+      "in-progress": "この期間はまだ進行中です({of} 日中 {days} 日ぶんを集計しています)。",
+      "missing-days": "日次レポートが無い日が {of} 日中 {n} 日あります({dates})。その日を除いて集計しています。",
+      "partial-days": "1 日が終わる前に作られた未完成の日次レポートを {n} 日ぶん含みます({dates})。",
+      "analysis-failed-days": "分析(LLM)が失敗した日次レポートを {n} 日ぶん含みます({dates})。その日の「起きたこと」「問題」は集計に入っていません。",
+      "webhook-unavailable-days": "Webhook ログが取得できていない日が {n} 日あります({dates})。総イベント数はその日を除いた合計です。",
+      "mixed-lang": "集計元の日次レポートの言語が混在しています({langs})。本文は生成時の言語のまま表示します。"
+    },
+    "periodReport": {
+      "weeklyTitle": "{key}({range})",
+      "monthlyTitle": "{key}({range})",
+      "range": "{from} 〜 {to}",
+      "inProgressBadge": "進行中",
+      "partialBadge": "一部の日のみ",
+      "notGeneratedBadge": "未生成",
+      "notGeneratedYet": "この期間のレポートはまだ生成されていません。定期実行(週次: 毎週月曜 / 月次: 毎月 1 日)か、日次レポートが新しく作られたときに自動で集計されます。下の日次レポートは今すぐ開けます。",
+      "noDailyAtAll": "この期間の日次レポートが 1 件も無いため、集計するものがありません。",
+      "aggregatedFrom": "日次レポート {n} 日ぶんを集計",
+      "noLlmNote": "週次 / 月次は蓄積済みの日次レポートを機械的に集計したものです(LLM による再分析は行っていません)。",
+      "summary": "この期間は日次レポート {days} 日ぶん(暦 {of} 日)を集計しました。イベント {events} 件・重大アラート {critical} 件・検出された問題は名寄せ後 {issues} 件(期間内で新規 {newIssues} 件 / 前期間から継続 {carried} 件)です。",
+      "eventsSub": "1 日平均 {avg} 件({n} 日ぶんの合計)",
+      "criticalSub": "警告 {warning} 件 ・最多は {date}({n} 件)",
+      "clientsSub": "期間 最小 {min} / 最大 {max}({n} 日の加重平均)",
+      "clientsPeak": "最大を記録した日: {date}",
+      "newIssuesSub": "前期間から継続 {carried} 件 / 名寄せ後 合計 {unique} 件",
+      "trendNoteDay": "この期間の日次レポート {n} 日ぶん",
+      "trendNoteWeek": "この期間を週単位にまとめた {n} 点",
+      "highlightsTruncated": "重要度の低い {n} 件は省略",
+      "onNDays": "{n} 日で発生",
+      "issuesCount": "{n} 件(名寄せ前 延べ {total} 件)",
+      "issuesHint": "行クリックでネットワーク調査タブへ / ▸ で発生日と詳細",
+      "colDays": "発生日数",
+      "colOccurrences": "延べ発生",
+      "colStatus": "期間内の位置づけ",
+      "daysOf": "{n} / {of} 日",
+      "streak": "最長 {n} 日連続",
+      "streakTitle": "この期間で最長 {n} 日連続して発生しました",
+      "firstSeenTitle": "初出日: {date}",
+      "firstSeenAt": "期間内の初回発生",
+      "occurredOn": "発生日(クリックでその日の日次レポート)",
+      "beforePeriod": "この期間より前に検出された日",
+      "siteChipTitle": "{site} のサイト詳細ページを開く({n} 日ぶんの平均)",
+      "sourceTitle": "集計に使った日次レポート",
+      "sourceCount": "{n} / {of} 日",
+      "sourceChipTitle": "{date} — 問題 {issues} 件 ・イベント {events} 件 ・分析 {status}",
+      "daysNote": "この期間の生成済み日次レポート: {n} 日",
+      "openDay": "{date} の日次レポートを開く",
+      "noDays": "この期間の日次レポートはまだありません。",
+      "footer": "{key}({from} 〜 {to} / {tz})・日次 {days} 日ぶんを集計 ・イベント {events} 件 ・調査実行 {investigations} 件"
+    }
+  },
+  "knowledge": {
+    "title": "ナレッジ",
+    "headerSub": "調査結果から抽出した知見の承認と蓄積",
+    "refresh": "更新",
+    "refreshing": "更新中…",
+    "badgeTitle": "未承認のナレッジ候補が {n} 件あります",
+    "sectionAria": "ナレッジの区分",
+    "foot": "承認済みのナレッジは data/knowledge/entries.json に保存されます。候補の抽出は調査 1 件につき 1 回だけ行われます。",
+    "sections": {
+      "pending": "未承認の候補",
+      "approved": "承認済みナレッジ",
+      "archive": "却下・統合済み"
+    },
+    "error": {
+      "prefix": "操作に失敗しました: {message}"
+    },
+    "status": {
+      "pending": "未承認",
+      "approved": "承認済み",
+      "rejected": "却下済み",
+      "merged": "統合済み"
+    },
+    "origin": {
+      "manual": "手動調査",
+      "auto": "自動事前調査",
+      "scheduled": "定期実行"
+    },
+    "scope": {
+      "general": "一般的なパターン",
+      "site": "サイト固有",
+      "device": "機器固有"
+    },
+    "platform": {
+      "central": "Central",
+      "mist": "Mist",
+      "both": "Central / Mist"
+    },
+    "extract": {
+      "on": "候補抽出: 有効(対象 {sources})",
+      "off": "候補抽出: 無効",
+      "none": "なし",
+      "logToggle": "抽出の状況",
+      "logTitle": "候補抽出の実行状況(直近)",
+      "logEmpty": "この起動以降、まだ抽出は行われていません。",
+      "settingsSummary": "1 調査あたり最大 {max} 件 / 回答 {min} 文字未満は対象外 / 類似しきい値 {threshold} / モデル {model}",
+      "defaultModel": "既定",
+      "logCreated": "候補 {n} 件を作成(重複で見送り {dup} 件 / マージ提案 {similar} 件)",
+      "status": {
+        "created": "作成",
+        "empty": "候補なし",
+        "skipped": "対象外",
+        "error": "失敗"
+      },
+      "reason": {
+        "disabled": "候補抽出が設定で無効です",
+        "sourceExcluded": "この実行経路は抽出対象に含まれていません",
+        "investigationError": "調査そのものが失敗しています",
+        "answerTooShort": "回答が短すぎるため対象外です",
+        "alreadyExtracted": "この調査からは既に抽出済みです",
+        "noInsight": "今後に活かせる知見は見つかりませんでした",
+        "allDuplicates": "作成した候補はすべて既存の未承認候補と重複していました",
+        "llmFailed": "抽出の実行に失敗しました"
+      }
+    },
+    "card": {
+      "title": "タイトル",
+      "symptom": "症状",
+      "rootCause": "根本原因",
+      "action": "対処法",
+      "scope": "適用範囲",
+      "site": "サイト: {value}",
+      "device": "対象機器: {value}",
+      "siteLabel": "サイト",
+      "deviceLabel": "対象機器",
+      "tagsLabel": "タグ(カンマ区切り)",
+      "tagsPlaceholder": "例: rogue-ap, 5ghz",
+      "sourceLine": "出典: {at} の{origin}",
+      "langNote": "この内容は{lang}で生成されています(実行時の記録として原文のまま表示しています)。"
+    },
+    "meta": {
+      "created": "{at} に生成",
+      "approved": "{at} に承認",
+      "rejected": "{at} に却下",
+      "edited": "編集あり",
+      "merged": "統合 {n} 件"
+    },
+    "actions": {
+      "approve": "承認",
+      "editApprove": "編集して承認",
+      "reject": "却下",
+      "saveAndApprove": "保存して承認",
+      "cancel": "キャンセル",
+      "edit": "編集",
+      "save": "保存",
+      "retire": "取り下げ",
+      "restore": "承認して復活",
+      "openRun": "調査結果を見る",
+      "editing": "編集中"
+    },
+    "bulk": {
+      "selectAll": "すべて選択",
+      "selected": "{n} 件を選択中",
+      "approve": "まとめて承認",
+      "selectTitle": "まとめて承認する候補として選ぶ"
+    },
+    "pending": {
+      "empty": "未承認の候補はありません。ネットワーク調査(手動・自動事前調査)が終わると、そこから知見候補が自動で作られます。"
+    },
+    "similar": {
+      "title": "これは既存のナレッジと同じ可能性があります",
+      "score": "一致度 {score}",
+      "merge": "この既存にマージする",
+      "mergeTitle": "既存エントリを更新し、この候補は統合済みとして残します",
+      "missing": "対象の既存エントリが見つかりませんでした(削除・却下された可能性があります)。",
+      "keepSeparateNote": "別の知見として残す場合は、そのまま「承認」を押してください。"
+    },
+    "approved": {
+      "searchPlaceholder": "タイトル・症状・原因・対処法から検索",
+      "searchAria": "承認済みナレッジの検索",
+      "count": "{total} 件中 {shown} 件を表示",
+      "allTags": "すべて",
+      "empty": "承認済みのナレッジはまだありません。",
+      "noMatch": "条件に一致するナレッジはありません。",
+      "filterByTag": "タグ #{tag} で絞り込む",
+      "sortAria": "承認済みナレッジの並べ替え",
+      "sort": {
+        "approved": "承認が新しい順",
+        "refs": "参照が多い順",
+        "stale": "未参照・参照が古い順"
+      }
+    },
+    "archive": {
+      "title": "却下・統合済み",
+      "note": "却下しても内容は消えません。誤って却下した場合はここから承認し直せます。",
+      "empty": "却下・統合されたものはありません。",
+      "mergedInto": "「{title}」に統合"
+    },
+    "refs": {
+      "count": "調査で参照 {n} 回",
+      "last": "最終 {at}",
+      "never": "未参照",
+      "neverTitle": "承認後、まだ一度も調査プロンプトに注入されていません",
+      "title": "このナレッジが調査プロンプトに注入された回数と、最後に注入された時刻",
+      "unusedCount": "未参照 {n} 件"
+    },
+    "inject": {
+      "on": "調査への注入: 有効(最大 {max} 件)",
+      "off": "調査への注入: 無効",
+      "summary": "調査プロンプトへ最大 {max} 件 / 関連度しきい値 {threshold}"
+    }
+  },
+  "bestPractice": {
+    "title": "ベストプラクティス",
+    "headerSub": "セキュリティ / RF チューニングの推奨設定チェック(サイト単位・手動実行)",
+    "platform": {
+      "all": "すべて",
+      "central": "Central",
+      "mist": "Mist"
+    },
+    "site": {
+      "title": "サイトを選択",
+      "loading": "サイト一覧を読み込み中…",
+      "refreshBtn": "再取得",
+      "empty": "対象サイトがありません。",
+      "selectPlaceholder": "サイトを選択してください",
+      "apCount": "AP {n} 台"
+    },
+    "run": {
+      "button": "診断実行",
+      "buttonBusy": "診断中…",
+      "hint": "サイト内の代表 AP 1 台をサンプリングして判定します(通常 8〜10 秒程度かかります)。",
+      "llmToggle": "AI 所見(SEC-12 / SEC-13 / RF-15 / RF-16)も生成する",
+      "conflict": "同じサイトの診断が既に実行中です。しばらく待ってから再度お試しください。",
+      "errorPrefix": "診断の実行に失敗しました: "
+    },
+    "result": {
+      "title": "診断結果",
+      "noRunYet": "このサイトの診断結果はまだありません。「診断実行」を押してください。",
+      "loadingPrevious": "過去の実行結果を確認しています…",
+      "polling": "診断結果を待っています…",
+      "startedAt": "実行日時",
+      "duration": "所要時間",
+      "durationValue": "{s} 秒",
+      "sampledAp": "サンプリング対象 AP",
+      "summary": "適合 {pass} / 要確認 {warn} / 非適合 {fail} / 取得不可 {unknown} / 対象外 {na} / AI所見 {info}",
+      "legalReviewNote": "うち法務確認の検討対象: {n} 件",
+      "errorRun": "この実行はエラーで終了しました: {error}",
+      "rerunBtn": "再実行",
+      "empty": "この区分に該当する項目はありません。"
+    },
+    "category": {
+      "security": "セキュリティ",
+      "rf": "RF"
+    },
+    "verdict": {
+      "pass": "適合",
+      "warn": "要確認",
+      "fail": "非適合",
+      "unknown": "取得不可",
+      "not_applicable": "対象外",
+      "info": "AI所見"
+    },
+    "severity": {
+      "must": "必須",
+      "strong": "強く推奨",
+      "recommended": "推奨",
+      "advisory": "注意喚起"
+    },
+    "method": {
+      "mechanical": "機械判定",
+      "llm": "AI 所見"
+    },
+    "legalReview": {
+      "badge": "法務確認",
+      "note": "有効化を検討する場合は、法務・セキュリティ部門の確認を推奨します。"
+    },
+    "unknown": {
+      "note": "この環境では取得できない項目です(取得不可。非適合という意味ではありません)。"
+    },
+    "llmFinding": {
+      "badge": "AI 所見",
+      "note": "この所見は診断時のスナップショットの値のみを根拠にした参考情報です(合否判定ではありません)。"
+    },
+    "references": {
+      "title": "根拠"
+    },
+    "view": {
+      "diagnose": "診断",
+      "reference": "ルール一覧"
+    },
+    "detail": {
+      "toggle": "ルールの説明・根拠を表示",
+      "category": "カテゴリ",
+      "priority": "重要度",
+      "method": "判定方法",
+      "openReference": "ルール一覧で詳しく見る"
+    },
+    "reference": {
+      "title": "ルール一覧 / リファレンス",
+      "headerSub": "全 {n} ルールの一覧です。診断を実行しなくても閲覧できます。",
+      "loading": "ルール一覧を読み込み中…",
+      "error": "ルール一覧の取得に失敗しました: "
+    },
+    "rules": {
+      "SEC-01": { "title": "レガシー暗号方式の排除", "desc": "SSID の暗号方式に WEP・TKIP・オープン認証(暗号化なし)が使われていないかを確認します。" },
+      "SEC-02": { "title": "オープン SSID への OWE 適用", "desc": "オープン認証(暗号化なし)の SSID に OWE(Enhanced Open)を適用し、通信を暗号化しているかを確認します。" },
+      "SEC-03": { "title": "WPA3 への移行状況", "desc": "SSID が WPA2 に留まっていないか、WPA3(または OWE)へ移行済みかを確認します。" },
+      "SEC-04": { "title": "WPA2 SSID の PMF 設定", "desc": "WPA2 系 SSID で PMF(Protected Management Frames)が mfp-required または mfp-capable により有効化されているかを確認します。" },
+      "SEC-05": { "title": "WPA3 Transition Mode の常用回避", "desc": "WPA3 の Transition Mode(WPA2 との共存モード)が常時有効なままになっていないかを確認します。有効な間は WPA2 相当の接続も許容されます。" },
+      "SEC-06": { "title": "6GHz 帯での WPA3 必須化", "desc": "6GHz 帯を使用する SSID が、規格上必須の WPA3(または OWE)を満たしているかを確認します。" },
+      "SEC-07": { "title": "無線 IDS 検知(インフラ)の有効化", "desc": "インフラストラクチャに対する WIDS 検知レベルが off になっていないかを確認します。" },
+      "SEC-08": { "title": "無線 IDS 検知(クライアント)の有効化", "desc": "クライアントに対する WIDS 検知レベルが off になっていないかを確認します。" },
+      "SEC-09": { "title": "無線 IDS 検知レベルの過剰設定", "desc": "検知レベルが medium/high など高い設定になっていないか(誤検知増加のおそれ)を確認します。" },
+      "SEC-10": { "title": "無線封じ込め(Containment)の有効化状況", "desc": "無線 Containment(封じ込め)が有効になっていないかを確認します。有効化は電波法・近隣ネットワークへの影響に関わるため、法務・セキュリティ部門の確認を推奨します。" },
+      "SEC-11": { "title": "高リスクな保護ポリシーの有効化状況", "desc": "rogue-containment 等、高リスクな WIDS/WIPS 保護ポリシーが有効になっていないかを確認します。有効化には法務・セキュリティ部門の確認を推奨します。" },
+      "SEC-12": { "title": "認証・鍵配布構成の総合所見(AI)", "desc": "認証サーバの冗長性、SSID の用途と認証方式の整合、MPSK の使いどころについて、診断時のスナップショットのみを根拠に AI が所見を述べます。" },
+      "SEC-13": { "title": "SSID 構成のセキュリティ姿勢(AI)", "desc": "機械判定で挙がった問題の優先順位と、機械判定に現れない構成上の懸念について、診断時のスナップショットのみを根拠に AI が所見を述べます。" },
+      "RF-01": { "title": "2.4GHz のチャネル幅", "desc": "2.4GHz 無線のチャネル幅が 20MHz を超えていないかを確認します。" },
+      "RF-02": { "title": "5GHz のチャネル幅", "desc": "5GHz 無線のチャネル幅が 80MHz を超えていないかを確認します。" },
+      "RF-03": { "title": "帯域内のチャネル幅の統一", "desc": "同一サイト・同一帯域の無線間でチャネル幅が揃っているかを確認します。" },
+      "RF-04": { "title": "2.4GHz の非重複チャネルへの限定", "desc": "2.4GHz の許可チャネルが非重複チャネル(1/6/11)に限定されているかを確認します。" },
+      "RF-05": { "title": "同一無線の Tx 電力レンジ", "desc": "同一無線内の最大/最小 Tx 電力の差が大きくなりすぎていないか(ARM/RRM が収束しにくくなっていないか)を確認します。" },
+      "RF-06": { "title": "2.4GHz と 5GHz の Tx 電力差", "desc": "5GHz の最小 Tx 電力が 2.4GHz より十分高く(目安 6dB 以上)設定されているかを確認します。" },
+      "RF-07": { "title": "5GHz と 6GHz の Tx 電力差", "desc": "6GHz の最小 Tx 電力が、5GHz と比べて適正な範囲(目安 0〜+3dB)に収まっているかを確認します。" },
+      "RF-08": { "title": "基本レート(Basic Rate)の下限", "desc": "基本レートに低速(12Mbps 未満)なレートが含まれていないかを確認します。" },
+      "RF-09": { "title": "802.11k(Neighbor Report)の有効化", "desc": "802.11k が有効になっているかを確認します。" },
+      "RF-10": { "title": "OKC / PMK キャッシュの有効化", "desc": "OKC(Opportunistic Key Caching)が有効になっているかを確認します。" },
+      "RF-11": { "title": "ブロードキャスト/マルチキャストフィルタの有効化", "desc": "broadcast-filter と IPv6 RA フィルタが有効になっているかを確認します。" },
+      "RF-12": { "title": "Wi-Fi 6/7 機能の無効化状況", "desc": "HE(Wi-Fi 6)/EHT(Wi-Fi 7)の各機能が意図せず無効化されていないかを確認します。" },
+      "RF-13": { "title": "ARM(Adaptive Radio Management)の有効化", "desc": "ARM の scanning / client-match が有効になっているか(AOS8 のみ対象)を確認します。" },
+      "RF-14": { "title": "AP モデル系列の混在", "desc": "サイト内で AP のモデル系列(例: 5xx 系と 6xx 系)が混在していないかを確認します。" },
+      "RF-15": { "title": "高密度環境における 2.4GHz の扱い(AI)", "desc": "2.4GHz を使う SSID・AP 台数から、この環境で 2.4GHz をクライアント用途に開けておくべきかについて、環境依存であることを明記した上で AI が所見を述べます。" },
+      "RF-16": { "title": "静的チャネル/電力割当と RRM 運用の妥当性(AI)", "desc": "AirMatch / ARM / Mist RRM に任せられているか、静的なチャネル・電力割当が残っていないかについて AI が所見を述べます。" }
+    },
+    "findings": {
+      "SEC-01": {
+        "ok": "{ssid}: 暗号方式は WEP/TKIP/オープンではありません({opmode})。",
+        "wep": "{ssid}: WEP を使用しています({opmode})。優先して移行してください。",
+        "tkip": "{ssid}: レガシー暗号方式(WEP/TKIP)を使用しています({opmode})。",
+        "open": "{ssid}: オープン認証(暗号化なし)です。",
+        "opmodeUnknown": "{ssid}: 暗号方式「{opmode}」を判定できませんでした。",
+        "pairwiseUnset": "{ssid}: 暗号方式(pairwise)が明示されておらず、Mist の既定値に委ねられています。"
+      },
+      "SEC-02": {
+        "owe": "{ssid}: OWE(Enhanced Open)が有効です。",
+        "openNotOwe": "{ssid}: オープン認証ですが OWE ではありません。通信が暗号化されません。",
+        "notOpen": "{ssid}: オープン認証ではないため対象外です。",
+        "opmodeUnknown": "{ssid}: 暗号方式を判定できませんでした。"
+      },
+      "SEC-03": {
+        "wpa3": "{ssid}: WPA3 に移行済みです。",
+        "wpa2": "{ssid}: まだ WPA2 です。WPA3 への移行を検討してください。",
+        "owe": "{ssid}: OWE(Enhanced Open)です。",
+        "legacy": "{ssid}: レガシー方式のため対象外です(SEC-01 を参照)。",
+        "opmodeUnknown": "{ssid}: 暗号方式を判定できませんでした。",
+        "pairwiseUnset": "{ssid}: 暗号方式が明示されておらず判定できません。"
+      },
+      "SEC-04": {
+        "required": "{ssid}: mfp-required が設定され、PMF が必須化されています。",
+        "capableOnly": "{ssid}: mfp-capable のみで PMF が任意設定です。mfp-required の設定を検討してください。",
+        "capableViaMbo": "{ssid}: mbo-enable により PMF(capable)が暗黙で有効になっています。明示的な mfp-required の設定を検討してください。",
+        "disabled": "{ssid}: mfp-capable / mfp-required がいずれも設定されておらず、PMF が無効です。",
+        "notWpa2": "{ssid}: WPA2 系ではないため対象外です(PMF は opmode により自動決定されます)。",
+        "opmodeUnknown": "{ssid}: 暗号方式を判定できませんでした。",
+        "noPmfField": "Mist の WLAN 設定には PMF を独立して確認できるフィールドがなく、判定できません。"
+      },
+      "SEC-05": {
+        "disabled": "{ssid}: Transition Mode は無効です(常時 PMF 必須)。",
+        "enabled": "{ssid}: WPA3 Transition Mode が有効なままで、WPA2 相当の接続を許容しています。",
+        "oweTransition": "{ssid}: OWE Transition Mode が有効です(別途オープン SSID が広報されます)。",
+        "notApplicable": "{ssid}: Transition Mode が成立しない構成のため対象外です。",
+        "opmodeUnknown": "{ssid}: 暗号方式を判定できませんでした。",
+        "noTransitionField": "Mist の WLAN 設定には Transition Mode を独立して確認できるフィールドがなく、判定できません。"
+      },
+      "SEC-06": {
+        "ok": "{ssid}: 6GHz 帯で WPA3(または OWE)を満たしています。",
+        "notWpa3": "{ssid}: 6GHz 帯を使用していますが WPA3/OWE を満たしていません(規格違反)。",
+        "no6ghz": "{ssid}: 6GHz 帯を使用していないため対象外です。",
+        "opmodeUnknown": "{ssid}: 暗号方式を判定できませんでした。",
+        "pairwiseUnset": "{ssid}: 暗号方式が明示されておらず判定できません。"
+      },
+      "SEC-07": {
+        "enabled": "{ap}: インフラストラクチャに対する検知レベルは「{level}」です。",
+        "off": "{ap}: インフラストラクチャに対する検知が off になっています。",
+        "notCollected": "{ap}: インフラストラクチャの検知レベルを取得できませんでした。",
+        "rogueSettingsUnreachable": "Mist の Rogue/WIDS 設定は現在の取得経路(get_mist_config)から到達できないため、判定できません。"
+      },
+      "SEC-08": {
+        "enabled": "{ap}: クライアントに対する検知レベルは「{level}」です。",
+        "off": "{ap}: クライアントに対する検知が off になっています。",
+        "notCollected": "{ap}: クライアントの検知レベルを取得できませんでした。",
+        "rogueSettingsUnreachable": "Mist の Rogue/WIDS 設定は現在の取得経路(get_mist_config)から到達できないため、判定できません。"
+      },
+      "SEC-09": {
+        "low": "{ap}: 検知レベルは低〜標準です。",
+        "elevated": "{ap}: 検知レベルが高めです({levels})。誤検知の増加に注意してください。",
+        "off": "{ap}: 検知が off のため対象外です(SEC-07 / SEC-08 を参照)。",
+        "notCollected": "{ap}: 検知レベルを取得できませんでした。",
+        "rogueSettingsUnreachable": "Mist の Rogue/WIDS 設定は現在の取得経路(get_mist_config)から到達できないため、判定できません。"
+      },
+      "SEC-10": {
+        "disabled": "{ap}: 無線 Containment は無効です。",
+        "enabled": "{ap}: 無線 Containment が有効です(モード: {mode})。有効化を継続する場合は法務・セキュリティ部門の確認を検討してください。",
+        "notCollected": "{ap}: Containment の設定を取得できませんでした。",
+        "rogueSettingsUnreachable": "Mist の Rogue/WIDS 設定は現在の取得経路(get_mist_config)から到達できないため、判定できません。"
+      },
+      "SEC-11": {
+        "none": "{ap}: 高リスクな保護ポリシーは有効になっていません。",
+        "enabled": "{ap}: 高リスクな保護ポリシーが {count} 件有効です({policies})。有効化を継続する場合は法務・セキュリティ部門の確認を検討してください。",
+        "notCollected": "{ap}: 保護ポリシーの設定を取得できませんでした。",
+        "rogueSettingsUnreachable": "Mist の Rogue/WIDS 設定は現在の取得経路(get_mist_config)から到達できないため、判定できません。"
+      },
+      "SEC-12": {
+        "llmFailed": "AI 所見の生成に失敗しました。",
+        "llmEmpty": "AI からの所見が空でした。"
+      },
+      "SEC-13": {
+        "llmFailed": "AI 所見の生成に失敗しました。",
+        "llmEmpty": "AI からの所見が空でした。"
+      },
+      "RF-01": {
+        "ok": "{radio}: チャネル幅は 20MHz 以下です({bandwidth}MHz)。",
+        "over20": "{radio}: チャネル幅が 20MHz を超えています({bandwidth}MHz)。",
+        "notCollected": "{radio}: チャネル幅を取得できませんでした。",
+        "noRfTemplate": "このサイトに RF テンプレートが割り当てられていないため判定できません。"
+      },
+      "RF-02": {
+        "ok": "{radio}: チャネル幅は 80MHz 以下です({bandwidth}MHz)。",
+        "over80": "{radio}: チャネル幅が 80MHz を超えています({bandwidth}MHz)。広すぎるチャネル幅は DFS・混雑の影響を受けやすくなります。",
+        "notCollected": "{radio}: チャネル幅を取得できませんでした。",
+        "noRfTemplate": "このサイトに RF テンプレートが割り当てられていないため判定できません。"
+      },
+      "RF-03": {
+        "ok": "{band}GHz: 帯域内でチャネル幅が統一されています({widths}MHz)。",
+        "inconsistent": "{band}GHz: 帯域内でチャネル幅が統一されていません({widths}MHz)。",
+        "notCollected": "帯域内のチャネル幅を取得できませんでした。",
+        "modelSpecific": "テンプレート「{template}」に機種別の上書きがあり、チャネル幅が均一でない可能性があります。",
+        "uniformByTemplate": "テンプレート「{template}」が適用されており、帯域内のチャネル幅は均一です。",
+        "noRfTemplate": "このサイトに RF テンプレートが割り当てられていないため判定できません。"
+      },
+      "RF-04": {
+        "ok": "非重複チャネル(1/6/11)のみが許可されています。",
+        "overlapping": "重複チャネルが許可されています({channels})。1/6/11 のみに限定することを検討してください。",
+        "notCollected": "許可チャネルの設定を取得できませんでした。",
+        "auto": "チャネルは自動割当(RRM 任せ)です。RRM が非重複チャネルを選択します。",
+        "noRfTemplate": "このサイトに RF テンプレートが割り当てられていないため判定できません。"
+      },
+      "RF-05": {
+        "ok": "{radio}: Tx 電力レンジの差は許容範囲内です({diff}dB)。",
+        "wideRange": "{radio}: 最大/最小 Tx 電力の差が大きすぎます({diff}dB)。ARM/RRM が電力を絞り込みにくくなります。",
+        "notCollected": "{radio}: Tx 電力レンジを取得できませんでした。",
+        "noRfTemplate": "このサイトに RF テンプレートが割り当てられていないため判定できません。"
+      },
+      "RF-06": {
+        "ok": "5GHz の最小 Tx 電力が 2.4GHz より十分高く設定されています(差 {delta}dB)。",
+        "tooClose": "5GHz と 2.4GHz の最小 Tx 電力差が小さすぎます(差 {delta}dB)。目安の 6dB 以上を確保してください。",
+        "notCollected": "帯域間の Tx 電力を比較できませんでした。",
+        "noRfTemplate": "このサイトに RF テンプレートが割り当てられていないため判定できません。"
+      },
+      "RF-07": {
+        "ok": "6GHz の最小 Tx 電力は 5GHz と比べて適正な範囲です(差 {delta}dB)。",
+        "outOfRange": "6GHz と 5GHz の最小 Tx 電力差が目安の範囲(0〜+3dB)を外れています(差 {delta}dB)。",
+        "notCollected": "帯域間の Tx 電力を比較できませんでした。",
+        "no6ghz": "6GHz 無線が無いため対象外です。",
+        "noRfTemplate": "このサイトに RF テンプレートが割り当てられていないため判定できません。"
+      },
+      "RF-08": {
+        "ok": "{ssid}: 基本レートに低速レートは含まれていません。",
+        "lowRates": "{ssid}: 基本レートに低速レートが含まれています({rates}Mbps)。",
+        "notConfigured": "{ssid}: 基本レートが明示的に設定されておらず、機種既定値に委ねられています。",
+        "notInMistConfig": "この項目は get_mist_config から確認できるフィールドが見つからず、判定できません。"
+      },
+      "RF-09": {
+        "enabled": "{ssid}: 802.11k(Neighbor Report)が有効です。",
+        "disabled": "{ssid}: 802.11k が無効です。",
+        "notInMistConfig": "この項目は get_mist_config から確認できるフィールドが見つからず、判定できません。"
+      },
+      "RF-10": {
+        "enabled": "{ssid}: OKC(Opportunistic Key Caching)が有効です。",
+        "disabled": "{ssid}: OKC が無効です。",
+        "notInMistConfig": "この項目は get_mist_config から確認できるフィールドが見つからず、判定できません。"
+      },
+      "RF-11": {
+        "ok": "{ssid}: ブロードキャストフィルタ・IPv6 RA フィルタともに有効です。",
+        "bothMissing": "{ssid}: ブロードキャストフィルタ・IPv6 RA フィルタともに無効です。",
+        "filterMissing": "{ssid}: broadcast-filter が arp/all になっていません(現在値: {filter})。",
+        "raMissing": "{ssid}: IPv6 RA フィルタが無効です。",
+        "notInMistConfig": "この項目は get_mist_config から確認できるフィールドが見つからず、判定できません。"
+      },
+      "RF-12": {
+        "ok": "Wi-Fi 6/7 の機能は無効化されていません。",
+        "ssidDisabled": "{ssid}: 一部の Wi-Fi 6/7 機能が無効化されています({features})。",
+        "radioDisabled": "{radio}: 一部の Wi-Fi 6/7 機能が無効化されています({features})。",
+        "notCollected": "{radio}: Wi-Fi 6/7 機能の設定を取得できませんでした。",
+        "notInMistConfig": "この項目は get_mist_config から確認できるフィールドが見つからず、判定できません。"
+      },
+      "RF-13": {
+        "ok": "{ap}: ARM の scanning / client-match が有効です。",
+        "disabled": "{ap}: ARM の一部機能が無効です({features})。",
+        "notCollected": "{ap}: ARM の設定を取得できませんでした。",
+        "aos10": "{ap}: AOS10 のため ARM ではなく AirMatch が対象になります(対象外)。",
+        "centralOnly": "ARM は Aruba(Central)固有の機能のため対象外です。"
+      },
+      "RF-14": {
+        "ok": "AP モデル系列は統一されています({models})。",
+        "mixed": "AP モデル系列が混在しています({series})。RF 特性の違いが RRM/ARM の判断に影響することがあります。",
+        "notCollected": "AP モデル情報を取得できませんでした。"
+      },
+      "RF-15": {
+        "llmFailed": "AI 所見の生成に失敗しました。",
+        "llmEmpty": "AI からの所見が空でした。"
+      },
+      "RF-16": {
+        "llmFailed": "AI 所見の生成に失敗しました。",
+        "llmEmpty": "AI からの所見が空でした。"
+      }
+    }
+  }
+}

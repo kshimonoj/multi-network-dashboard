@@ -1,0 +1,1573 @@
+{
+  "app": {
+    "title": "Multi Network Dashboard",
+    "tabsAriaLabel": "Switch view",
+    "modelPrefix": "model:"
+  },
+  "plugin": {
+    "networkInvestigation": {
+      "name": "Network Investigation",
+      "sub": "Central / Mist"
+    }
+  },
+  "tabs": {
+    "globalOverview": {
+      "label": "Global Overview",
+      "sub": "Central / Mist direct API"
+    },
+    "eventFeed": {
+      "label": "Event / Alert",
+      "sub": "All sites, on-demand fetch"
+    },
+    "webhookFeed": {
+      "label": "Webhook Log",
+      "sub": "New Central / Classic Central / Mist (via Google Spreadsheet)"
+    },
+    "centralStreaming": {
+      "label": "Streaming (Central)",
+      "sub": "New Central Streaming API (persistent WSS)"
+    },
+    "reports": {
+      "label": "Reports",
+      "sub": "Daily / weekly / monthly review"
+    },
+    "knowledge": {
+      "label": "Knowledge",
+      "sub": "Insights gathered from investigations"
+    },
+    "networkInvestigation": {
+      "label": "Network Investigation",
+      "sub": "Central / Mist"
+    },
+    "bestPractice": {
+      "label": "Best Practice",
+      "sub": "Security / RF recommended-config check"
+    }
+  },
+  "theme": {
+    "light": "Light",
+    "dark": "Dark",
+    "toggleTitle": "Switch to {next} mode (the choice is saved in this browser)",
+    "toggleAria": "Switch to {next} mode"
+  },
+  "language": {
+    "ja": "日本語",
+    "en": "English",
+    "switchTitle": "Switch the display language (saved in this browser; the investigation assistant answers in the same language)",
+    "switchAria": "Display language"
+  },
+  "model": {
+    "unspecified": "(legacy / unspecified)"
+  },
+  "time": {
+    "relative": {
+      "secondsAgoOne": "{n} second ago",
+      "secondsAgoOther": "{n} seconds ago",
+      "minutesAgoOne": "{n} minute ago",
+      "minutesAgoOther": "{n} minutes ago",
+      "hoursAgoOne": "{n} hour ago",
+      "hoursAgoOther": "{n} hours ago",
+      "daysAgoOne": "{n} day ago",
+      "daysAgoOther": "{n} days ago"
+    }
+  },
+  "globalOverview": {
+    "headerSub": "HPE Aruba Central / Juniper Mist — direct API",
+    "updatedLabel": "Last updated",
+    "staleTag": "Possibly stale",
+    "loading": "Loading…",
+    "refresh": {
+      "button": "Refresh",
+      "running": "Refreshing…",
+      "countdown": "Refresh ({s}s)",
+      "titleCooldown": "Waiting for the server's minimum fetch interval ({s}s)",
+      "titleReady": "Fetch fresh data from Central / Mist"
+    },
+    "error": {
+      "snapshotMissing": "No snapshot yet.",
+      "refreshFailed": "Failed to fetch."
+    },
+    "cards": {
+      "totalSites": "Total sites",
+      "totalDevices": "Total devices",
+      "connectedClients": "Connected clients",
+      "totalAlerts": "Total alerts"
+    },
+    "alertNote": {
+      "prefix": "Alert counts use different definitions and can't simply be summed — Central counts alerts where ",
+      "centralSuffix": " (unresolved), while Mist counts alarms from the ",
+      "mistPart": "last 24 hours",
+      "mistSuffix": " (including resolved)."
+    },
+    "platformPanel": {
+      "connectedOk": "Connected OK",
+      "fetchFailed": "Fetch failed",
+      "sites": "Sites",
+      "clients": "Clients",
+      "alerts": "Alerts",
+      "devicesUp": "Devices up"
+    },
+    "siteTable": {
+      "title": "Sites breakdown",
+      "count": "{n} sites",
+      "filterAll": "All",
+      "sortHint": "Click to sort",
+      "col": {
+        "site": "Site",
+        "devices": "Devices",
+        "clients": "Clients",
+        "alerts": "Alerts",
+        "health": "Health"
+      },
+      "noteAlerts": "Central=Active / Mist=last 24h",
+      "noteHealth": "Central only / Mist not available",
+      "unregisteredTag": "Unregistered",
+      "unregisteredTitle": "Not registered in the site map (site-platform-map.json)",
+      "healthUnavailableTitle": "This platform doesn't provide a health score (no value)",
+      "empty": "No matching sites"
+    },
+    "map": {
+      "title": "Site map",
+      "locatedCount": "{n} / {total} sites have location data",
+      "fitAll": "Fit all",
+      "fitAllTitle": "Reset to a view that fits all sites",
+      "legendBorder": "Border =",
+      "legendFill": "Fill =",
+      "popup": {
+        "devicesLabel": "Devices",
+        "clientsLabel": "Clients",
+        "alertsLabel": "Alerts",
+        "healthLabel": "Health",
+        "unavailableNote": "(not available)",
+        "devicesValue": "{total} (Up {up} / Down {down})"
+      }
+    },
+    "siteMapOnlyNote": "Sites in the site map that didn't appear in this API response ({n}): {list}",
+    "footer": {
+      "pollInterval": "Poll interval",
+      "savingInterval": "Saving…",
+      "minutes": "{n} min",
+      "seconds": "{n} sec",
+      "intervalTitle": "Change the polling interval (saved on the server and preserved across container recreation)",
+      "eventTabHint": "The Event / Alert tab doesn't auto-refresh — it fetches only when opened or when you press Refresh (60s server-side cache).",
+      "eventTabNote": "(This setting only affects Global Overview's auto-refresh — it doesn't apply to the Event / Alert tab)",
+      "minRefresh": "Minimum manual refresh interval: {s}s",
+      "httpCount": "HTTP requests in the last fetch: Central {c} / Mist {m}"
+    },
+    "alertLabel": {
+      "central": "Active",
+      "mist": "Last 24h"
+    },
+    "alertDesc": {
+      "central": "Central: count of alerts with status = Active (unresolved)",
+      "mist": "Mist: count of alarms from the last 24 hours (including resolved)"
+    },
+    "stateLabel": {
+      "down": "Has device down",
+      "alert": "Has alerts",
+      "ok": "OK",
+      "empty": "No devices"
+    },
+    "donut": {
+      "unit": "{v}"
+    },
+    "detail": {
+      "backToList": "← Back to list",
+      "backToListTitle": "Back to the Global Overview list (Esc)",
+      "deviceCount": "Devices {up}/{total}",
+      "clientCount": "Clients {n}",
+      "alertCount": "Alerts {n}",
+      "fetched": "Fetched {time}",
+      "cached": "(cached)",
+      "httpCount": " · {n} HTTP requests",
+      "loading": "Loading details…",
+      "noSiteId": "This site has no siteId, so details can't be fetched (e.g. unassigned devices).",
+      "fetchFailedPrefix": "Failed to fetch — ",
+      "unavailableDefault": "Not available on this platform",
+      "none": "None",
+      "investigateBtn": "Investigate",
+      "investigateBtnTitle": "Turn this item's summary into a query and hand it to the Network Investigation tab (it won't run automatically).",
+      "health": {
+        "mistSource": "Mist SLE (metric average)",
+        "centralSource": "Central health",
+        "noBreakdown": "No breakdown"
+      },
+      "sections": {
+        "health": "Health / SLE",
+        "devices": "Devices",
+        "clients": "Connected clients",
+        "alerts": "Alerts",
+        "events": "Events"
+      },
+      "devices": {
+        "empty": "No devices",
+        "kindOther": "Other",
+        "col": {
+          "name": "Name",
+          "model": "Model",
+          "status": "Status",
+          "uptime": "Uptime"
+        }
+      },
+      "clients": {
+        "empty": "No connected clients",
+        "rowTitle": "Click to show event history",
+        "col": {
+          "client": "Client",
+          "bandCh": "Band/CH",
+          "connectedTo": "Connected to"
+        },
+        "eventHistory": "Event history",
+        "loading": "Loading…",
+        "noRecentEvents": "No recent events"
+      },
+      "alerts": {
+        "empty": "No alerts"
+      },
+      "events": {
+        "empty": "No events"
+      }
+    }
+  },
+  "eventFeed": {
+    "headerSub": "All sites — last {hours}h, fetched on demand",
+    "lastFetched": "Last fetched",
+    "cachedTag": "Cached",
+    "noAutoUpdateTag": "No auto-refresh",
+    "noAutoUpdateTitle": "This tab doesn't auto-refresh. It fetches from Central / Mist only when opened or when you press Refresh, then caches server-side for {ttl}s (Global Overview's polling interval setting doesn't apply here).",
+    "refreshBtn": "Refresh",
+    "refreshBtnLoading": "Fetching…",
+    "refreshBtnTitle": "Fetch fresh data from Central / Mist (not part of scheduled polling)",
+    "loading": "Fetching Event / Alert… (Central fetches per site, so this can take a few seconds)",
+    "sources": {
+      "title": "Sources",
+      "summary": "{n} HTTP requests · {total} items total",
+      "ofTotal": " / {n} total",
+      "failed": "Failed",
+      "empty": "No sources available (Central / Mist credentials are not configured)"
+    },
+    "filter": {
+      "title": "Filter",
+      "summary": "{filtered} / {total} items (alerts {alert} · events {event} · critical {critical} · warning {warning})",
+      "clear": "Clear",
+      "clearTitle": "Clear all filters",
+      "kind": "Type",
+      "kindAll": "All",
+      "kindAlert": "Alert",
+      "kindEvent": "Event",
+      "severity": "Severity",
+      "site": "Site",
+      "siteAllOption": "All ({n})",
+      "category": "Category",
+      "categoryAllOption": "All ({n})",
+      "searchPlaceholder": "Filter by text / type / device"
+    },
+    "timeline": {
+      "title": "Timeline",
+      "summary": "Newest first · showing {shown} / {total}",
+      "col": {
+        "time": "Time",
+        "severity": "Severity",
+        "kind": "Type",
+        "site": "Site",
+        "category": "Category",
+        "content": "Content",
+        "action": "Action"
+      },
+      "empty": "No Event / Alert matches the current filters",
+      "showMore": "Show {n} more"
+    },
+    "footer": "This tab fetches from Central / Mist only when opened or when you press Refresh, then caches server-side for {ttl}s (Global Overview's polling interval setting doesn't apply here).",
+    "footerCentralNote": " Only Central events are fetched per site.",
+    "row": {
+      "apiValueTitle": "API value: {v}",
+      "noSeverityTitle": "This API doesn't return severity"
+    },
+    "severity": {
+      "critical": "Critical",
+      "warning": "Warning",
+      "info": "Info"
+    },
+    "investigateBtn": "Investigate",
+    "investigateBtnTitle": "Turn this item's summary into a query and hand it to the Network Investigation tab (it won't run automatically).",
+    "investigateQuery": {
+      "kindAlert": "alert",
+      "kindEvent": "event",
+      "template": "Investigate the cause and impact of the following {kind} that occurred at {site} ({platform}): {tag}{text} ({time})"
+    }
+  },
+  "webhookFeed": {
+    "title": "Webhook Log",
+    "headerSubWithTitle": "New Central / Classic Central / Mist — via Google Spreadsheet \"{title}\"",
+    "headerSubNoTitle": "New Central / Classic Central / Mist — via Google Spreadsheet",
+    "lastFetched": "Last fetched",
+    "staleTag": "Waiting for next cycle",
+    "refresh": {
+      "button": "Refresh",
+      "running": "Fetching…",
+      "title": "Fetch new rows from the spreadsheet (minimum interval {s}s)"
+    },
+    "error": {
+      "configPrefix": "Can't fetch the Webhook log: "
+    },
+    "loading": "Loading the Webhook log…",
+    "sheets": {
+      "title": "Source sheets",
+      "totalCount": "{n} total",
+      "failedTag": "Failed",
+      "readCount": "{n} rows read",
+      "readCountDelta": " (+{n} last time)",
+      "nextRowNote": "Incremental fetch: next read starts at row {n}"
+    },
+    "filter": {
+      "title": "Filter",
+      "summary": "{filtered} / {total} items (critical {critical} · warning {warning} · auto-investigated {auto})",
+      "clear": "Clear",
+      "clearTitle": "Clear all filters",
+      "source": "Source",
+      "all": "All",
+      "severity": "Severity",
+      "severityNone": "None",
+      "site": "Site",
+      "allWithCount": "All ({n})",
+      "category": "Category",
+      "autoOnly": "Auto-investigated only",
+      "autoOnlyTitle": "Show only rows where the AI ran an automatic preliminary investigation",
+      "searchPlaceholder": "Filter by text / type / device / site"
+    },
+    "table": {
+      "title": "Timeline",
+      "summary": "Newest received first · showing {shown} / {filtered}",
+      "col": {
+        "expand": "Expand",
+        "time": "Received",
+        "severity": "Severity",
+        "source": "Source",
+        "site": "Site",
+        "category": "Category",
+        "content": "Content",
+        "action": "Action"
+      },
+      "empty": "No Webhook log entries match the current filters",
+      "showMore": "Show {n} more"
+    },
+    "footer": {
+      "pollInterval": "Webhook log auto-refresh interval",
+      "hours": "{n} hr",
+      "minutes": "{n} min",
+      "seconds": "{n} sec",
+      "saving": "Saving…",
+      "intervalTitle": "This setting is specific to this tab. It's saved on the server and preserved across container recreation, managed separately from Global Overview's interval setting.",
+      "hintTitle": "This setting only changes the fetch interval for the Webhook log (Google Spreadsheet). It's saved separately from Global Overview's Central / Mist polling interval.",
+      "hintNote": "(This setting only affects Webhook log fetching — it's separate from Global Overview's polling interval)",
+      "minRefresh": "Minimum manual refresh interval: {s}s",
+      "autoLabel": "Auto preliminary investigation",
+      "autoDisabled": "Disabled",
+      "autoEnabledDetail": "Critical only · up to {max} per cycle · within {age} min of receipt · once per alert (already run: {done})",
+      "storageLabel": "Raw log retention",
+      "retentionDays": "{n} days",
+      "retentionForever": "Unlimited",
+      "retentionTitle": "How many days of received webhooks are kept as per-day files (daily/YYYY-MM-DD.jsonl). Shortening this deletes older day files. Daily reports aggregate from this stored data.",
+      "storageStored": "Stored: {days} days / {items} rows / {size} ({from} – {to})",
+      "storageShown": "Shown: {items} of max {max}",
+      "storageNote": "(storage is per-day with no row cap / only the list view is limited)",
+      "storageTitle": "Storage is split into one file per day, so no rows are lost no matter how many arrive in a day. The list only loads the most recent rows to stay fast — that cap limits the view only, never what is stored."
+    },
+    "row": {
+      "trCloseTitle": "Click to collapse",
+      "trOpenTitle": "Click to show raw data, the auto investigation, and site status",
+      "btnCloseTitle": "Collapse",
+      "btnOpenTitle": "Show raw data, the auto investigation, and site status",
+      "sevRawTitle": "Value in the sheet: {v}",
+      "sevNoneTitle": "This notification has no severity",
+      "autoTag": {
+        "running": "AI investigating…",
+        "done": "AI auto-investigated",
+        "error": "AI auto-investigation failed"
+      },
+      "historyBtn": "View investigation",
+      "historyBtnTitle": "Open the thread from the auto investigation directly in the Network Investigation tab",
+      "investigateBtn": "Investigate",
+      "investigateBtnTitleFollowUp": "Hand a follow-up query, based on the auto investigation's result, to the Network Investigation tab (it won't run automatically)",
+      "investigateBtnTitleNew": "Turn this notification's summary into a query and hand it to the Network Investigation tab (it won't run automatically)"
+    },
+    "detail": {
+      "rawTitle": "Raw data (row {row} of {sheet})"
+    },
+    "auto": {
+      "title": "AI auto preliminary investigation",
+      "status": {
+        "running": "Running",
+        "done": "Done",
+        "error": "Failed"
+      },
+      "queryLabel": "Query: {query}",
+      "runningBody": "The Insight Agent is investigating. A summary will appear here automatically once it's done (this view refreshes every 15s).",
+      "errorDefault": "The run failed",
+      "emptyAnswer": "(The answer was empty)",
+      "footNote": "Recorded in the Network Investigation tab's timeline with an \"Auto\" tag (runId: {runId}). Use \"View investigation\" on the right to open that result directly, or \"Investigate\" to ask a follow-up."
+    },
+    "site": {
+      "title": "Related info (site status)",
+      "unavailableDefault": "Not prefetched because the site couldn't be identified",
+      "fetchFailedPrefix": "Prefetch failed: ",
+      "meta": "{site} · fetched {time}",
+      "kpi": {
+        "devices": "Devices",
+        "clients": "Clients",
+        "openAlerts": "Open alerts"
+      },
+      "alertsNotePrefix": "Alert population: "
+    },
+    "severity": {
+      "critical": "Critical",
+      "warning": "Warning",
+      "info": "Info"
+    },
+    "investigateQuery": {
+      "timeUnknown": "unknown time",
+      "template": "Investigate the cause and impact of the following Webhook notification from {where}: {tag}{message} ({when}).{device}",
+      "deviceSuffix": " Target device: {device}.",
+      "followUpSuffix": "\n\nNote: an automatic preliminary investigation has already run for this alert. Skip anything already covered and dig into what's still unknown (root cause, whether it recurs, scope of impact, and next steps).\n---\n{summary}\n---"
+    }
+  },
+  "centralStreaming": {
+    "title": "Streaming (Central)",
+    "headerSub": "New Central Streaming API — persistent WSS / two-stage CloudEvents + protobuf decoding",
+    "stored": {
+      "label": "Stored",
+      "value": "{n} events",
+      "age": "(updated {age})"
+    },
+    "masterToggle": {
+      "onTitle": "Disconnects all streams (settings are kept).",
+      "offTitle": "Starts a WSS connection to the selected streams.",
+      "on": "Receiving — Stop",
+      "off": "Stopped — Start"
+    },
+    "error": {
+      "configPrefix": "Can't connect to the Streaming API: "
+    },
+    "loading": "Loading connection status…",
+    "connPanel": {
+      "title": "Connection status",
+      "note": "While the master toggle is off, individually enabled streams still won't connect"
+    },
+    "conn": {
+      "received": "Received {n}",
+      "last": "Last {age}",
+      "typesAll": "All events (all {n} types)",
+      "typesSelected": "{selected} / {total} types selected",
+      "edit": "Choose types",
+      "close": "Close",
+      "nextRetry": "Next reconnect: {countdown}",
+      "disconnectTest": "Test disconnect",
+      "disconnectTestTitle": "Intentionally disconnect to verify the reconnect logic works"
+    },
+    "retry": {
+      "inSecondsOne": "in {n} second",
+      "inSecondsOther": "in {n} seconds",
+      "inMinutesOne": "in {n} minute",
+      "inMinutesOther": "in {n} minutes"
+    },
+    "picker": {
+      "title": "{label} — event types to subscribe to",
+      "note": "Selecting none = receive all events from this endpoint (no event-types filter applied)",
+      "selectNone": "Deselect all (= all events)",
+      "selectAll": "Select all",
+      "close": "Close",
+      "footer": "wss://<Central>/{path} · proto: {protoFile}"
+    },
+    "retention": {
+      "title": "Storage and retention",
+      "noteBase": "Stored at data/central-streaming/events.jsonl · keeping {n} events",
+      "lastPurge": " · last cleanup {time} ({n} removed)",
+      "noPurgeYet": " · no cleanup has run yet",
+      "daysLabel": "Retention period",
+      "daysOption": "{n} days",
+      "daysTitle": "Events older than this are removed by the periodic job (every 10 minutes)",
+      "maxEventsLabel": "Max events",
+      "maxEventsOption": "{n} events",
+      "maxEventsTitle": "If this limit is hit before the retention period, the oldest events are discarded first",
+      "purgeNow": "Clean up now",
+      "purgeNowTitle": "Run the retention check immediately",
+      "clearAll": "Clear all",
+      "clearAllTitle": "Delete all stored events (settings are kept)",
+      "hint": "Location / RSSI stream several events per second continuously. Check the max-events setting before enabling them for long periods."
+    },
+    "filter": {
+      "title": "Filter",
+      "summary": "{filtered} / {total} (showing up to the latest {total})",
+      "clear": "Clear",
+      "streamLabel": "Stream",
+      "all": "All",
+      "decodeErrorsOnly": "Decode failures only",
+      "decodeErrorsOnlyTitle": "Show only rows where protobuf decoding failed",
+      "searchPlaceholder": "Filter by summary / type / device / site / actor"
+    },
+    "table": {
+      "title": "Received events",
+      "summary": "Newest first · showing {shown} / {filtered}",
+      "col": {
+        "expand": "Expand",
+        "time": "Received",
+        "stream": "Stream",
+        "type": "Type",
+        "site": "Site / device",
+        "content": "Content",
+        "action": "Action"
+      },
+      "emptyEnabled": "No events received yet (check the connection status)",
+      "emptyDisabled": "Receiving is stopped. Click \"Start\" above to begin subscribing",
+      "showMore": "Show {n} more"
+    },
+    "footer": {
+      "body": "The connection is held by the {server} (the browser never connects to Central directly). The access token is renewed 5 minutes before it expires, and unexpected disconnects retry with exponential backoff (up to 60 seconds). Central queues events for 15 minutes after a disconnect, so reconnecting within that window won't lose data.",
+      "serverLabel": "server",
+      "tokenExpiry": " / Current token expires {time}",
+      "noAutoInvestigate": " / Automatic investigation is not implemented (events have no field equivalent to severity)."
+    },
+    "row": {
+      "trCloseTitle": "Click to close",
+      "trOpenTitle": "Click to show the decoded result (raw data)",
+      "btnCloseTitle": "Close",
+      "btnOpenTitle": "Show the decoded result",
+      "actor": "Actor {actor}",
+      "investigate": "Investigate",
+      "investigateTitle": "Build a query in the Network Investigation tab from this event (does not run it)",
+      "cloudEventId": "CloudEvent id: {id}",
+      "type": "type: {type}",
+      "eventAt": "Occurred at: {time}"
+    },
+    "investigateQuery": {
+      "timeUnknown": "unknown time",
+      "siteIdFallback": "Site ID {id}",
+      "template": "Investigate the background, impact, and whether a response is needed for the following event received via New Central's Streaming API: [{tags}] {summary} ({when}). {siteSuffix}{deviceSuffix}{actorSuffix}",
+      "siteSuffix": "Target site: {site}. ",
+      "deviceSuffix": "Related device: {device}. ",
+      "actorSuffix": "Actor: {actor}. "
+    },
+    "state": {
+      "disabled": "Disconnected",
+      "connecting": "Connecting…",
+      "open": "Connected",
+      "reconnecting": "Reconnecting",
+      "error": "Error"
+    },
+    "volume": {
+      "low": "Volume: Low",
+      "medium": "Volume: Medium",
+      "high": "Volume: High"
+    },
+    "endpoint": {
+      "audit-trail": {
+        "label": "Audit Trail",
+        "note": "A record of configuration changes and operations in Central. Choose from 20 subcategories. Volume is low — events arrive as soon as a configuration change is made."
+      },
+      "ap-monitoring": {
+        "label": "AP Monitoring",
+        "note": "AP state (state.*) and statistics (stats.*). stats.* events scale with AP count × interval, so volume is high. Starting with state.* only is the safer choice."
+      },
+      "geofence": {
+        "label": "Geofence",
+        "note": "Zone entry/exit events. Nothing arrives unless zones are defined on the floor plan."
+      },
+      "location": {
+        "label": "Location",
+        "note": "Positioning results. Several events per second stream continuously, scaling with client count. Check the retention settings before enabling this for long periods."
+      },
+      "location-analytics": {
+        "label": "Location Analytics (RSSI)",
+        "note": "Raw and proximity RSSI observed by APs. Volume is even higher than Location."
+      }
+    },
+    "auditSubtype": {
+      "device-monitoring": "Device monitoring",
+      "configuration": "Configuration",
+      "certificate-management": "Certificate management",
+      "alert-management": "Alert management",
+      "system-management": "System management",
+      "central-nac": "Central NAC",
+      "overlay-tunnel-orchestrator": "Overlay tunnel",
+      "reporting": "Reporting",
+      "firmware-management": "Firmware management",
+      "security": "Security",
+      "gcis": "GCIS",
+      "troubleshooting": "Troubleshooting",
+      "subscription": "Subscription",
+      "floorplan-manager": "Floor plan",
+      "configuration-validation": "Configuration validation",
+      "extension": "Extension",
+      "service-config-bridge": "Service config bridge",
+      "configuration-distribution": "Configuration distribution",
+      "configuration-import": "Configuration import",
+      "configuration-health": "Configuration health"
+    },
+    "apEventType": {
+      "state-device": "State: Device",
+      "state-radio": "State: Radio",
+      "state-port": "State: Port",
+      "state-vap": "State: VAP",
+      "state-wlan": "State: WLAN",
+      "state-tunnel": "State: Tunnel",
+      "stats-device": "Stats: Device",
+      "stats-radio": "Stats: Radio",
+      "stats-vap": "Stats: VAP",
+      "stats-port": "Stats: Port",
+      "stats-modem": "Stats: Modem",
+      "stats-tunnel": "Stats: Tunnel",
+      "stats-ip-probe": "Stats: IP probe",
+      "stats-user-role": "Stats: User role",
+      "stats-ssid": "Stats: SSID",
+      "stats-vlan": "Stats: VLAN"
+    },
+    "geofenceEventType": {
+      "wifi-client": "Wi-Fi client",
+      "asset-tag": "Asset tag"
+    },
+    "locationEventType": {
+      "wifi-client": "Wi-Fi client location",
+      "asset-tag": "Asset tag last known location"
+    },
+    "rssiEventType": {
+      "raw": "Raw RSSI",
+      "proximity": "Proximity RSSI"
+    }
+  },
+  "networkInvestigation": {
+    "console": {
+      "queryPlaceholder": "Investigation query (e.g. Check the health of all sites / Check for failures at the Home site)",
+      "siteSelectTitle": "Selecting a site narrows MCP to that site's platform only (routing skip)",
+      "siteAny": "No site specified (query both)",
+      "modelSelectTitle": "Model used to run this query (the default model is used when unset)",
+      "modelOption": "Model: {label}",
+      "runBtn": "Run (⌘/Ctrl+Enter)",
+      "runBtnBusy": "Running…",
+      "continueTitle": "When checked, this run is recorded as the next turn of the current investigation thread",
+      "continueLabel": "Run as a continuation of this thread",
+      "threadHeadOne": "This investigation thread · {n} turn",
+      "threadHeadOther": "This investigation thread · {n} turns",
+      "newSessionBtn": "Start a new investigation",
+      "newSessionTitle": "Collapse the thread shown and start a new investigation (history is kept)",
+      "siteQuerySeed": "Check failures, alerts and client status at the {site} site",
+      "historyNotFound": "This investigation result was not found (it can take a moment to appear in the history)"
+    },
+    "sitePanel": {
+      "title": "Sites",
+      "refreshBtn": "Refresh status",
+      "refreshBtnBusy": "Refreshing…",
+      "refreshTitle": "Fetches health and other metrics for each site from Central/Mist and updates the list (takes a while)",
+      "foot": "{n} sites · Central {central} / Mist {mist}",
+      "statusFetched": " · status fetched {when}",
+      "statusNotFetched": " · status not fetched",
+      "empty": "The site map has not been generated yet.",
+      "rowTitle": "Target {site} (managed by {platform} / siteId={siteId}) with the query",
+      "notFetched": "status not fetched"
+    },
+    "sse": {
+      "headQuery": "Query: \"{query}\"",
+      "headDefault": "MCP call log",
+      "siteUnspecified": "site=unspecified",
+      "empty": "Run a query and MCP calls will stream here in real time.",
+      "used": "{server} used",
+      "skippedTitle": "{server} (skipped)",
+      "judgmentTag": "Model decision",
+      "judgmentTitle": "{platform} (skipped by model decision)",
+      "judgmentText": "{platform} deemed unnecessary: {reason}",
+      "thinking": "The agent is composing an answer…",
+      "legendSkipped": "Skipped (greyscale)",
+      "knowledgeTag": "Knowledge",
+      "knowledgeText": "Investigating with approved knowledge in context ({n}): {titles}"
+    },
+    "status": {
+      "calling": "Querying…",
+      "unfinished": "Incomplete",
+      "error": "Failed",
+      "done": "Done",
+      "doneCount": "Done · {n}"
+    },
+    "toolCall": {
+      "failTitle": "Click to show failure details",
+      "noStatusCode": "No status code",
+      "serverError": "Error returned by the MCP server ({server})",
+      "args": "Call arguments"
+    },
+    "turn": {
+      "single": "Investigation",
+      "no": "Turn {i}/{n}",
+      "modelLine": "model={model} · {duration}",
+      "modelLegacy": "Sonnet (assumed, legacy history)",
+      "failTag": "Failed",
+      "healthTitle": "Some of the MCP servers included by narrowing were never used and could not be reached by a direct check either",
+      "loadQueryBtn": "To input",
+      "loadQueryTitle": "Load this query into the input box",
+      "callsSummary": "Tools called ({n})",
+      "callsPlatforms": " · {platforms}",
+      "callsEmpty": "No tool calls were recorded for this run.",
+      "errorDefault": "The run failed",
+      "noAnswer": "No answer was recorded."
+    },
+    "timeline": {
+      "title": "Execution timeline",
+      "editorOpen": "Configure schedule",
+      "editorClose": "Close schedule settings",
+      "empty": "No runs yet. Run a query or wait for a scheduled run, and they will appear here in chronological order.",
+      "cardTitleMulti": "Click to show this investigation thread (all turns)",
+      "cardTitleSingle": "Click to show the details of this run",
+      "threadTagOne": "{n} turn",
+      "threadTagOther": "{n} turns",
+      "lastQuery": "└ Last: {query}",
+      "mcpTagTitle": "Some MCP servers could not be reached (their credentials may have expired)",
+      "scheduleLoading": "Schedule: loading…",
+      "scheduleSummary": "Schedule: {state} · {when} · {n} queries",
+      "scheduleEnabled": "enabled",
+      "scheduleDisabled": "disabled",
+      "scheduleWeekly": "{weekday}s at {time}",
+      "scheduleDaily": "daily at {time}"
+    },
+    "thread": {
+      "backBtn": "← Back to timeline",
+      "loading": "Loading…",
+      "loadFailed": "Failed to load the thread: {error}",
+      "loadLastBtn": "Last query to input",
+      "loadLastTitle": "Load the last query of this thread into the input box",
+      "periodTail": " – {time}"
+    },
+    "schedule": {
+      "frequency": "Frequency",
+      "daily": "Daily",
+      "weekly": "Weekly",
+      "dayOfWeek": "Day",
+      "time": "Time",
+      "enableLabel": "Enable scheduled runs",
+      "saveBtn": "Save time & frequency (apply cron)",
+      "savingBtn": "Applying…",
+      "applyOk": "Applied",
+      "applyFail": "Failed to apply",
+      "applyMsg": "{state}: {detail}",
+      "emptyList": "No scheduled queries yet. Add one below.",
+      "save": "Save",
+      "cancel": "Cancel",
+      "edit": "Edit",
+      "delete": "Delete",
+      "deleteTitle": "Delete",
+      "toggleOn": "Enabled",
+      "toggleOff": "Disabled",
+      "siteAny": "No site specified (both)",
+      "siteUnset": "site=unspecified (both)",
+      "siteValue": "site={site}",
+      "modelValue": "model={model}",
+      "modelLegacy": "model=(legacy, unset)",
+      "qmeta": "{site} · {model}",
+      "addPlaceholder": "Add a query to run on schedule (e.g. Check the health of all sites)",
+      "addBtn": "Add query",
+      "weekday": {
+        "0": "Sunday",
+        "1": "Monday",
+        "2": "Tuesday",
+        "3": "Wednesday",
+        "4": "Thursday",
+        "5": "Friday",
+        "6": "Saturday"
+      },
+      "detail": {
+        "disabled": "Scheduled runs are disabled (the cron job was stopped)",
+        "invalid": "Invalid cron expression: {expression}",
+        "applied": "Scheduled runs set to {freq} (cron \"{expression}\" / TZ={tz})",
+        "registerFailed": "Failed to register the cron job: {error}",
+        "freqDaily": "daily at {time}",
+        "freqWeekly": "{weekday}s at {time}"
+      }
+    },
+    "mcpHealth": {
+      "tagUnreachable": "MCP down",
+      "tagWarn": "Check needed",
+      "headUnreachable": "Some MCP servers could not be reached (their credentials may have expired)",
+      "headWarn": "The connection status of some MCP servers could not be verified",
+      "stateUnreachable": "Could not connect",
+      "stateUnknown": "Could not verify the connection",
+      "serverLine": "{server} ({platform})",
+      "platformUnknown": "unknown",
+      "note": "No {server} tool was used at all in this run{init}. The answer may have been composed from the remaining data only.",
+      "noteInit": " (status at claude init: {status})"
+    },
+    "suggested": {
+      "label": "Investigate further"
+    },
+    "source": {
+      "manual": "Manual",
+      "scheduled": "Scheduled",
+      "auto": "Auto"
+    },
+    "duration": {
+      "none": "—",
+      "ms": "{n}ms",
+      "sec": "{n}s"
+    },
+    "routing": {
+      "bothNoSite": "No site specified — querying both Central and Mist",
+      "siteUnknown": "Site \"{site}\" was not found in the site map, so both platforms will be queried",
+      "narrowed": "{site} is managed by {platform}, so {skipped} was skipped"
+    },
+    "share": {
+      "label": "Share",
+      "sessionLabel": "Share whole thread",
+      "print": "Print / PDF",
+      "printTitle": "Prints with the print layout (choose \"Save as PDF\" in the dialog to get a PDF)",
+      "printSessionTitle": "Prints all turns of this thread as one report (choose \"Save as PDF\" in the dialog to get a PDF)",
+      "mail": "Email",
+      "mailSummary": "Email (summary)",
+      "mailTitle": "Drafts an email containing this investigation result",
+      "mailSessionTitle": "Puts a summary of the key points of each turn into an email body",
+      "copy": "Copy",
+      "copyTitle": "Copies this investigation result as plain text",
+      "copySessionTitle": "Copies all turns of this thread as plain text",
+      "msgMailCreated": "Email drafted",
+      "msgMailTruncated": "Email drafted (body was long, so only the beginning is quoted)",
+      "msgMailSummary": "Email drafted (key points of each turn only)",
+      "msgCopied": "Copied to the clipboard",
+      "msgCopyFailed": "Copy failed",
+      "msgCopiedSession": "Copied the whole thread ({n} turns)"
+    },
+    "report": {
+      "title": "Network Investigation Report",
+      "sessionTitle": "Network Investigation Report (thread)",
+      "sub": "Multi Network Dashboard — across Central / Mist",
+      "resultHeading": "Findings",
+      "turnHeading": "Turn {i}/{n} · {ts} · {site}",
+      "turnQuery": "Query: {query}",
+      "turnTools": "Tools: {tools}",
+      "turnModel": " · Model: {model}",
+      "turnFailed": "(this turn failed) {note}",
+      "foot": "Generated: {ts} · {origin}",
+      "none": "—",
+      "toolsNone": "(not recorded)",
+      "missingChart": "(chart omitted; it can be viewed on the dashboard)",
+      "missingTopology": "(topology diagram omitted; it can be viewed on the dashboard)",
+      "meta": {
+        "site": "Site",
+        "ts": "Executed",
+        "query": "Query",
+        "platforms": "Platforms",
+        "tools": "Tools",
+        "model": "Model",
+        "period": "Period",
+        "turns": "Turns",
+        "firstQuery": "First query"
+      }
+    },
+    "shareText": {
+      "siteAny": "Not specified (across all sites)",
+      "docTitle": "[Network Investigation Report]",
+      "sessionDocTitle": "[Network Investigation Report — investigation thread]",
+      "resultDivider": "── Findings ──",
+      "summaryDivider": "── Investigation summary ──",
+      "truncatedNote": "…(truncated)\n\n* The body is long, so only the beginning is quoted. Please see the dashboard for details.",
+      "truncatedShort": "…(truncated)",
+      "dashboard": "Dashboard: {url}",
+      "seeDashboard": "Please see the dashboard for details{url}",
+      "urlSuffix": ": {url}",
+      "subject": "[Network Investigation] {site} {ts}",
+      "sessionSubject": "[Network Investigation] {site} {ts} ({n} turns)",
+      "sessionSiteOther": "{sites} and others ({any})",
+      "periodRange": "{first} – {last}",
+      "turnDivider": "── Turn {i}/{n} · {ts} · {site} ──",
+      "turnQuery": "■ Query: {query}",
+      "turnFailed": "(this turn failed) {note}",
+      "omittedTurns": "…({n} intermediate turns omitted)",
+      "failedPoint": "(failed) {summary}",
+      "mailFooter": "Full answers, charts and topology diagrams for all {n} turns are available on the dashboard{url}",
+      "chartNote": "(the chart is shown on the dashboard)",
+      "topologyNote": "(the topology diagram is shown on the dashboard)",
+      "bullet": "- ",
+      "header": {
+        "site": "■ Site      : {value}",
+        "ts": "■ Executed  : {value}",
+        "query": "■ Query     : {value}",
+        "platforms": "■ Platforms : {value}",
+        "tools": "■ Tools     : {value}",
+        "model": "■ Model     : {value}",
+        "period": "■ Period    : {value}",
+        "turns": "■ Turns     : {value}"
+      },
+      "mailHeader": {
+        "site": "Site: {value}",
+        "ts": "Executed: {value}",
+        "query": "Query: {value}",
+        "period": "Period: {value} ({n} turns)"
+      }
+    }
+  },
+  "reports": {
+    "title": "Reports",
+    "headerSub": "Pick a date from the calendar to review the stored daily reports",
+    "periodAria": "Switch period",
+    "period": {
+      "daily": "Daily",
+      "weekly": "Weekly",
+      "monthly": "Monthly"
+    },
+    "reload": "Reload",
+    "reloading": "Reloading…",
+    "loading": "Loading…",
+    "pickDay": "Pick a date from the calendar.",
+    "noSummary": "No summary.",
+    "partial": "incomplete",
+    "generatedAt": "generated {at}",
+    "generatedBy": {
+      "schedule": "scheduled",
+      "manual": "manual",
+      "catchup": "catch-up"
+    },
+    "analysisFailed": "Analysis failed for this day ({reason}). Only the aggregated numbers are available.",
+    "langNote": "The report text is shown in the language it was generated in ({lang}). It is a record of that run, so it is not translated.",
+    "error": {
+      "notGenerated": "No report has been generated for {date} yet."
+    },
+    "weekday": {
+      "sun": "Sun",
+      "mon": "Mon",
+      "tue": "Tue",
+      "wed": "Wed",
+      "thu": "Thu",
+      "fri": "Fri",
+      "sat": "Sat"
+    },
+    "picker": {
+      "prevMonth": "Previous month",
+      "nextMonth": "Next month",
+      "prevYear": "Previous year",
+      "nextYear": "Next year",
+      "latest": "Latest",
+      "latestTitle": "Jump to the latest report ({date})",
+      "weekColumn": "Week",
+      "weekTitle": "{key} ({from} – {to}) — no weekly report yet / {n} daily report(s)",
+      "dayTitle": "{date} — {issues} issue(s), {critical} critical",
+      "dayEmpty": "{date} — no report",
+      "monthTitle": "{month} — no monthly report yet / {n} daily report(s)",
+      "daysCount": "{n} d",
+      "legendOk": "no issues",
+      "legendWarn": "issues",
+      "legendBad": "critical issues",
+      "legendNone": "dimmed = no report",
+      "weekReportTitle": "{key} ({from} – {to}) — rolled up from {n}/{of} days · {issues} issue(s), {critical} critical",
+      "monthReportTitle": "{month} — rolled up from {n}/{of} days · {issues} issue(s), {critical} critical",
+      "daysCountPending": "{n} d (not rolled up)",
+      "legendPending": "faded dot = daily reports exist, not rolled up yet"
+    },
+    "kpi": {
+      "events": "Total events",
+      "eventsSub": "Webhook log (all sources)",
+      "eventsUnavailable": "not collected for this day",
+      "critical": "Critical alerts",
+      "criticalSub": "{n} warning(s)",
+      "clients": "Connected clients",
+      "clientsSub": "min {min} / max {max} that day",
+      "clientsSnapshot": "no samples that day; value at generation time",
+      "newIssues": "New issues",
+      "newIssuesSub": "{n} continuing / recurring"
+    },
+    "charts": {
+      "healthTitle": "Health / SLE trend",
+      "clientsTitle": "Usage trend (connected clients)",
+      "rangeNote": "last {n} daily report(s)",
+      "noData": "No data to plot.",
+      "centralHealth": "Central avg. health",
+      "mistSle": "Mist avg. SLE",
+      "clients": "Connected clients",
+      "siteDetailNote": "Per-site and detailed breakdowns are available on each site detail page (click to open it in Global Overview).",
+      "siteDetailLinkTitle": "Open the site detail page for {site}",
+      "trafficNote": "Traffic volume (bytes / bps) is not measured: the APIs this app collects from do not expose it."
+    },
+    "highlights": {
+      "title": "What happened in this period",
+      "count": "{n} item(s)",
+      "hint": "click to open the Network Investigation tab",
+      "empty": "No notable events were recorded.",
+      "source": "source: {source}"
+    },
+    "issues": {
+      "title": "Detected issues",
+      "count": "{n} item(s)",
+      "hint": "click a row for Network Investigation / ▸ for details",
+      "empty": "No issues were detected on this day.",
+      "rowTitle": "Investigate this issue in the Network Investigation tab",
+      "expand": "Show details",
+      "collapse": "Hide details",
+      "prevDays": "{n} past day(s)",
+      "colName": "Issue",
+      "colDevice": "Device",
+      "colSite": "Site",
+      "colFirstSeen": "First seen",
+      "colPlatform": "Platform",
+      "colSeverity": "Severity",
+      "colRecurrence": "Recurrence",
+      "colNextAction": "Next action",
+      "rootCause": "Root cause (estimated)",
+      "impact": "Impact",
+      "occurrences": "Occurrences that day",
+      "firstSeenDate": "First seen on",
+      "recurrenceNote": "Recurrence note",
+      "previousDates": "Previously detected on",
+      "key": "Correlation key"
+    },
+    "investigateBtn": "Investigate",
+    "investigateBtnTitle": "Open the Network Investigation tab with this text (it is not run automatically)",
+    "auto": {
+      "tag": {
+        "running": "investigating",
+        "done": "investigated",
+        "error": "investigation failed"
+      },
+      "tagTitle": "Investigated automatically when the {date} report was generated",
+      "resultBtn": "View result",
+      "resultBtnTitle": "Open the thread of the investigation run automatically on {date}",
+      "rowTitleResult": "Open the automatic investigation result in the Network Investigation tab",
+      "runningCount": "{n} automatic investigation(s) running",
+      "panelTitle": "Automatic investigation (with MCP)",
+      "meta": "Run while generating the {date} report · started {at}",
+      "queryLabel": "Query: {query}",
+      "runningBody": "Querying Central / Mist through MCP. When it finishes you can open it from \"View result\".",
+      "errorDefault": "The automatic investigation failed.",
+      "emptyAnswer": "The answer was empty."
+    },
+    "severity": {
+      "critical": "critical",
+      "warning": "warning",
+      "info": "info"
+    },
+    "platform": {
+      "central": "Central",
+      "mist": "Mist",
+      "glp": "GLP",
+      "other": "other"
+    },
+    "recurrence": {
+      "new": "new",
+      "recurring": "recurring",
+      "continuing": "continuing"
+    },
+    "footer": "{date} ({tz}) · {events} events · {investigations} investigation run(s)",
+    "investigateQuery": {
+      "unknown": "unknown",
+      "highlight": "From the daily report for {date}. At {time}, on site \"{site}\" / device \"{device}\" ({platform}): \"{title}\" (severity: {severity}). Details: {detail} Please investigate the cause, the scope of impact, and what action is required.",
+      "issue": "Please investigate the issue \"{name}\" detected in the daily report for {date}. Device: {device} / Site: {site} / Platform: {platform} / Severity: {severity} / Recurrence: {recurrence} (first seen {firstSeen}, {occurrences} occurrence(s) that day). Estimated root cause from the report: {rootCause} Impact: {impact} Next action: {nextAction} Please verify whether this still holds and what the current state is.",
+      "periodHighlight": "From the {period} report ({from} – {to}). At site \"{site}\" / device \"{device}\" ({platform}), \"{title}\" occurred (severity: {severity}; seen on {days} day(s): {dates}). Details: {detail} Please investigate the cause, the scope of impact, and what action is needed.",
+      "periodIssue": "Please investigate the issue \"{name}\" detected in the {period} report ({from} – {to}). Device: {device} / Site: {site} / Platform: {platform} / Severity: {severity} / In this period: {status} (first seen {firstSeen}). It occurred on {days} day(s) ({dates}), {occurrences} times in total, with a longest streak of {streak} day(s). Estimated root cause in the report: {rootCause} Impact: {impact} Next action: {nextAction} Please determine whether this is chronic or one-off, and whether it is still ongoing."
+    },
+    "periodIssue": {
+      "status": {
+        "new": "New in period",
+        "carried": "Carried over"
+      }
+    },
+    "periodNote": {
+      "in-progress": "This period is still in progress ({days} of {of} days rolled up so far).",
+      "missing-days": "{n} of {of} days have no daily report ({dates}). Those days are excluded from the roll-up.",
+      "partial-days": "Includes {n} day(s) whose daily report was generated before the day ended ({dates}).",
+      "analysis-failed-days": "Includes {n} day(s) whose LLM analysis failed ({dates}). Highlights and issues for those days are not part of the roll-up.",
+      "webhook-unavailable-days": "The webhook log was not available on {n} day(s) ({dates}). The total event count excludes those days.",
+      "mixed-lang": "The daily reports rolled up here were written in more than one language ({langs}). Their text is shown in the language it was generated in."
+    },
+    "periodReport": {
+      "weeklyTitle": "{key} ({range})",
+      "monthlyTitle": "{key} ({range})",
+      "range": "{from} – {to}",
+      "inProgressBadge": "in progress",
+      "partialBadge": "partial data",
+      "notGeneratedBadge": "not generated",
+      "notGeneratedYet": "No report has been generated for this period yet. It is rolled up on schedule (weekly: every Monday / monthly: on the 1st) and whenever a new daily report is created. The daily reports below can be opened right now.",
+      "noDailyAtAll": "There is no daily report in this period, so there is nothing to roll up.",
+      "aggregatedFrom": "rolled up from {n} daily report(s)",
+      "noLlmNote": "Weekly / monthly reports are a mechanical roll-up of the stored daily reports (no LLM re-analysis).",
+      "summary": "This period rolls up {days} daily report(s) out of {of} calendar days: {events} events, {critical} critical alerts, and {issues} distinct issues after merging ({newIssues} new in this period / {carried} carried over).",
+      "eventsSub": "{avg} per day on average (total over {n} day(s))",
+      "criticalSub": "{warning} warning(s) · worst day {date} ({n})",
+      "clientsSub": "min {min} / max {max} in period (weighted over {n} day(s))",
+      "clientsPeak": "Peak recorded on {date}",
+      "newIssuesSub": "{carried} carried over / {unique} distinct in total",
+      "trendNoteDay": "{n} daily report(s) in this period",
+      "trendNoteWeek": "{n} weekly point(s) in this period",
+      "highlightsTruncated": "{n} lower-severity item(s) omitted",
+      "onNDays": "on {n} days",
+      "issuesCount": "{n} (from {total} daily entries)",
+      "issuesHint": "click a row to investigate / ▸ for dates and details",
+      "colDays": "Days seen",
+      "colOccurrences": "Occurrences",
+      "colStatus": "In this period",
+      "daysOf": "{n} / {of} d",
+      "streak": "{n}-day streak",
+      "streakTitle": "Occurred on {n} consecutive days at most in this period",
+      "firstSeenTitle": "First seen: {date}",
+      "firstSeenAt": "First seen in period",
+      "occurredOn": "Days it occurred (click to open that daily report)",
+      "beforePeriod": "Days detected before this period",
+      "siteChipTitle": "Open the site detail page for {site} (average over {n} day(s))",
+      "sourceTitle": "Daily reports rolled up",
+      "sourceCount": "{n} / {of} days",
+      "sourceChipTitle": "{date} — {issues} issue(s) · {events} event(s) · analysis {status}",
+      "daysNote": "Daily reports generated in this period: {n}",
+      "openDay": "Open the daily report for {date}",
+      "noDays": "No daily report exists in this period yet.",
+      "footer": "{key} ({from} – {to} / {tz}) · rolled up from {days} day(s) · {events} events · {investigations} investigation runs"
+    }
+  },
+  "knowledge": {
+    "title": "Knowledge",
+    "headerSub": "Review and keep the insights extracted from investigations",
+    "refresh": "Refresh",
+    "refreshing": "Refreshing…",
+    "badgeTitle": "{n} knowledge candidate(s) awaiting review",
+    "sectionAria": "Knowledge sections",
+    "foot": "Approved entries are stored in data/knowledge/entries.json. Each investigation is mined for candidates exactly once.",
+    "sections": {
+      "pending": "Awaiting review",
+      "approved": "Approved knowledge",
+      "archive": "Rejected / merged"
+    },
+    "error": {
+      "prefix": "The action failed: {message}"
+    },
+    "status": {
+      "pending": "pending",
+      "approved": "approved",
+      "rejected": "rejected",
+      "merged": "merged"
+    },
+    "origin": {
+      "manual": "manual investigation",
+      "auto": "auto pre-investigation",
+      "scheduled": "scheduled run"
+    },
+    "scope": {
+      "general": "general pattern",
+      "site": "site specific",
+      "device": "device specific"
+    },
+    "platform": {
+      "central": "Central",
+      "mist": "Mist",
+      "both": "Central / Mist"
+    },
+    "extract": {
+      "on": "Extraction: on (sources: {sources})",
+      "off": "Extraction: off",
+      "none": "none",
+      "logToggle": "Extraction activity",
+      "logTitle": "Recent candidate extraction runs",
+      "logEmpty": "No extraction has run since this start-up.",
+      "settingsSummary": "up to {max} per investigation / answers under {min} chars skipped / similarity threshold {threshold} / model {model}",
+      "defaultModel": "default",
+      "logCreated": "created {n} candidate(s) ({dup} skipped as duplicates, {similar} flagged as merge proposals)",
+      "status": {
+        "created": "created",
+        "empty": "no insight",
+        "skipped": "skipped",
+        "error": "failed"
+      },
+      "reason": {
+        "disabled": "Extraction is disabled in the settings",
+        "sourceExcluded": "This kind of run is not in scope for extraction",
+        "investigationError": "The investigation itself failed",
+        "answerTooShort": "The answer was too short to mine",
+        "alreadyExtracted": "This investigation has already been mined",
+        "noInsight": "No reusable insight was found",
+        "allDuplicates": "Every candidate duplicated an existing pending one",
+        "llmFailed": "The extraction run failed"
+      }
+    },
+    "card": {
+      "title": "Title",
+      "symptom": "Symptom",
+      "rootCause": "Root cause",
+      "action": "Action",
+      "scope": "Scope",
+      "site": "Site: {value}",
+      "device": "Device: {value}",
+      "siteLabel": "Site",
+      "deviceLabel": "Device",
+      "tagsLabel": "Tags (comma separated)",
+      "tagsPlaceholder": "e.g. rogue-ap, 5ghz",
+      "sourceLine": "From the {origin} on {at}",
+      "langNote": "This entry was written in {lang}; it is shown as recorded at run time."
+    },
+    "meta": {
+      "created": "extracted {at}",
+      "approved": "approved {at}",
+      "rejected": "rejected {at}",
+      "edited": "edited",
+      "merged": "{n} merged in"
+    },
+    "actions": {
+      "approve": "Approve",
+      "editApprove": "Edit and approve",
+      "reject": "Reject",
+      "saveAndApprove": "Save and approve",
+      "cancel": "Cancel",
+      "edit": "Edit",
+      "save": "Save",
+      "retire": "Retire",
+      "restore": "Approve again",
+      "openRun": "Open investigation",
+      "editing": "Editing"
+    },
+    "bulk": {
+      "selectAll": "Select all",
+      "selected": "{n} selected",
+      "approve": "Approve selected",
+      "selectTitle": "Select this candidate for bulk approval"
+    },
+    "pending": {
+      "empty": "Nothing is waiting for review. Candidates appear here once a network investigation (manual or automatic) finishes."
+    },
+    "similar": {
+      "title": "This may be the same as an existing entry",
+      "score": "similarity {score}",
+      "merge": "Merge into this entry",
+      "mergeTitle": "Update the existing entry and keep this candidate as merged",
+      "missing": "The existing entry could not be found (it may have been rejected).",
+      "keepSeparateNote": "To keep it as a separate insight, just press Approve above."
+    },
+    "approved": {
+      "searchPlaceholder": "Search title, symptom, cause and action",
+      "searchAria": "Search approved knowledge",
+      "count": "showing {shown} of {total}",
+      "allTags": "All",
+      "empty": "No knowledge has been approved yet.",
+      "noMatch": "No entry matches the current filter.",
+      "filterByTag": "Filter by #{tag}",
+      "sortAria": "Sort approved knowledge",
+      "sort": {
+        "approved": "Newest approved",
+        "refs": "Most referenced",
+        "stale": "Never / least recently referenced"
+      }
+    },
+    "archive": {
+      "title": "Rejected / merged",
+      "note": "Rejecting never deletes anything. If you rejected something by mistake, approve it again from here.",
+      "empty": "Nothing has been rejected or merged.",
+      "mergedInto": "merged into “{title}”"
+    },
+    "refs": {
+      "count": "referenced {n}x",
+      "last": "last {at}",
+      "never": "never referenced",
+      "neverTitle": "This entry has never been injected into an investigation prompt since it was approved",
+      "title": "How many times this entry was injected into an investigation prompt, and when it last was",
+      "unusedCount": "{n} never referenced"
+    },
+    "inject": {
+      "on": "Injection into investigations: on (up to {max})",
+      "off": "Injection into investigations: off",
+      "summary": "up to {max} entries per investigation prompt / relevance threshold {threshold}"
+    }
+  },
+  "bestPractice": {
+    "title": "Best Practice",
+    "headerSub": "Security / RF tuning recommended-config check (per site, manual run)",
+    "platform": {
+      "all": "All",
+      "central": "Central",
+      "mist": "Mist"
+    },
+    "site": {
+      "title": "Select a site",
+      "loading": "Loading site list…",
+      "refreshBtn": "Refresh",
+      "empty": "No sites available.",
+      "selectPlaceholder": "Select a site",
+      "apCount": "{n} APs"
+    },
+    "run": {
+      "button": "Run diagnosis",
+      "buttonBusy": "Diagnosing…",
+      "hint": "Samples one representative AP per site and evaluates it (usually takes about 8-10 seconds).",
+      "llmToggle": "Also generate AI observations (SEC-12 / SEC-13 / RF-15 / RF-16)",
+      "conflict": "A diagnosis for this site is already running. Please wait and try again.",
+      "errorPrefix": "Failed to run the diagnosis: "
+    },
+    "result": {
+      "title": "Diagnosis result",
+      "noRunYet": "No diagnosis result for this site yet. Click \"Run diagnosis\".",
+      "loadingPrevious": "Checking for a previous result…",
+      "polling": "Waiting for the diagnosis to finish…",
+      "startedAt": "Run at",
+      "duration": "Duration",
+      "durationValue": "{s}s",
+      "sampledAp": "Sampled AP",
+      "summary": "Pass {pass} / Warn {warn} / Fail {fail} / Unknown {unknown} / N/A {na} / AI note {info}",
+      "legalReviewNote": "Of which flagged for legal review: {n}",
+      "errorRun": "This run ended in an error: {error}",
+      "rerunBtn": "Run again",
+      "empty": "No items in this group."
+    },
+    "category": {
+      "security": "Security",
+      "rf": "RF"
+    },
+    "verdict": {
+      "pass": "Pass",
+      "warn": "Warn",
+      "fail": "Fail",
+      "unknown": "Unavailable",
+      "not_applicable": "N/A",
+      "info": "AI note"
+    },
+    "severity": {
+      "must": "Must",
+      "strong": "Strongly recommended",
+      "recommended": "Recommended",
+      "advisory": "Advisory"
+    },
+    "method": {
+      "mechanical": "Mechanical check",
+      "llm": "AI observation"
+    },
+    "legalReview": {
+      "badge": "Legal review",
+      "note": "If you plan to enable this, we recommend a legal/security review."
+    },
+    "unknown": {
+      "note": "This item could not be retrieved in this environment (unavailable — not the same as a failure)."
+    },
+    "llmFinding": {
+      "badge": "AI observation",
+      "note": "This observation is a reference note based only on the values captured in this run's snapshot (it is not a pass/fail judgement)."
+    },
+    "references": {
+      "title": "References"
+    },
+    "view": {
+      "diagnose": "Diagnosis",
+      "reference": "Rule reference"
+    },
+    "detail": {
+      "toggle": "Show rule explanation and references",
+      "category": "Category",
+      "priority": "Priority",
+      "method": "Check method",
+      "openReference": "View in rule reference"
+    },
+    "reference": {
+      "title": "Rule reference",
+      "headerSub": "All {n} rules. No diagnosis run is required to view this page.",
+      "loading": "Loading rule list…",
+      "error": "Failed to load the rule list: "
+    },
+    "rules": {
+      "SEC-01": { "title": "Eliminate legacy cipher suites", "desc": "Checks that SSIDs do not use WEP, TKIP, or open (unencrypted) authentication." },
+      "SEC-02": { "title": "Apply OWE to open SSIDs", "desc": "Checks whether open (unencrypted) SSIDs use OWE (Enhanced Open) to encrypt traffic." },
+      "SEC-03": { "title": "WPA3 migration status", "desc": "Checks whether SSIDs are still on WPA2 or have already migrated to WPA3 (or OWE)." },
+      "SEC-04": { "title": "PMF setting on WPA2 SSIDs", "desc": "Checks whether PMF (Protected Management Frames) is enabled on WPA2-family SSIDs via mfp-required or mfp-capable." },
+      "SEC-05": { "title": "Avoid leaving WPA3 Transition Mode always on", "desc": "Checks whether WPA3 Transition Mode (co-existence with WPA2) is left permanently enabled. While enabled, WPA2-equivalent connections are still allowed." },
+      "SEC-06": { "title": "WPA3 required on the 6GHz band", "desc": "Checks whether SSIDs using the 6GHz band satisfy the standard-mandated WPA3 (or OWE) requirement." },
+      "SEC-07": { "title": "Wireless IDS detection (infrastructure) enabled", "desc": "Checks whether the WIDS detection level for infrastructure is off." },
+      "SEC-08": { "title": "Wireless IDS detection (client) enabled", "desc": "Checks whether the WIDS detection level for clients is off." },
+      "SEC-09": { "title": "Over-aggressive IDS detection level", "desc": "Checks whether the detection level is set high (medium/high), which can increase false positives." },
+      "SEC-10": { "title": "Wireless containment enablement status", "desc": "Checks whether wireless containment is enabled. Because enabling it has implications for radio regulations and neighboring networks, a legal/security review is recommended." },
+      "SEC-11": { "title": "High-risk protection policy enablement status", "desc": "Checks whether high-risk WIDS/WIPS protection policies such as rogue-containment are enabled. A legal/security review is recommended before enabling these." },
+      "SEC-12": { "title": "Overall auth / key-distribution assessment (AI)", "desc": "The AI comments on auth server redundancy, whether each SSID's purpose matches its auth method, and where MPSK fits — based only on this run's snapshot." },
+      "SEC-13": { "title": "SSID security posture (AI)", "desc": "The AI comments on which mechanical findings to fix first and on structural concerns the mechanical rules don't cover — based only on this run's snapshot." },
+      "RF-01": { "title": "2.4GHz channel width", "desc": "Checks whether the 2.4GHz radio's channel width exceeds 20MHz." },
+      "RF-02": { "title": "5GHz channel width", "desc": "Checks whether the 5GHz radio's channel width exceeds 80MHz." },
+      "RF-03": { "title": "Consistent channel width within a band", "desc": "Checks whether channel width is consistent across radios on the same band within a site." },
+      "RF-04": { "title": "Restrict 2.4GHz to non-overlapping channels", "desc": "Checks whether the allowed 2.4GHz channels are limited to the non-overlapping set (1/6/11)." },
+      "RF-05": { "title": "Tx power range within a radio", "desc": "Checks whether the gap between a radio's max and min Tx power is too wide (which can keep ARM/RRM from converging)." },
+      "RF-06": { "title": "Tx power delta between 2.4GHz and 5GHz", "desc": "Checks whether 5GHz minimum Tx power is set sufficiently higher than 2.4GHz (target: at least 6dB)." },
+      "RF-07": { "title": "Tx power delta between 5GHz and 6GHz", "desc": "Checks whether 6GHz minimum Tx power falls within an appropriate range relative to 5GHz (target: 0 to +3dB)." },
+      "RF-08": { "title": "Basic rate floor", "desc": "Checks whether low-speed rates (below 12Mbps) are included in the basic rates." },
+      "RF-09": { "title": "802.11k (Neighbor Report) enabled", "desc": "Checks whether 802.11k is enabled." },
+      "RF-10": { "title": "OKC / PMK caching enabled", "desc": "Checks whether OKC (Opportunistic Key Caching) is enabled." },
+      "RF-11": { "title": "Broadcast/multicast filtering enabled", "desc": "Checks whether the broadcast filter and IPv6 RA filter are enabled." },
+      "RF-12": { "title": "Wi-Fi 6/7 feature disablement status", "desc": "Checks whether HE (Wi-Fi 6) / EHT (Wi-Fi 7) features have been unintentionally disabled." },
+      "RF-13": { "title": "ARM (Adaptive Radio Management) enabled", "desc": "Checks whether ARM scanning / client-match is enabled (AOS8 only)." },
+      "RF-14": { "title": "Mixed AP model series", "desc": "Checks whether AP model series (e.g. the 5xx and 6xx families) are mixed within a site." },
+      "RF-15": { "title": "2.4GHz handling in high-density environments (AI)", "desc": "Given the SSIDs using 2.4GHz and the AP count, the AI comments on whether 2.4GHz should stay open for client use here, explicitly noting this is environment-dependent." },
+      "RF-16": { "title": "Validity of static channel/power assignment vs. RRM (AI)", "desc": "The AI comments on whether channels/power are being left to AirMatch / ARM / Mist RRM, or whether static assignments remain in place." }
+    },
+    "findings": {
+      "SEC-01": {
+        "ok": "{ssid}: encryption is not WEP/TKIP/open ({opmode}).",
+        "wep": "{ssid}: uses WEP ({opmode}). Migrate this as a priority.",
+        "tkip": "{ssid}: uses a legacy cipher (WEP/TKIP) ({opmode}).",
+        "open": "{ssid}: uses open authentication (no encryption).",
+        "opmodeUnknown": "{ssid}: could not classify the cipher \"{opmode}\".",
+        "pairwiseUnset": "{ssid}: the pairwise cipher is not explicitly set — left to Mist's default."
+      },
+      "SEC-02": {
+        "owe": "{ssid}: OWE (Enhanced Open) is enabled.",
+        "openNotOwe": "{ssid}: open authentication without OWE — traffic is not encrypted.",
+        "notOpen": "{ssid}: not open authentication — not applicable.",
+        "opmodeUnknown": "{ssid}: could not classify the cipher."
+      },
+      "SEC-03": {
+        "wpa3": "{ssid}: already migrated to WPA3.",
+        "wpa2": "{ssid}: still on WPA2. Consider migrating to WPA3.",
+        "owe": "{ssid}: uses OWE (Enhanced Open).",
+        "legacy": "{ssid}: legacy cipher — not applicable here (see SEC-01).",
+        "opmodeUnknown": "{ssid}: could not classify the cipher.",
+        "pairwiseUnset": "{ssid}: the cipher is not explicitly set — cannot determine."
+      },
+      "SEC-04": {
+        "required": "{ssid}: mfp-required is set — PMF is mandatory.",
+        "capableOnly": "{ssid}: only mfp-capable is set — PMF is optional. Consider enabling mfp-required.",
+        "capableViaMbo": "{ssid}: mbo-enable implicitly enables PMF (capable). Consider explicitly enabling mfp-required.",
+        "disabled": "{ssid}: neither mfp-capable nor mfp-required is set — PMF is disabled.",
+        "notWpa2": "{ssid}: not a WPA2-family SSID — not applicable (PMF is decided automatically by opmode).",
+        "opmodeUnknown": "{ssid}: could not classify the cipher.",
+        "noPmfField": "Mist's WLAN object has no independent field for PMF — cannot determine."
+      },
+      "SEC-05": {
+        "disabled": "{ssid}: Transition Mode is disabled (PMF always required).",
+        "enabled": "{ssid}: WPA3 Transition Mode is enabled, still allowing WPA2-equivalent connections.",
+        "oweTransition": "{ssid}: OWE Transition Mode is enabled (a separate open SSID is broadcast).",
+        "notApplicable": "{ssid}: Transition Mode does not apply to this configuration — not applicable.",
+        "opmodeUnknown": "{ssid}: could not classify the cipher.",
+        "noTransitionField": "Mist's WLAN object has no independent field for Transition Mode — cannot determine."
+      },
+      "SEC-06": {
+        "ok": "{ssid}: satisfies WPA3 (or OWE) on the 6GHz band.",
+        "notWpa3": "{ssid}: uses the 6GHz band but does not satisfy WPA3/OWE (non-compliant).",
+        "no6ghz": "{ssid}: does not use the 6GHz band — not applicable.",
+        "opmodeUnknown": "{ssid}: could not classify the cipher.",
+        "pairwiseUnset": "{ssid}: the cipher is not explicitly set — cannot determine."
+      },
+      "SEC-07": {
+        "enabled": "{ap}: infrastructure detection level is \"{level}\".",
+        "off": "{ap}: infrastructure detection is off.",
+        "notCollected": "{ap}: could not retrieve the infrastructure detection level.",
+        "rogueSettingsUnreachable": "Mist's rogue/WIDS settings are not reachable via the current retrieval path (get_mist_config) — cannot determine."
+      },
+      "SEC-08": {
+        "enabled": "{ap}: client detection level is \"{level}\".",
+        "off": "{ap}: client detection is off.",
+        "notCollected": "{ap}: could not retrieve the client detection level.",
+        "rogueSettingsUnreachable": "Mist's rogue/WIDS settings are not reachable via the current retrieval path (get_mist_config) — cannot determine."
+      },
+      "SEC-09": {
+        "low": "{ap}: detection levels are low to standard.",
+        "elevated": "{ap}: detection levels are elevated ({levels}). Watch for increased false positives.",
+        "off": "{ap}: detection is off — not applicable (see SEC-07 / SEC-08).",
+        "notCollected": "{ap}: could not retrieve the detection levels.",
+        "rogueSettingsUnreachable": "Mist's rogue/WIDS settings are not reachable via the current retrieval path (get_mist_config) — cannot determine."
+      },
+      "SEC-10": {
+        "disabled": "{ap}: wireless containment is disabled.",
+        "enabled": "{ap}: wireless containment is enabled (mode: {mode}). If keeping this enabled, consider a legal/security review.",
+        "notCollected": "{ap}: could not retrieve the containment configuration.",
+        "rogueSettingsUnreachable": "Mist's rogue/WIDS settings are not reachable via the current retrieval path (get_mist_config) — cannot determine."
+      },
+      "SEC-11": {
+        "none": "{ap}: no high-risk protection policies are enabled.",
+        "enabled": "{ap}: {count} high-risk protection policies enabled ({policies}). If keeping these enabled, consider a legal/security review.",
+        "notCollected": "{ap}: could not retrieve the protection policy configuration.",
+        "rogueSettingsUnreachable": "Mist's rogue/WIDS settings are not reachable via the current retrieval path (get_mist_config) — cannot determine."
+      },
+      "SEC-12": {
+        "llmFailed": "Failed to generate the AI observation.",
+        "llmEmpty": "The AI returned an empty observation."
+      },
+      "SEC-13": {
+        "llmFailed": "Failed to generate the AI observation.",
+        "llmEmpty": "The AI returned an empty observation."
+      },
+      "RF-01": {
+        "ok": "{radio}: channel width is 20MHz or less ({bandwidth}MHz).",
+        "over20": "{radio}: channel width exceeds 20MHz ({bandwidth}MHz).",
+        "notCollected": "{radio}: could not retrieve the channel width.",
+        "noRfTemplate": "No RF template is assigned to this site — cannot determine."
+      },
+      "RF-02": {
+        "ok": "{radio}: channel width is 80MHz or less ({bandwidth}MHz).",
+        "over80": "{radio}: channel width exceeds 80MHz ({bandwidth}MHz). Wider channels are more exposed to DFS and congestion.",
+        "notCollected": "{radio}: could not retrieve the channel width.",
+        "noRfTemplate": "No RF template is assigned to this site — cannot determine."
+      },
+      "RF-03": {
+        "ok": "{band}GHz: channel width is consistent within this band ({widths}MHz).",
+        "inconsistent": "{band}GHz: channel width is inconsistent within this band ({widths}MHz).",
+        "notCollected": "Could not retrieve the channel width for this band.",
+        "modelSpecific": "Template \"{template}\" has model-specific overrides — channel width may not be uniform.",
+        "uniformByTemplate": "Template \"{template}\" applies uniformly — channel width is consistent within this band.",
+        "noRfTemplate": "No RF template is assigned to this site — cannot determine."
+      },
+      "RF-04": {
+        "ok": "Only non-overlapping channels (1/6/11) are allowed.",
+        "overlapping": "Overlapping channels are allowed ({channels}). Consider restricting to 1/6/11 only.",
+        "notCollected": "Could not retrieve the allowed-channel configuration.",
+        "auto": "Channels are assigned automatically (left to RRM), which selects non-overlapping channels.",
+        "noRfTemplate": "No RF template is assigned to this site — cannot determine."
+      },
+      "RF-05": {
+        "ok": "{radio}: the Tx power range is within an acceptable range ({diff}dB).",
+        "wideRange": "{radio}: the gap between max and min Tx power is too wide ({diff}dB), which can keep ARM/RRM from converging.",
+        "notCollected": "{radio}: could not retrieve the Tx power range.",
+        "noRfTemplate": "No RF template is assigned to this site — cannot determine."
+      },
+      "RF-06": {
+        "ok": "5GHz minimum Tx power is set sufficiently higher than 2.4GHz (delta {delta}dB).",
+        "tooClose": "The gap between 5GHz and 2.4GHz minimum Tx power is too small (delta {delta}dB). Aim for at least 6dB.",
+        "notCollected": "Could not compare Tx power across bands.",
+        "noRfTemplate": "No RF template is assigned to this site — cannot determine."
+      },
+      "RF-07": {
+        "ok": "6GHz minimum Tx power is within an appropriate range relative to 5GHz (delta {delta}dB).",
+        "outOfRange": "The gap between 6GHz and 5GHz minimum Tx power is outside the target range (0 to +3dB) (delta {delta}dB).",
+        "notCollected": "Could not compare Tx power across bands.",
+        "no6ghz": "No 6GHz radio present — not applicable.",
+        "noRfTemplate": "No RF template is assigned to this site — cannot determine."
+      },
+      "RF-08": {
+        "ok": "{ssid}: no low-speed rates are included in the basic rates.",
+        "lowRates": "{ssid}: low-speed rates are included in the basic rates ({rates}Mbps).",
+        "notConfigured": "{ssid}: basic rates are not explicitly configured — left to the device default.",
+        "notInMistConfig": "This item has no field reachable via get_mist_config — cannot determine."
+      },
+      "RF-09": {
+        "enabled": "{ssid}: 802.11k (Neighbor Report) is enabled.",
+        "disabled": "{ssid}: 802.11k is disabled.",
+        "notInMistConfig": "This item has no field reachable via get_mist_config — cannot determine."
+      },
+      "RF-10": {
+        "enabled": "{ssid}: OKC (Opportunistic Key Caching) is enabled.",
+        "disabled": "{ssid}: OKC is disabled.",
+        "notInMistConfig": "This item has no field reachable via get_mist_config — cannot determine."
+      },
+      "RF-11": {
+        "ok": "{ssid}: both the broadcast filter and IPv6 RA filter are enabled.",
+        "bothMissing": "{ssid}: both the broadcast filter and IPv6 RA filter are disabled.",
+        "filterMissing": "{ssid}: broadcast-filter is not set to arp/all (current: {filter}).",
+        "raMissing": "{ssid}: the IPv6 RA filter is disabled.",
+        "notInMistConfig": "This item has no field reachable via get_mist_config — cannot determine."
+      },
+      "RF-12": {
+        "ok": "No Wi-Fi 6/7 features are disabled.",
+        "ssidDisabled": "{ssid}: some Wi-Fi 6/7 features are disabled ({features}).",
+        "radioDisabled": "{radio}: some Wi-Fi 6/7 features are disabled ({features}).",
+        "notCollected": "{radio}: could not retrieve the Wi-Fi 6/7 feature configuration.",
+        "notInMistConfig": "This item has no field reachable via get_mist_config — cannot determine."
+      },
+      "RF-13": {
+        "ok": "{ap}: ARM scanning / client-match is enabled.",
+        "disabled": "{ap}: some ARM features are disabled ({features}).",
+        "notCollected": "{ap}: could not retrieve the ARM configuration.",
+        "aos10": "{ap}: this AP runs AOS10 — AirMatch, not ARM, applies here (not applicable).",
+        "centralOnly": "ARM is an Aruba (Central)-specific feature — not applicable."
+      },
+      "RF-14": {
+        "ok": "AP model series are consistent ({models}).",
+        "mixed": "AP model series are mixed ({series}). Differing RF characteristics can affect RRM/ARM decisions.",
+        "notCollected": "Could not retrieve AP model information."
+      },
+      "RF-15": {
+        "llmFailed": "Failed to generate the AI observation.",
+        "llmEmpty": "The AI returned an empty observation."
+      },
+      "RF-16": {
+        "llmFailed": "Failed to generate the AI observation.",
+        "llmEmpty": "The AI returned an empty observation."
+      }
+    }
+  }
+}

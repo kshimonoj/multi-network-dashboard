@@ -10,6 +10,7 @@
 // 生かしてあり、main.tsx がその値をタイトル行の右端へ出している。
 
 import { createContext, useContext } from "react";
+import { getLang, translate } from "./i18n";
 
 // ---- PluginEntry(Corstack src/lib/types.ts と同じ形) ----
 // 本アプリではプラグイン一覧が無いので固定値 1 件を main.tsx から渡すだけ。
@@ -37,9 +38,10 @@ export function useSetTopbarModel(): SetTopbarModel {
 }
 
 // モデル値をトップバー表示用の文字列に整える(Corstack 版と同じ挙動)。
+// React コンポーネントではないので Context を張れない。表示言語は i18n の窓口(getLang)から読む。
 export function topbarModelLabel(model: string | null | undefined): string {
   const v = (model ?? "").trim();
-  return v === "" ? "(旧・未指定)" : v;
+  return v === "" ? translate(getLang(), "model.unspecified") : v;
 }
 
 // ---- 調査キュー(15番) ----
@@ -60,3 +62,16 @@ export interface InvestigationRequest {
 // 値は対象実行の runId(= HistoryRecord.id。webhook-feed/enrich.ts が記録時に一致させている)。
 // main.tsx がローカル state として保持し、NetworkInvestigation が消費(反映後にクリア)する。
 export type PendingHistoryFocus = string;
+
+// ---- サイト詳細ジャンプ(43番) ----
+// レポートタブのグラフ下にある「サイト別・詳細な内訳は各サイト詳細ページで確認できます」の
+// リンクから、Global Overview タブのサイト詳細ページ(SiteDetailPage)を直接開くための共有state。
+// 上の 2 つと同じパターン(main.tsx が保持 → 対象タブが消費してクリア)。
+//
+// レポートには siteId が入っているが、詳細ページは Global Overview の最新スナップショットの
+// 行(SiteRow)を必要とする。そこで「どのサイトか」だけを渡し、突き合わせは GlobalOverview に任せる
+// (スナップショット未取得ならその到着を待ってから開く。取得できても一致が無ければ静かに捨てる)。
+export interface SiteFocusRequest {
+  siteName: string;
+  platform: "central" | "mist";
+}

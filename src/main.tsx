@@ -22,38 +22,57 @@ import { GlobalOverview } from "../plugins/global-overview/view/GlobalOverview";
 import { EventFeed } from "../plugins/global-overview/view/EventFeed";
 import { WebhookFeed } from "../plugins/webhook-feed/view/WebhookFeed";
 import { CentralStreaming } from "../plugins/central-streaming/view/CentralStreaming";
+import { Reports } from "../plugins/reports/view/Reports";
+import { Knowledge } from "../plugins/knowledge/view/Knowledge";
+import { BestPractice } from "../plugins/best-practice/view/BestPractice";
+import { fetchPendingCount } from "../plugins/knowledge/view/api";
 import {
   TopbarModelContext,
   type InvestigationRequest,
   type PendingHistoryFocus,
   type PluginEntry,
+  type SiteFocusRequest,
   type TopbarModel,
 } from "./shell";
 import { applyTheme, resolveInitialTheme, storeTheme, type Theme } from "./theme";
+import { LanguageProvider, useLanguage, useT, type Lang, type TFunc } from "./i18n";
 import "./theme.css";
-
-// Corstack の registry.json 相当。単一アプリなので固定値。
-const PLUGIN: PluginEntry = {
-  id: "network-investigation",
-  name: "ネットワーク調査",
-  sub: "Central / Mist 横断",
-  order: 2,
-};
 
 type TabId =
   | "global-overview"
   | "event-feed"
   | "webhook-feed"
   | "central-streaming"
-  | "network-investigation";
+  | "reports"
+  | "knowledge"
+  | "network-investigation"
+  | "best-practice";
 
-const TABS: Array<{ id: TabId; label: string; sub: string }> = [
-  { id: "global-overview", label: "Global Overview", sub: "Central / Mist 直接 API" },
-  { id: "event-feed", label: "Event / Alert", sub: "全サイト横断・オンデマンド取得" },
-  { id: "webhook-feed", label: "Webhook ログ", sub: "New Central / Classic Central / Mist(スプレッドシート経由)" },
-  { id: "central-streaming", label: "Streaming(Central)", sub: "New Central Streaming API(WSS 常時接続)" },
-  { id: "network-investigation", label: "ネットワーク調査", sub: "Central / Mist 横断" },
+// タブの並びと、辞書のキー接頭辞だけをここに持つ(表示文言は src/i18n/*.json)。
+const TABS: Array<{ id: TabId; key: string }> = [
+  { id: "global-overview", key: "tabs.globalOverview" },
+  { id: "event-feed", key: "tabs.eventFeed" },
+  { id: "webhook-feed", key: "tabs.webhookFeed" },
+  { id: "central-streaming", key: "tabs.centralStreaming" },
+  { id: "reports", key: "tabs.reports" },
+  { id: "knowledge", key: "tabs.knowledge" },
+  { id: "network-investigation", key: "tabs.networkInvestigation" },
+  { id: "best-practice", key: "tabs.bestPractice" },
 ];
+
+/** 未承認のナレッジ候補を見失わないための、タブ名横のバッジ更新間隔(46 Task 4-5)。 */
+const KNOWLEDGE_BADGE_MS = 60_000;
+
+// Corstack の registry.json 相当。単一アプリなので固定値。
+// name / sub だけは言語で変わるので、描画時に辞書から引く。
+function usePlugin(t: TFunc): PluginEntry {
+  return {
+    id: "network-investigation",
+    name: t("plugin.networkInvestigation.name"),
+    sub: t("plugin.networkInvestigation.sub"),
+    order: 2,
+  };
+}
 
 const TAB_STORAGE_KEY = "mnd-tab";
 
@@ -78,13 +97,14 @@ function initialTab(focusId: string | null): TabId {
 // 「今の選択を state に持ち、クリックで反転して localStorage へ保存する」だけを行う。
 // 06: 地図タイルの明暗もテーマに追従させるため、値そのものは App 側で持つ。
 function ThemeToggle({ theme, onChange }: { theme: Theme; onChange: (t: Theme) => void }) {
-  const nextLabel = theme === "dark" ? "ライト" : "ダーク";
+  const t = useT();
+  const nextLabel = theme === "dark" ? t("theme.light") : t("theme.dark");
   return (
     <button
       className="app-theme-btn app-theme-toggle"
       onClick={() => onChange(theme === "dark" ? "light" : "dark")}
-      title={`${nextLabel}モードに切り替える(選択はこのブラウザに保存されます)`}
-      aria-label={`${nextLabel}モードに切り替える`}
+      title={t("theme.toggleTitle", { next: nextLabel })}
+      aria-label={t("theme.toggleAria", { next: nextLabel })}
     >
       <span className="app-theme-icon" aria-hidden>
         {theme === "dark" ? "☀" : "☾"}
@@ -94,7 +114,32 @@ function ThemeToggle({ theme, onChange }: { theme: Theme; onChange: (t: Theme) =
   );
 }
 
+// 表示言語の切替(29 Task 2)。テーマトグルと同じ並び・同じ見た目の枠に収める。
+// テーマは 2 値なのでトグルボタンだが、言語は「今どちらなのか」が一目で分かる方が良いので
+// プルダウン(select)にし、選択中の言語名をそのまま表示する。
+function LanguageSelect() {
+  const { lang, setLang, t } = useLanguage();
+  return (
+    <label className="app-theme-btn app-lang" title={t("language.switchTitle")}>
+      <span className="app-theme-icon" aria-hidden>
+        🌐
+      </span>
+      <select
+        className="app-lang-select"
+        value={lang}
+        aria-label={t("language.switchAria")}
+        onChange={(e) => setLang(e.target.value as Lang)}
+      >
+        <option value="ja">{t("language.ja")}</option>
+        <option value="en">{t("language.en")}</option>
+      </select>
+    </label>
+  );
+}
+
 function App() {
+  const t = useT();
+  const plugin = usePlugin(t);
   const focusId = new URLSearchParams(window.location.search).get("focus");
   // View が報告してくる「今使うモデル」。Corstack ではシェルのトップバーに出していたもの。
   const [model, setModel] = useState<TopbarModel | null>(null);
@@ -105,14 +150,41 @@ function App() {
   // Event/Alert・Webhook ログ →「調査する」で渡す事前入力クエリ(15番。17 番で Webhook ログも利用)。ネットワーク調査タブが
   // マウント時/更新時に読み、反映したらクリアする。それまでは他タブの操作に影響しない。
   const [pendingInvestigationQuery, setPendingInvestigationQuery] = useState<InvestigationRequest | null>(null);
-  // Webhook ログ →「調査結果を見る」で渡す、過去実行の直接ジャンプ先(18番)。
+  // Webhook ログ / レポート →「調査結果を見る」で渡す、過去実行の直接ジャンプ先(18番。44番でレポートも利用)。
   // pendingInvestigationQuery とは独立に管理し、互いのタブ切替・消費に影響しないようにする。
   const [pendingHistoryFocus, setPendingHistoryFocus] = useState<PendingHistoryFocus | null>(null);
+  // レポートタブ →「サイト詳細ページで確認できます」のリンクで渡すサイト(43番)。
+  // Global Overview がスナップショットと突き合わせて詳細ページを開き、反映したらクリアする。
+  const [pendingSiteFocus, setPendingSiteFocus] = useState<SiteFocusRequest | null>(null);
+  // ナレッジタブの未承認候補数(46 Task 4-5)。タブを開いていなくても増えるので、
+  // シェル側で定期的に取りに行く(応答は数 KB)。ナレッジタブを開いている間は
+  // そちらの操作結果(onPendingCount)が即座に上書きする。
+  const [knowledgePending, setKnowledgePending] = useState(0);
 
   // StrictMode の二重実行でも冪等(同じ属性を入れ直すだけ)。
   useEffect(() => {
     applyTheme(theme);
   }, [theme]);
+
+  // バッジ用の件数だけを定期取得する(ナレッジタブ自体はマウントしていなくてよい)。
+  useEffect(() => {
+    let alive = true;
+    const tick = () => {
+      void fetchPendingCount()
+        .then((n) => {
+          if (alive) setKnowledgePending(n);
+        })
+        .catch(() => {
+          /* 取得できない間はバッジを更新しないだけ(画面は壊さない) */
+        });
+    };
+    tick();
+    const timer = setInterval(tick, KNOWLEDGE_BADGE_MS);
+    return () => {
+      alive = false;
+      clearInterval(timer);
+    };
+  }, []);
 
   const onTheme = useCallback((t: Theme) => {
     setTheme(t);
@@ -140,7 +212,7 @@ function App() {
     [onTab],
   );
 
-  // Webhook ログの「調査結果を見る」ボタンから呼ばれる。runId を共有stateに積んで
+  // Webhook ログ / レポートの「調査結果を見る」ボタンから呼ばれる。runId を共有stateに積んで
   // ネットワーク調査タブへ切り替えるところまでを行う(新しいクエリは組み立てない)。
   const onOpenHistoryFocus = useCallback(
     (runId: PendingHistoryFocus) => {
@@ -150,32 +222,62 @@ function App() {
     [onTab],
   );
 
+  // レポートタブのサイトリンクから呼ばれる(43番)。サイトを共有stateに積んで
+  // Global Overview タブへ切り替える(詳細ページを開くのは GlobalOverview 側)。
+  const onOpenSite = useCallback(
+    (req: SiteFocusRequest) => {
+      setPendingSiteFocus(req);
+      onTab("global-overview");
+    },
+    [onTab],
+  );
+
   return (
     <TopbarModelContext.Provider value={setModel}>
       <div className="app-shell">
         <div className="app-bar">
-          <span className="app-title">Multi Network Dashboard</span>
-          <nav className="app-tabs" role="tablist" aria-label="画面切替">
-            {TABS.map((t) => (
+          <span className="app-title">{t("app.title")}</span>
+          <nav className="app-tabs" role="tablist" aria-label={t("app.tabsAriaLabel")}>
+            {TABS.map((tb) => (
               <button
-                key={t.id}
+                key={tb.id}
                 role="tab"
-                aria-selected={tab === t.id}
-                className={`app-tab${tab === t.id ? " app-tab-on" : ""}`}
-                onClick={() => onTab(t.id)}
-                title={t.sub}
+                aria-selected={tab === tb.id}
+                className={`app-tab${tab === tb.id ? " app-tab-on" : ""}`}
+                onClick={() => onTab(tb.id)}
+                title={t(`${tb.key}.sub`)}
               >
-                {t.label}
+                {t(`${tb.key}.label`)}
+                {tb.id === "knowledge" && knowledgePending > 0 && (
+                  <span
+                    className="app-tab-badge"
+                    title={t("knowledge.badgeTitle", { n: knowledgePending })}
+                    aria-label={t("knowledge.badgeTitle", { n: knowledgePending })}
+                  >
+                    {knowledgePending}
+                  </span>
+                )}
               </button>
             ))}
           </nav>
-          {model && tab === "network-investigation" && <span className="app-model">model: {model.label}</span>}
+          {model && tab === "network-investigation" && (
+            <span className="app-model">
+              {t("app.modelPrefix")} {model.label}
+            </span>
+          )}
+          <LanguageSelect />
           <ThemeToggle theme={theme} onChange={onTheme} />
         </div>
         <div className="app-body">
           {visited.has("global-overview") && (
             <div className="app-pane" hidden={tab !== "global-overview"}>
-              <GlobalOverview active={tab === "global-overview"} theme={theme} onInvestigate={onInvestigate} />
+              <GlobalOverview
+                active={tab === "global-overview"}
+                theme={theme}
+                onInvestigate={onInvestigate}
+                pendingSiteFocus={pendingSiteFocus}
+                onConsumePendingSiteFocus={() => setPendingSiteFocus(null)}
+              />
             </div>
           )}
           {visited.has("event-feed") && (
@@ -197,16 +299,40 @@ function App() {
               <CentralStreaming active={tab === "central-streaming"} onInvestigate={onInvestigate} />
             </div>
           )}
+          {visited.has("reports") && (
+            <div className="app-pane" hidden={tab !== "reports"}>
+              <Reports
+                active={tab === "reports"}
+                onInvestigate={onInvestigate}
+                onOpenSite={onOpenSite}
+                onOpenHistoryFocus={onOpenHistoryFocus}
+              />
+            </div>
+          )}
+          {visited.has("knowledge") && (
+            <div className="app-pane" hidden={tab !== "knowledge"}>
+              <Knowledge
+                active={tab === "knowledge"}
+                onOpenHistoryFocus={onOpenHistoryFocus}
+                onPendingCount={setKnowledgePending}
+              />
+            </div>
+          )}
           {visited.has("network-investigation") && (
             <div className="app-pane" hidden={tab !== "network-investigation"}>
               <NetworkInvestigation
-                plugin={PLUGIN}
+                plugin={plugin}
                 focusId={focusId}
                 pendingQuery={pendingInvestigationQuery}
                 onConsumePendingQuery={() => setPendingInvestigationQuery(null)}
                 pendingHistoryFocus={pendingHistoryFocus}
                 onConsumePendingHistoryFocus={() => setPendingHistoryFocus(null)}
               />
+            </div>
+          )}
+          {visited.has("best-practice") && (
+            <div className="app-pane" hidden={tab !== "best-practice"}>
+              <BestPractice active={tab === "best-practice"} />
             </div>
           )}
         </div>
@@ -217,6 +343,8 @@ function App() {
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <App />
+    <LanguageProvider>
+      <App />
+    </LanguageProvider>
   </StrictMode>,
 );

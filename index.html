@@ -13,8 +13,8 @@
     href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans+JP:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
     rel="stylesheet"
   />
-  <!-- テーマの初期反映(src/theme.ts と同じキー・同じ判定順)。
-       React のマウント前に <html data-theme> を確定させ、初回描画のちらつきを防ぐ。 -->
+  <!-- テーマ・表示言語の初期反映(src/theme.ts / src/i18n/i18n.ts と同じキー・同じ判定順)。
+       React のマウント前に <html data-theme> / <html lang> を確定させ、初回描画のちらつきを防ぐ。 -->
   <script>
     (function () {
       var stored = null;
@@ -30,6 +30,15 @@
             ? "light"
             : "dark";
       document.documentElement.setAttribute("data-theme", theme);
+
+      // 表示言語。未保存・壊れた値は既定の日本語(src/i18n/i18n.ts の DEFAULT_LANG と揃える)。
+      var lang = null;
+      try {
+        lang = localStorage.getItem("mnd-lang");
+      } catch (e) {
+        /* localStorage が使えない環境では既定言語 */
+      }
+      document.documentElement.setAttribute("lang", lang === "ja" || lang === "en" ? lang : "ja");
     })();
   </script>
 </head>

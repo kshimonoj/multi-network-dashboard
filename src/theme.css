@@ -99,11 +99,21 @@ body {
   font-size: 11px;
   color: var(--text-muted);
 }
-/* モデル表示が無いときもトグルは右端に寄せる。 */
+/* モデル表示が無いときもトグル類は右端に寄せる。
+   右端の並びは 言語プルダウン → テーマトグル の順なので、auto は先頭側に付ける。 */
 .app-theme-toggle {
   margin-left: auto;
 }
 .app-model + .app-theme-toggle {
+  margin-left: 0;
+}
+.app-lang {
+  margin-left: auto;
+}
+.app-model + .app-lang {
+  margin-left: 0;
+}
+.app-lang + .app-theme-toggle {
   margin-left: 0;
 }
 .app-body {
@@ -152,6 +162,24 @@ body {
   font-weight: 600;
 }
 
+/* ---- 未承認件数のバッジ(46 Task 4-5)----
+   ナレッジタブに未承認の候補があることを、タブを開かなくても気付けるようにする。 */
+.app-tab-badge {
+  display: inline-block;
+  margin-left: 6px;
+  min-width: 16px;
+  padding: 0 5px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 16px;
+  text-align: center;
+  vertical-align: 1px;
+}
+
 /* ---- テーマ切替トグル(Task 1) ---- */
 .app-theme-btn {
   align-self: center;
@@ -175,4 +203,31 @@ body {
 .app-theme-icon {
   font-size: 12px;
   line-height: 1;
+}
+
+/* ---- 表示言語プルダウン(29 Task 2) ----
+   枠は .app-theme-btn を流用し、中の <select> だけを素の見た目に落とす。 */
+.app-lang {
+  cursor: pointer;
+  padding-right: 6px;
+}
+.app-lang:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+.app-lang-select {
+  background: transparent;
+  color: inherit;
+  border: none;
+  outline: none;
+  font-family: var(--mono);
+  font-size: 11px;
+  line-height: 1.4;
+  cursor: pointer;
+  padding: 0 2px;
+}
+/* プルダウンの選択肢はネイティブ描画なので、ダークテーマでも読める色を明示する。 */
+.app-lang-select option {
+  background: var(--panel);
+  color: var(--text);
 }
