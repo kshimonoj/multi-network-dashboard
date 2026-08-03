@@ -1,0 +1,808 @@
+/* レポートタブ View(43)固有のスタイル。
+ *
+ * 画面の骨格は Global Overview の styles.css(.go-root / .go-panel / .go-card / .go-table)を
+ * そのまま借り、ここには「カレンダーピッカー」「トレンドグラフの枠」「起きたこと」「問題の表」
+ * だけを足す(Webhook ログ(.wf-*)と同じ流儀)。
+ * 配色は src/theme.css の変数と、.go-root が定義するローカル変数(--central / --mist /
+ * --up / --down / --warn)だけを使い、ダーク / ライトどちらでも成立させる。
+ */
+
+.rp-root {
+  padding-bottom: 24px;
+}
+
+/* ---- 期間タブ(日次 / 週次 / 月次)---- */
+
+.rp-head-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.rp-periods {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.rp-period {
+  background: var(--panel);
+  color: var(--text-muted);
+  border: none;
+  border-right: 1px solid var(--border);
+  padding: 5px 14px;
+  font-family: var(--sans);
+  font-size: 12px;
+  cursor: pointer;
+}
+.rp-period:last-child {
+  border-right: none;
+}
+.rp-period:hover {
+  color: var(--text);
+  background: var(--panel-2);
+}
+.rp-period-on {
+  background: var(--panel-2);
+  color: var(--text);
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+
+/* ---- 上段: 左にカレンダー / 右に総括 + KPI ---- */
+
+.rp-top {
+  display: grid;
+  grid-template-columns: minmax(300px, 340px) 1fr;
+  gap: 12px;
+  align-items: start;
+}
+@media (max-width: 1080px) {
+  .rp-top {
+    grid-template-columns: 1fr;
+  }
+}
+.rp-top-main {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+.rp-cards {
+  grid-template-columns: repeat(4, 1fr);
+}
+@media (max-width: 1400px) {
+  .rp-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* ---- カレンダーピッカー ---- */
+
+.rp-picker-head {
+  gap: 6px;
+}
+.rp-picker-title {
+  font-size: 13px;
+  font-weight: 600;
+  min-width: 92px;
+  text-align: center;
+}
+.rp-nav,
+.rp-latest {
+  background: var(--panel-2);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-family: var(--mono);
+  line-height: 1;
+}
+.rp-nav {
+  padding: 3px 9px;
+  font-size: 14px;
+}
+.rp-latest {
+  margin-left: auto;
+  padding: 4px 9px;
+  font-size: 11px;
+}
+.rp-nav:hover,
+.rp-latest:hover {
+  color: var(--text);
+  border-color: var(--accent);
+}
+
+.rp-picker-body {
+  padding: 10px;
+}
+
+/* 週の箱(.rp-week)は display:contents で、日セルを親グリッドに直接並べる。 */
+.rp-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+}
+.rp-grid-weekly {
+  grid-template-columns: 74px repeat(7, 1fr);
+}
+.rp-week {
+  display: contents;
+}
+.rp-wd {
+  font-size: 10px;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 2px 0 4px;
+  font-family: var(--mono);
+}
+.rp-wd-sun {
+  color: var(--down);
+}
+.rp-wd-sat {
+  color: #60a5fa;
+}
+.rp-wd-range {
+  text-align: left;
+}
+
+.rp-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 5px 0 4px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: var(--mono);
+  cursor: pointer;
+}
+.rp-day-n {
+  font-size: 12px;
+  line-height: 1;
+}
+.rp-day-out .rp-day-n {
+  color: var(--text-dim);
+}
+/* 生成済みの日だけを押せる形にする(未生成日は薄く出して無効化)。 */
+.rp-day-has {
+  background: var(--panel-2);
+  border-color: var(--border-soft);
+}
+.rp-day-has:hover {
+  border-color: var(--accent);
+}
+.rp-day-none {
+  color: var(--text-dim);
+  cursor: default;
+}
+.rp-day-none .rp-day-n {
+  color: var(--text-dim);
+  opacity: 0.55;
+}
+.rp-day-today .rp-day-n {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.rp-day-on {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.rp-day:disabled {
+  cursor: default;
+}
+
+/* 日セル下の点 = その日のレポートの荒れ具合。無い日は場所だけ確保して高さを揃える。 */
+.rp-day-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: transparent;
+  display: inline-block;
+}
+.rp-dot-ok {
+  background: var(--up);
+}
+.rp-dot-warn {
+  background: var(--warn);
+}
+.rp-dot-bad {
+  background: var(--down);
+}
+
+.rp-week-range {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 6px;
+  background: var(--panel-2);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  font-family: var(--mono);
+  font-size: 10px;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.rp-week-range:hover {
+  color: var(--text);
+  border-color: var(--accent);
+}
+.rp-week-on {
+  color: var(--text);
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.rp-week-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+}
+
+.rp-months {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+.rp-month {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  align-items: center;
+  padding: 10px 4px;
+  background: var(--panel-2);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  color: var(--text);
+  cursor: pointer;
+}
+.rp-month:hover {
+  border-color: var(--accent);
+}
+.rp-month-on {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.rp-month-empty {
+  background: transparent;
+}
+.rp-month-empty .rp-month-name {
+  color: var(--text-dim);
+}
+.rp-month-name {
+  font-size: 12px;
+}
+.rp-month-count {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.rp-picker-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--border-soft);
+  font-size: 10px;
+  color: var(--text-muted);
+}
+.rp-legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.rp-legend-none {
+  color: var(--text-dim);
+}
+
+/* ---- 総括 ---- */
+
+.rp-summary-body {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.rp-summary-text {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.75;
+}
+.rp-partial {
+  margin-left: 8px;
+}
+
+/* ---- 週次 / 月次の「準備中」 ---- */
+
+.rp-soon-body {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.rp-soon-text {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.8;
+  color: var(--text-muted);
+}
+
+/* ---- グラフ ---- */
+
+.rp-charts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+@media (max-width: 1080px) {
+  .rp-charts {
+    grid-template-columns: 1fr;
+  }
+}
+.rp-panel-body {
+  padding: 10px 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+.rp-chart {
+  width: 100%;
+  height: 220px;
+}
+.rp-chart-empty {
+  height: 220px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-dim);
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+/* ---- サイト詳細ページへのリンク(チップ)---- */
+
+.rp-sitelinks {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.rp-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  max-height: 116px;
+  overflow-y: auto;
+}
+.rp-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  color: var(--text);
+  font-size: 11px;
+  cursor: pointer;
+}
+.rp-chip:hover {
+  border-color: var(--accent);
+}
+.rp-chip-central {
+  border-left: 3px solid var(--central);
+}
+.rp-chip-mist {
+  border-left: 3px solid var(--mist);
+}
+.rp-chip-name {
+  max-width: 168px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rp-chip-score {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-muted);
+}
+.rp-chip-ok .rp-chip-score {
+  color: var(--up);
+}
+.rp-chip-warn .rp-chip-score {
+  color: var(--warn);
+}
+.rp-chip-bad .rp-chip-score {
+  color: var(--down);
+}
+
+/* ---- 重要度 / プラットフォーム / 再発性のバッジ ---- */
+
+.rp-sev {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 10px;
+  padding: 1px 7px;
+  border-radius: 9px;
+  white-space: nowrap;
+}
+.rp-sev-critical {
+  background: color-mix(in srgb, var(--down) 20%, transparent);
+  color: var(--down);
+  font-weight: 600;
+}
+.rp-sev-warning {
+  background: color-mix(in srgb, var(--warn) 20%, transparent);
+  color: var(--warn);
+}
+.rp-sev-info {
+  background: var(--badge-bg);
+  color: var(--text-muted);
+}
+
+.rp-plat {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 10px;
+  padding: 0 6px;
+  border-radius: 9px;
+  border: 1px solid currentColor;
+  white-space: nowrap;
+}
+.rp-plat-central {
+  color: var(--central);
+}
+.rp-plat-mist {
+  color: var(--mist);
+}
+.rp-plat-glp,
+.rp-plat-other {
+  color: var(--text-muted);
+}
+
+.rp-rec {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 10px;
+  padding: 0 6px;
+  border-radius: 9px;
+  border: 1px solid currentColor;
+}
+.rp-rec-new {
+  color: var(--accent);
+}
+.rp-rec-recurring {
+  color: var(--warn);
+}
+.rp-rec-continuing {
+  color: var(--down);
+}
+/* 「過去 n 日」は再発バッジの下に 1 行で置く(インラインのままだと列幅で途中改行される)。 */
+.rp-rec-n {
+  display: block;
+  margin-top: 3px;
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+/* ---- この期間に起きたこと ---- */
+
+.rp-hint {
+  margin-left: auto;
+}
+.rp-hl-list {
+  display: flex;
+  flex-direction: column;
+}
+.rp-hl {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  padding: 10px 14px;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--border-soft);
+  color: var(--text);
+  cursor: pointer;
+  font-family: var(--sans);
+}
+.rp-hl:last-child {
+  border-bottom: none;
+}
+.rp-hl:hover {
+  background: var(--panel-2);
+}
+.rp-hl:hover .rp-hl-go {
+  color: var(--accent);
+}
+.rp-hl-body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  flex: 1;
+}
+.rp-hl-title {
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+.rp-hl-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  color: var(--text-muted);
+}
+.rp-hl-tag {
+  padding: 0 6px;
+  border-radius: 9px;
+  background: var(--badge-bg);
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rp-hl-src {
+  color: var(--text-dim);
+}
+.rp-hl-detail {
+  font-size: 11px;
+  line-height: 1.7;
+  color: var(--text-muted);
+}
+.rp-hl-go {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-dim);
+  white-space: nowrap;
+  padding-top: 2px;
+}
+
+/* ---- 検出された問題(表)----
+   画面幅に収まらないときは横スクロールさせる(Task 4-2)。 */
+
+.rp-issues-scroll {
+  max-height: min(70vh, 720px);
+}
+.rp-issues {
+  min-width: 1180px;
+}
+.rp-issues td {
+  vertical-align: top;
+  white-space: normal;
+}
+.rp-issues .rp-c-exp {
+  width: 26px;
+  text-align: center;
+}
+.rp-issues .rp-c-name {
+  font-family: var(--sans);
+  min-width: 210px;
+  font-weight: 600;
+}
+.rp-issues .rp-c-device,
+.rp-issues .rp-c-site {
+  min-width: 110px;
+}
+.rp-issues .rp-c-first {
+  white-space: nowrap;
+  min-width: 150px;
+}
+.rp-issues .rp-c-action {
+  font-family: var(--sans);
+  min-width: 260px;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+.rp-issues .rp-c-go {
+  width: 68px;
+}
+.rp-exp-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 11px;
+  padding: 2px 4px;
+  line-height: 1;
+}
+.rp-exp-btn:hover {
+  color: var(--accent);
+}
+.rp-go-btn {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  font-family: var(--mono);
+  font-size: 10px;
+  padding: 3px 7px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.rp-go-btn:hover {
+  color: var(--text);
+  border-color: var(--accent);
+}
+.rp-row-open > td {
+  background: var(--badge-bg);
+}
+.rp-issue-detail > td {
+  background: var(--panel-2);
+  cursor: default;
+}
+.rp-issue-detail {
+  cursor: default;
+}
+.rp-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 18px;
+  padding: 4px 2px;
+}
+.rp-detail-wide {
+  grid-column: 1 / -1;
+}
+.rp-detail-label {
+  display: block;
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+}
+.rp-detail-value {
+  display: block;
+  font-family: var(--sans);
+  font-size: 11px;
+  line-height: 1.7;
+  color: var(--text);
+}
+
+/* ---- 44: 重大な問題の自動事前調査 ---- */
+
+/* 問題名の右に出す状態バッジ。Webhook ログの wf-auto-tag と同じ配色にして、
+   「自動で先回り調査したもの」という意味が両タブで一貫して読めるようにする。 */
+.rp-auto-tag {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 10px;
+  padding: 0 6px;
+  border-radius: 9px;
+  border: 1px solid currentColor;
+  margin-left: 6px;
+  white-space: nowrap;
+}
+.rp-auto-running {
+  color: var(--accent);
+}
+.rp-auto-done {
+  color: var(--accent-amber);
+  background: color-mix(in srgb, var(--accent-amber) 18%, transparent);
+  font-weight: 600;
+}
+.rp-auto-error {
+  color: var(--down);
+}
+.rp-auto-running.go-tag {
+  margin-left: 8px;
+}
+
+/* 「調査結果を見る」。「調査」(新しいクエリを渡すだけ)と混同しないよう配色を分ける
+   (Webhook ログの wf-history-btn と同じ考え方)。 */
+.rp-result-btn {
+  background: transparent;
+  color: var(--accent-amber);
+  border: 1px solid var(--accent-amber);
+  border-radius: var(--radius);
+  padding: 3px 7px;
+  font-family: var(--mono);
+  font-size: 10px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.rp-result-btn:hover {
+  background: color-mix(in srgb, var(--accent-amber) 16%, transparent);
+}
+.rp-issues .rp-c-go {
+  width: 104px;
+}
+
+/* 行を展開したときに出す調査パネル。 */
+.rp-auto-panel {
+  margin-top: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-soft);
+  border-left: 2px solid var(--accent-amber);
+  border-radius: var(--radius);
+  background: var(--panel);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
+}
+.rp-auto-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.rp-auto-head .rp-detail-label {
+  margin-bottom: 0;
+}
+.rp-auto-meta {
+  font-family: var(--mono);
+}
+.rp-auto-query {
+  font-size: 10.5px;
+  line-height: 1.6;
+  color: var(--text-muted);
+  word-break: break-word;
+}
+.rp-auto-body {
+  font-family: var(--sans);
+  font-size: 11px;
+  line-height: 1.7;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ---- 45: 週次 / 月次 ---- */
+
+/* 期間の点は「日次はあるが、まだ集計されていない」状態を薄い点で区別する。
+   色(緑 / 黄 / 赤)は日と同じ意味のまま、生成済みかどうかだけを濃さで出す。 */
+.rp-dot-pending {
+  background: var(--text-dim);
+  opacity: 0.45;
+}
+.rp-month .rp-day-dot {
+  margin-top: 1px;
+}
+
+/* 問題の表: 日次の「初回発生」列の代わりに「発生日数 / 延べ発生」を出す。 */
+.rp-issues .rp-c-days {
+  min-width: 96px;
+  white-space: nowrap;
+}
+.rp-issues .rp-c-occ {
+  min-width: 64px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.rp-days-n {
+  font-family: var(--mono);
+}
+.rp-days-streak {
+  display: block;
+  margin-top: 3px;
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--accent-amber);
+  white-space: nowrap;
+}
+
+/* 展開したときの「発生日」チップ。詳細グリッドの中に入るので高さを抑える。 */
+.rp-chips-inline {
+  max-height: none;
+  margin-top: 2px;
+}
+
+/* 「起きたこと」の日付は、その日の日次レポートへ飛べる。 */
+.rp-hl-date {
+  cursor: pointer;
+  text-decoration: underline dotted;
+  text-underline-offset: 2px;
+}
+.rp-hl-date:hover {
+  color: var(--accent);
+}

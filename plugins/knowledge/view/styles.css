@@ -1,0 +1,572 @@
+/* ナレッジタブ View(46)固有のスタイル。
+ *
+ * 画面の骨格は Global Overview の styles.css(.go-root / .go-panel / .go-head / .go-note)を
+ * そのまま借り、ここには「候補カード」「マージ提案」「タグ絞り込み」「却下・統合済み」だけを足す
+ * (レポート(.rp-*)・Webhook ログ(.wf-*)と同じ流儀)。
+ * 配色は src/theme.css の変数と .go-root のローカル変数(--up / --down / --warn / --central / --mist)
+ * だけを使い、ダーク / ライトどちらでも成立させる。
+ */
+
+.kb-root {
+  padding-bottom: 24px;
+}
+
+.kb-extract-state {
+  border-left: none;
+  padding-left: 0;
+}
+
+/* ---- 区分タブ(未承認 / 承認済み / 却下・統合済み)---- */
+
+.kb-sections {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  align-self: flex-start;
+}
+.kb-section {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--panel);
+  color: var(--text-muted);
+  border: none;
+  border-right: 1px solid var(--border);
+  padding: 6px 16px;
+  font-family: var(--sans);
+  font-size: 12px;
+  cursor: pointer;
+}
+.kb-section:last-child {
+  border-right: none;
+}
+.kb-section:hover {
+  color: var(--text);
+  background: var(--panel-2);
+}
+.kb-section-on {
+  background: var(--panel-2);
+  color: var(--text);
+  box-shadow: inset 0 -2px 0 var(--accent);
+  font-weight: 600;
+}
+.kb-section-n {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 0 6px;
+  min-width: 18px;
+  text-align: center;
+}
+.kb-section-on .kb-section-n {
+  color: var(--text);
+  border-color: var(--accent);
+}
+
+/* ---- まとめて承認のバー ---- */
+
+.kb-bulk {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.kb-bulk-count {
+  border-left: none;
+  padding-left: 0;
+  margin-right: auto;
+}
+.kb-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.kb-check input {
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+/* ---- カード ---- */
+
+.kb-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.kb-card {
+  padding: 12px 14px;
+  gap: 10px;
+}
+.kb-card-selected {
+  border-color: var(--accent);
+}
+.kb-card-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.kb-card-title {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.5;
+  flex: 1 1 auto;
+  min-width: 200px;
+}
+.kb-card-at {
+  border-left: none;
+  padding-left: 0;
+  font-family: var(--mono);
+  white-space: nowrap;
+}
+.kb-badges {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+.kb-scope,
+.kb-plat {
+  font-family: var(--mono);
+  font-size: 9px;
+  padding: 1px 7px;
+  border-radius: 9px;
+  border: 1px solid currentColor;
+  white-space: nowrap;
+}
+.kb-scope-general {
+  color: var(--up);
+}
+.kb-scope-site {
+  color: var(--accent);
+}
+.kb-scope-device {
+  color: var(--warn);
+}
+.kb-plat-central {
+  color: var(--central);
+}
+.kb-plat-mist {
+  color: var(--mist);
+}
+.kb-plat-both {
+  color: var(--text-muted);
+}
+.kb-tag-edited {
+  color: var(--text-dim);
+}
+
+/* ---- 4 項目 ---- */
+
+.kb-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.kb-field {
+  display: grid;
+  grid-template-columns: 84px 1fr;
+  gap: 10px;
+  align-items: start;
+}
+@media (max-width: 720px) {
+  .kb-field {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+}
+.kb-field-label {
+  font-size: 10px;
+  color: var(--text-muted);
+  padding-top: 2px;
+}
+.kb-field-value {
+  font-size: 12px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ---- タグ・対象 ---- */
+
+.kb-meta,
+.kb-tagbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.kb-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--panel-2);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  padding: 1px 9px;
+  font-family: var(--mono);
+  font-size: 10px;
+  cursor: default;
+}
+button.kb-tag {
+  cursor: pointer;
+}
+button.kb-tag:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+.kb-tag-on {
+  border-color: var(--accent);
+  color: var(--text);
+}
+.kb-tag-n {
+  color: var(--text-dim);
+}
+.kb-target {
+  font-size: 10px;
+  color: var(--text-dim);
+}
+
+/* ---- 出典 ---- */
+
+.kb-sources {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.kb-source {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.kb-source-text {
+  border-left: none;
+  padding-left: 0;
+}
+.kb-link-btn {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-family: var(--mono);
+  font-size: 10px;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+}
+.kb-link-btn:hover {
+  filter: brightness(1.15);
+}
+.kb-lang-note {
+  border-left-color: var(--accent-amber);
+}
+
+/* ---- マージ提案(Task 2)---- */
+
+.kb-similar {
+  border: 1px solid var(--accent-amber);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--accent-amber) 8%, transparent);
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.kb-similar-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.kb-similar-mark {
+  color: var(--accent-amber);
+  font-size: 12px;
+}
+.kb-similar-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text);
+}
+.kb-similar-item {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.kb-similar-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.kb-similar-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: none;
+  border: none;
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0;
+  text-align: left;
+  flex: 1 1 auto;
+  min-width: 160px;
+}
+.kb-similar-toggle:hover {
+  color: var(--accent);
+}
+.kb-caret {
+  display: inline-block;
+  font-size: 9px;
+  color: var(--text-dim);
+  transition: transform 0.12s ease;
+}
+.kb-caret-open {
+  transform: rotate(90deg);
+}
+.kb-similar-score {
+  border-left: none;
+  padding-left: 0;
+  font-family: var(--mono);
+  white-space: nowrap;
+}
+.kb-similar-body {
+  border-left: 2px solid var(--border);
+  padding-left: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.kb-similar-note {
+  border-left: none;
+  padding-left: 0;
+}
+
+/* ---- 操作ボタン ---- */
+
+.kb-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.kb-btn {
+  background: var(--panel-2);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 5px 14px;
+  font-family: var(--mono);
+  font-size: 11px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.kb-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--text);
+}
+.kb-btn:disabled {
+  color: var(--text-dim);
+  cursor: not-allowed;
+}
+.kb-btn-approve {
+  background: var(--accent);
+  color: var(--on-accent);
+  border-color: var(--accent);
+  font-weight: 600;
+}
+.kb-btn-approve:hover:not(:disabled) {
+  filter: brightness(1.08);
+  color: var(--on-accent);
+}
+.kb-btn-approve:disabled {
+  background: var(--panel-2);
+  color: var(--text-dim);
+  border-color: var(--border);
+}
+.kb-btn-reject:hover:not(:disabled) {
+  border-color: var(--down);
+  color: var(--down);
+}
+.kb-btn-merge {
+  border-color: var(--accent-amber);
+  color: var(--accent-amber);
+}
+.kb-btn-merge:hover:not(:disabled) {
+  border-color: var(--accent-amber);
+  color: var(--text);
+}
+
+/* ---- 編集フォーム ---- */
+
+.kb-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.kb-edit-row {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.kb-edit-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(160px, 1fr));
+  gap: 8px 12px;
+}
+@media (max-width: 720px) {
+  .kb-edit-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.kb-input,
+.kb-textarea,
+.kb-search {
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 6px 9px;
+  font-family: var(--sans);
+  font-size: 12px;
+  line-height: 1.6;
+  width: 100%;
+}
+.kb-textarea {
+  resize: vertical;
+  min-height: 56px;
+}
+.kb-input:focus,
+.kb-textarea:focus,
+.kb-search:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* ---- 承認済みの検索・絞り込み ---- */
+
+.kb-filter {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.kb-search {
+  max-width: 420px;
+}
+.kb-filter-count {
+  border-left: none;
+  padding-left: 0;
+  white-space: nowrap;
+}
+
+/* ---- 却下・統合済み ---- */
+
+.kb-arch-panel {
+  padding-bottom: 6px;
+}
+.kb-arch {
+  border-bottom: 1px solid var(--border-soft);
+}
+.kb-arch:last-child {
+  border-bottom: none;
+}
+.kb-arch-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 14px;
+  flex-wrap: wrap;
+}
+.kb-arch-body {
+  padding: 4px 14px 12px 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.kb-status-rejected {
+  color: var(--down);
+  border-color: rgba(239, 68, 68, 0.5);
+}
+.kb-status-merged {
+  color: var(--accent-amber);
+  border-color: rgba(242, 166, 90, 0.5);
+}
+
+/* ---- 空表示 / 抽出ログ ---- */
+
+.kb-empty {
+  padding: 16px 14px;
+}
+.kb-empty-inner {
+  padding: 12px 14px;
+}
+.kb-log-body {
+  display: flex;
+  flex-direction: column;
+  padding: 6px 0;
+  max-height: 260px;
+  overflow-y: auto;
+}
+.kb-log-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 14px;
+  font-size: 11px;
+  flex-wrap: wrap;
+}
+.kb-log-at {
+  font-size: 10px;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+.kb-log-origin {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+.kb-log-detail {
+  color: var(--text-muted);
+}
+.kb-log-created {
+  color: var(--up);
+  border-color: rgba(34, 197, 94, 0.4);
+}
+.kb-log-empty {
+  color: var(--text-dim);
+}
+.kb-log-skipped {
+  color: var(--text-dim);
+}
+.kb-log-error {
+  color: var(--down);
+  border-color: rgba(239, 68, 68, 0.5);
+}
+
+/* ---- 47: 調査プロンプトへの注入実績 ---- */
+
+/* 参照されている = このナレッジが効いている。アクセント色で肯定的に見せる。 */
+.kb-ref-count {
+  color: var(--accent);
+  border-color: var(--accent);
+  white-space: nowrap;
+}
+/* 未参照 = 承認したが一度も使われていない。棚卸しの対象として控えめに目立たせる。 */
+.kb-ref-none {
+  color: var(--text-dim);
+  border-style: dashed;
+  white-space: nowrap;
+}
+.kb-sort {
+  width: auto;
+  min-width: 12rem;
+}

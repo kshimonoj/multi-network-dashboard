@@ -1,0 +1,414 @@
+/* ベストプラクティス View(52)。
+ *
+ * .go-root(global-overview/view/styles.css)を土台にし、bp-* だけを追加する
+ * (webhook-feed / central-streaming と同じ構成)。--central / --mist / --up / --down / --warn は
+ * .go-root が定義する CSS 変数を .bp-root にも同時に付けているクラスからそのまま継承する。
+ */
+
+.bp-root {
+  gap: 12px;
+}
+
+/* ---- サブビュー切替(診断 / ルール一覧) ---- */
+
+.bp-view-toggle {
+  display: flex;
+  gap: 4px;
+}
+.bp-view-btn {
+  background: var(--panel-2);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 5px 12px;
+  font-family: var(--sans);
+  font-size: 12px;
+  cursor: pointer;
+}
+.bp-view-btn:hover {
+  color: var(--text);
+  border-color: var(--accent);
+}
+.bp-view-btn.active {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  color: var(--accent);
+  border-color: var(--accent);
+  font-weight: 600;
+}
+
+/* ---- 操作行(サイト選択・AI トグル・実行ボタン) ---- */
+
+.bp-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.bp-site-select {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.bp-site-select select {
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 5px 8px;
+  font-family: var(--sans);
+  font-size: 12px;
+  min-width: 220px;
+}
+
+.bp-btn-secondary {
+  background: var(--panel-2);
+  color: var(--text-muted);
+  border-color: var(--border);
+}
+.bp-btn-secondary:hover:not(:disabled) {
+  color: var(--text);
+  border-color: var(--accent);
+  filter: none;
+}
+
+.bp-llm-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.bp-llm-toggle input {
+  cursor: pointer;
+}
+
+/* ---- 実行結果 ---- */
+
+.bp-result {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.bp-result-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.bp-summary {
+  font-size: 12px;
+  color: var(--text);
+}
+
+.bp-category-title {
+  margin: 4px 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 4px;
+}
+
+.bp-rule-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+/* ---- ルールカード ---- */
+
+.bp-rule-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+}
+.bp-rule-card.bp-status-fail {
+  border-left-color: var(--down);
+}
+.bp-rule-card.bp-status-warn {
+  border-left-color: var(--warn);
+}
+.bp-rule-card.bp-status-info {
+  border-left-color: var(--accent);
+}
+.bp-rule-card.bp-status-unknown {
+  border-left-color: var(--text-dim);
+}
+.bp-rule-card.bp-status-pass {
+  border-left-color: var(--up);
+}
+
+.bp-rule-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.bp-rule-id {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+.bp-rule-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  margin-right: auto;
+}
+.bp-rule-desc {
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+/* ---- ルールの説明(展開表示。53) ---- */
+
+.bp-rule-explain {
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border-soft);
+}
+.bp-rule-explain > summary {
+  cursor: pointer;
+  list-style: none;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+.bp-rule-explain > summary::-webkit-details-marker {
+  display: none;
+}
+.bp-rule-explain > summary::after {
+  content: "▸";
+  margin-left: 6px;
+}
+.bp-rule-explain[open] > summary::after {
+  content: "▾";
+}
+.bp-rule-explain > summary:hover {
+  color: var(--text);
+}
+.bp-rule-explain-body {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bp-rule-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 0;
+  font-size: 11px;
+}
+.bp-rule-meta-item {
+  display: flex;
+  gap: 4px;
+}
+.bp-rule-meta-item dt {
+  color: var(--text-dim);
+}
+.bp-rule-meta-item dt::after {
+  content: ":";
+}
+.bp-rule-meta-item dd {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.bp-rule-view-ref {
+  align-self: flex-start;
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 3px 10px;
+  font-family: var(--sans);
+  font-size: 11px;
+  cursor: pointer;
+}
+.bp-rule-view-ref:hover {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+/* ---- ルール一覧 / リファレンス(53) ---- */
+
+.bp-reference {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.bp-ref-card {
+  scroll-margin-top: 16px;
+  transition: border-color 0.3s ease, background-color 0.3s ease;
+}
+.bp-ref-card.bp-ref-highlight {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, var(--panel));
+}
+.bp-ref-card .bp-rule-desc {
+  margin-bottom: 4px;
+}
+
+/* ---- バッジ共通 ---- */
+
+.bp-badge {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 10px;
+  line-height: 1.5;
+  padding: 1px 7px;
+  border-radius: 9px;
+  white-space: nowrap;
+}
+
+.bp-severity-must {
+  background: color-mix(in srgb, var(--down) 20%, transparent);
+  color: var(--down);
+  border: 1px solid currentColor;
+  font-weight: 700;
+}
+.bp-severity-strong {
+  background: color-mix(in srgb, var(--warn) 18%, transparent);
+  color: var(--warn);
+  border: 1px solid currentColor;
+  font-weight: 600;
+}
+.bp-severity-recommended {
+  background: var(--badge-bg);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+.bp-severity-advisory {
+  background: transparent;
+  color: var(--text-dim);
+  border: 1px dashed var(--border);
+}
+
+.bp-badge-llm {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  color: var(--accent);
+  border: 1px solid currentColor;
+}
+
+.bp-badge-legal-small {
+  background: color-mix(in srgb, var(--accent-amber) 18%, transparent);
+  color: var(--accent-amber);
+  border: 1px solid currentColor;
+}
+
+.bp-status-badge.bp-status-pass {
+  background: color-mix(in srgb, var(--up) 16%, transparent);
+  color: var(--up);
+}
+.bp-status-badge.bp-status-warn {
+  background: color-mix(in srgb, var(--warn) 20%, transparent);
+  color: var(--warn);
+  font-weight: 600;
+}
+.bp-status-badge.bp-status-fail {
+  background: color-mix(in srgb, var(--down) 22%, transparent);
+  color: var(--down);
+  font-weight: 700;
+}
+.bp-status-badge.bp-status-unknown {
+  background: var(--badge-bg);
+  color: var(--text-dim);
+  border: 1px dashed var(--border);
+}
+.bp-status-badge.bp-status-not_applicable {
+  background: transparent;
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+}
+.bp-status-badge.bp-status-info {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--accent);
+}
+
+/* ---- 注記(AI 所見の但し書き・法務確認の但し書き) ---- */
+
+.bp-note {
+  font-size: 11px;
+  line-height: 1.6;
+  border-left: 2px solid var(--border);
+  padding-left: 8px;
+  margin-top: 6px;
+}
+.bp-note-llm {
+  color: var(--text-muted);
+  border-left-color: var(--accent);
+}
+.bp-note-legal {
+  color: var(--text-muted);
+  border-left-color: var(--accent-amber);
+}
+
+/* ---- 個別 Finding 行 ---- */
+
+.bp-finding-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.bp-finding-row {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 12px;
+  padding: 2px 0;
+}
+.bp-finding-target {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.bp-finding-text {
+  color: var(--text);
+}
+.bp-finding-row.bp-status-not_applicable .bp-finding-text,
+.bp-finding-row.bp-status-unknown .bp-finding-text {
+  color: var(--text-dim);
+}
+.bp-finding-note {
+  font-size: 10px;
+  color: var(--text-dim);
+  font-style: italic;
+}
+
+/* ---- 根拠リンク ---- */
+
+.bp-refs {
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border-soft);
+  font-size: 11px;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+}
+.bp-refs-title {
+  color: var(--text-dim);
+}
+.bp-ref-link {
+  color: var(--accent);
+  text-decoration: none;
+}
+.bp-ref-link:hover {
+  text-decoration: underline;
+}

@@ -44,6 +44,11 @@ const { router: webhookFeedRouter, initWebhookFeed } = await import(
 const { router: centralStreamingRouter, initCentralStreaming } = await import(
   "../plugins/central-streaming/api.js"
 );
+const { router: reportsRouter, initReports } = await import("../plugins/reports/api.js");
+const { router: knowledgeRouter, initKnowledge } = await import("../plugins/knowledge/api.js");
+const { router: bestPracticeRouter, initBestPractice } = await import(
+  "../plugins/best-practice/api.js"
+);
 
 async function createServer(): Promise<void> {
   const app = express();
@@ -87,6 +92,31 @@ async function createServer(): Promise<void> {
   // 既定は「停止中」で、画面のトグルで明示的に有効化するまで接続しない。
   app.use("/api/central-streaming", centralStreamingRouter);
   await initCentralStreaming();
+
+  // ---- 日次レポート(41)----
+  // 他の 4 機能が既に持っているデータ(Global Overview のスナップショット / Webhook ログ /
+  // Streaming の Audit Trail / ネットワーク調査の履歴)から「その日ぶん」を集約し、
+  // LLM に分析させて data/reports/daily/YYYY-MM-DD.json に蓄積する。
+  // 外部 API を新たに叩き直さないため、ここより後(各プラグインの init 済み)で初期化する。
+  // 画面(レポートタブ)は 42 番。ここでは生成基盤と API だけを載せる。
+  app.use("/api/reports", reportsRouter);
+  await initReports();
+
+  // ---- ナレッジ(46)----
+  // ネットワーク調査(手動・自動事前調査)が終わるたびに、その結果から知見候補を抽出して
+  // 承認待ちに積む。抽出は MCP を使わない軽い claude CLI 呼び出し(plugins/knowledge/extract.ts)。
+  // 調査完了フックを network-investigation に登録するので、その router を載せた後に初期化する。
+  // 蓄積したナレッジを次の調査プロンプトへ注入する(調査への反映)のは 47 番。
+  app.use("/api/knowledge", knowledgeRouter);
+  await initKnowledge();
+
+  // ---- ベストプラクティス診断(51)----
+  // Central / Mist の設定を公開ベストプラクティス(セキュリティ・RF)と突き合わせる。
+  // 収集は claude CLI を経由せず MCP を直接呼ぶ(決定的な取得に LLM を挟まない)。
+  // **実行はユーザーが「診断実行」を押したときだけ**で、定期実行の口は持たない(51 の確定事項)。
+  // 画面(タブ UI)は未実装。ここでは実行エンジンと API まで。
+  app.use("/api/best-practice", bestPracticeRouter);
+  await initBestPractice();
 
   // ---- MCP サーバー定義の初期読み込み(07)----
   // 単一ファイル bind mount はコンテナ作成時の inode に固定され、ホスト側が
