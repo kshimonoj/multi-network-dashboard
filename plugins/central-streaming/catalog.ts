@@ -28,14 +28,21 @@ export type StreamKey =
 export interface StreamEventTypeDef {
   /** event-types クエリパラメータに渡す完全な識別子 */
   id: string;
-  /** 画面に出す短いラベル */
+  /**
+   * 画面に出す短いラベル(日本語固定・後方互換用)。
+   * View 側は 32 番以降これを直接出さず、`key` を src/i18n の
+   * `centralStreaming.*EventType.*` に引いて表示言語に合わせる。
+   */
   label: string;
+  /** i18n 辞書引き用の安定キー(エンドポイント内で一意。id から機械的に導出できないため明示する) */
+  key: string;
   /** 2 段目のデコードに使う protobuf メッセージの完全修飾名 */
   message: string;
 }
 
 export interface StreamEndpointDef {
   key: StreamKey;
+  /** 日本語固定のラベル(後方互換用)。View 側は `key` を `centralStreaming.endpoint.*.label` に引く(32 番) */
   label: string;
   /** wss://<central-base-url>/<path> の <path> */
   path: string;
@@ -45,6 +52,7 @@ export interface StreamEndpointDef {
   selectableSubtypes: boolean;
   /** 想定される流量。既定で有効にするかの判断材料として画面にも出す */
   volume: "low" | "medium" | "high";
+  /** 日本語固定の説明文(後方互換用)。View 側は `key` を `centralStreaming.endpoint.*.note` に引く(32 番) */
   note: string;
   eventTypes: StreamEventTypeDef[];
 }
@@ -94,6 +102,7 @@ export const ENDPOINTS: StreamEndpointDef[] = [
     eventTypes: AUDIT_SUBTYPES.map(([sub, label]) => ({
       id: `${AT}.${sub}`,
       label,
+      key: sub,
       message: AUDIT_MSG,
     })),
   },
@@ -107,30 +116,32 @@ export const ENDPOINTS: StreamEndpointDef[] = [
     volume: "high",
     note: "AP の状態(state.*)と統計(stats.*)。stats.* は AP 台数 × 周期で流れるため流量が大きい。まずは state.* だけを選ぶのが無難。",
     eventTypes: [
-      { id: `${AP}.state.device`, label: "状態: デバイス", message: "network_monitoring.ap.v1alpha1.APInfo" },
-      { id: `${AP}.state.radio`, label: "状態: 無線", message: "network_monitoring.ap.v1alpha1.RadioInfo" },
-      { id: `${AP}.state.port`, label: "状態: ポート", message: "network_monitoring.ap.v1alpha1.PortInfo" },
+      { id: `${AP}.state.device`, label: "状態: デバイス", key: "state-device", message: "network_monitoring.ap.v1alpha1.APInfo" },
+      { id: `${AP}.state.radio`, label: "状態: 無線", key: "state-radio", message: "network_monitoring.ap.v1alpha1.RadioInfo" },
+      { id: `${AP}.state.port`, label: "状態: ポート", key: "state-port", message: "network_monitoring.ap.v1alpha1.PortInfo" },
       {
         id: `${AP}.state.virtual_access_point`,
         label: "状態: VAP",
+        key: "state-vap",
         message: "network_monitoring.ap.v1alpha1.VapInfo",
       },
-      { id: `${AP}.state.wlan`, label: "状態: WLAN", message: "network_monitoring.ap.v1alpha1.WlanInfo" },
-      { id: `${AP}.state.tunnel`, label: "状態: トンネル", message: "network_monitoring.ap.v1alpha1.TunnelInfo" },
-      { id: `${AP}.stats.device`, label: "統計: デバイス", message: "network_monitoring.ap.v1alpha1.APSystemStat" },
-      { id: `${AP}.stats.radio`, label: "統計: 無線", message: "network_monitoring.ap.v1alpha1.RadioStat" },
+      { id: `${AP}.state.wlan`, label: "状態: WLAN", key: "state-wlan", message: "network_monitoring.ap.v1alpha1.WlanInfo" },
+      { id: `${AP}.state.tunnel`, label: "状態: トンネル", key: "state-tunnel", message: "network_monitoring.ap.v1alpha1.TunnelInfo" },
+      { id: `${AP}.stats.device`, label: "統計: デバイス", key: "stats-device", message: "network_monitoring.ap.v1alpha1.APSystemStat" },
+      { id: `${AP}.stats.radio`, label: "統計: 無線", key: "stats-radio", message: "network_monitoring.ap.v1alpha1.RadioStat" },
       {
         id: `${AP}.stats.virtual_access_point`,
         label: "統計: VAP",
+        key: "stats-vap",
         message: "network_monitoring.ap.v1alpha1.VapStat",
       },
-      { id: `${AP}.stats.port`, label: "統計: ポート", message: "network_monitoring.ap.v1alpha1.PortStat" },
-      { id: `${AP}.stats.modem`, label: "統計: モデム", message: "network_monitoring.ap.v1alpha1.ModemStat" },
-      { id: `${AP}.stats.tunnel`, label: "統計: トンネル", message: "network_monitoring.ap.v1alpha1.TunnelStat" },
-      { id: `${AP}.stats.ip_probe`, label: "統計: IP プローブ", message: "network_monitoring.ap.v1alpha1.IPProbeStat" },
-      { id: `${AP}.stats.user_role`, label: "統計: ユーザーロール", message: "network_monitoring.ap.v1alpha1.RoleStat" },
-      { id: `${AP}.stats.ssid`, label: "統計: SSID", message: "network_monitoring.ap.v1alpha1.SsidStat" },
-      { id: `${AP}.stats.vlan`, label: "統計: VLAN", message: "network_monitoring.ap.v1alpha1.VlanStat" },
+      { id: `${AP}.stats.port`, label: "統計: ポート", key: "stats-port", message: "network_monitoring.ap.v1alpha1.PortStat" },
+      { id: `${AP}.stats.modem`, label: "統計: モデム", key: "stats-modem", message: "network_monitoring.ap.v1alpha1.ModemStat" },
+      { id: `${AP}.stats.tunnel`, label: "統計: トンネル", key: "stats-tunnel", message: "network_monitoring.ap.v1alpha1.TunnelStat" },
+      { id: `${AP}.stats.ip_probe`, label: "統計: IP プローブ", key: "stats-ip-probe", message: "network_monitoring.ap.v1alpha1.IPProbeStat" },
+      { id: `${AP}.stats.user_role`, label: "統計: ユーザーロール", key: "stats-user-role", message: "network_monitoring.ap.v1alpha1.RoleStat" },
+      { id: `${AP}.stats.ssid`, label: "統計: SSID", key: "stats-ssid", message: "network_monitoring.ap.v1alpha1.SsidStat" },
+      { id: `${AP}.stats.vlan`, label: "統計: VLAN", key: "stats-vlan", message: "network_monitoring.ap.v1alpha1.VlanStat" },
     ],
   },
   {
@@ -145,11 +156,13 @@ export const ENDPOINTS: StreamEndpointDef[] = [
       {
         id: `${NS}.wifi-client-geofence-crossed`,
         label: "Wi-Fi クライアント",
+        key: "wifi-client",
         message: "network_services.geofence.v1alpha1.StreamGeofenceMessage",
       },
       {
         id: `${NS}.asset-tag-geofence-crossed`,
         label: "アセットタグ",
+        key: "asset-tag",
         message: "network_services.geofence.v1alpha1.StreamGeofenceMessage",
       },
     ],
@@ -168,11 +181,13 @@ export const ENDPOINTS: StreamEndpointDef[] = [
       {
         id: `${NS_LOCATION_V1}.wifi-client-locations.created`,
         label: "Wi-Fi クライアント位置",
+        key: "wifi-client",
         message: "network_services.location.v1.StreamLocationMessage",
       },
       {
         id: `${NS_LOCATION_V1}.asset-tags.last-known-location.created`,
         label: "アセットタグ最終位置",
+        key: "asset-tag",
         message: "network_services.location.v1.StreamLocationMessage",
       },
     ],
@@ -189,11 +204,13 @@ export const ENDPOINTS: StreamEndpointDef[] = [
       {
         id: `${NS}.rssi.raw-rssi`,
         label: "Raw RSSI",
+        key: "raw",
         message: "network_services.location_analytics.v1alpha1.RssiEvent",
       },
       {
         id: `${NS}.rssi.proximity-rssi`,
         label: "Proximity RSSI",
+        key: "proximity",
         message: "network_services.location_analytics.v1alpha1.RssiEvent",
       },
     ],

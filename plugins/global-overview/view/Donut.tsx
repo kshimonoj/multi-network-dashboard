@@ -8,6 +8,7 @@
 
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import type { DeviceCounts } from "./types";
+import { useT } from "../../../src/i18n/LanguageContext";
 
 export const UP_COLOR = "#22c55e";
 export const DOWN_COLOR = "#ef4444";
@@ -21,6 +22,7 @@ export function Donut({
   counts: DeviceCounts;
   size?: number;
 }) {
+  const t = useT();
   const empty = counts.total === 0;
   const data = empty
     ? []
@@ -70,7 +72,7 @@ export function Donut({
                   fontSize: 12,
                 }}
                 itemStyle={{ color: "var(--text)" }}
-                formatter={(v, n) => [`${v} 台`, String(n)] as [string, string]}
+                formatter={(v, n) => [t("globalOverview.donut.unit", { v: String(v) }), String(n)] as [string, string]}
               />
             </PieChart>
           </ResponsiveContainer>

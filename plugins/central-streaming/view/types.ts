@@ -13,7 +13,10 @@ export type StreamConnState = "disabled" | "connecting" | "open" | "reconnecting
 
 export interface StreamEventTypeDef {
   id: string;
+  /** 日本語固定のラベル(後方互換用)。表示には使わず `key` を i18n 辞書に引く(32 番) */
   label: string;
+  /** i18n 辞書引き用の安定キー */
+  key: string;
   message: string;
 }
 
@@ -87,25 +90,15 @@ export interface StreamEnvelope {
   generatedAt: string;
 }
 
-/** 接続状態のラベル(タスク指定の「未接続 / 接続中 / 再接続中 / エラー」に対応)。 */
-export const STATE_LABEL: Record<StreamConnState, string> = {
-  disabled: "未接続",
-  connecting: "接続中…",
-  open: "接続済み",
-  reconnecting: "再接続中",
-  error: "エラー",
-};
+// 接続状態(state)・流量(volume)のラベルは 32 番で i18n 辞書
+// (centralStreaming.state.* / centralStreaming.volume.*)に移した。
+// 表示は CentralStreaming.tsx の stateLabel(t, state) / volumeLabel(t, volume) を使う。
 
+/** ストリームの短縮タグ(タイムラインのバッジ用)。技術的な省略表記のため言語を切り替えない。 */
 export const STREAM_SHORT: Record<StreamKey, string> = {
   "audit-trail": "Audit",
   "ap-monitoring": "AP",
   geofence: "Geofence",
   location: "Location",
   "location-analytics": "RSSI",
-};
-
-export const VOLUME_LABEL: Record<StreamEndpointDef["volume"], string> = {
-  low: "流量: 小",
-  medium: "流量: 中",
-  high: "流量: 大",
 };

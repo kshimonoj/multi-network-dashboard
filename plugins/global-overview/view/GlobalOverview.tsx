@@ -11,8 +11,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  ALERT_DESC,
-  ALERT_LABEL,
+  alertDesc,
+  alertLabel,
   DEVICE_KINDS,
   DEVICE_KIND_LABEL,
   PLATFORM_LABEL,
@@ -30,30 +30,27 @@ import {
   type PollSettings,
 } from "./api";
 import { Donut } from "./Donut";
-import { SiteMap, STATE_COLOR, STATE_LABEL, PLATFORM_COLOR, siteKey, siteState } from "./SiteMap";
+import { SiteMap, STATE_COLOR, stateLabel, PLATFORM_COLOR, siteKey, siteState } from "./SiteMap";
 import { SiteDetailPage } from "./SiteDetailPage";
 import { LogoBadge } from "../../network-investigation/view/LogoBadge";
-import type { InvestigationRequest } from "../../../src/shell";
+import type { InvestigationRequest, SiteFocusRequest } from "../../../src/shell";
+import { useT } from "../../../src/i18n/LanguageContext";
+import type { TFunc } from "../../../src/i18n/LanguageContext";
+import { formatDateTime, formatRelative } from "../../../src/i18n";
 import "./styles.css";
 
 const AUTO_RELOAD_MS = 30_000;
 
 function fmtTime(iso: string | null | undefined): string {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleString("ja-JP", { hour12: false });
+  // 33 L-10: toLocaleString("ja-JP") のハードコードをやめ、表示言語に追従させる
+  // (ja のときの出力は従来と同じ)。
+  return formatDateTime(iso);
 }
 
-function fmtAge(ms: number | null): string {
+function fmtAge(t: TFunc, ms: number | null): string {
   if (ms === null || !Number.isFinite(ms)) return "—";
-  const s = Math.max(0, Math.round(ms / 1000));
-  if (s < 60) return `${s} 秒前`;
-  const m = Math.floor(s / 60);
-  if (m < 60) return `${m} 分前`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h} 時間前`;
-  return `${Math.floor(h / 24)} 日前`;
+  // 33 L-11: 分岐は src/i18n/format.ts に集約した(4 タブの重複実装を 1 箇所へ)。
+  return formatRelative(t, ms);
 }
 
 // ---- 小物 ----
@@ -81,6 +78,7 @@ function SummaryCard({
 }
 
 function PlatformPanel({ platform, snapshot }: { platform: Platform; snapshot: Snapshot }) {
+  const t = useT();
   const p = snapshot.platforms[platform];
   return (
     <section className={`go-panel go-plat go-plat-${platform}`}>
@@ -88,9 +86,9 @@ function PlatformPanel({ platform, snapshot }: { platform: Platform; snapshot: S
         <LogoBadge target={platform} size={20} />
         <span className="go-panel-title">{PLATFORM_LABEL[platform]}</span>
         {p.ok ? (
-          <span className="go-tag go-tag-ok">接続 OK</span>
+          <span className="go-tag go-tag-ok">{t("globalOverview.platformPanel.connectedOk")}</span>
         ) : (
-          <span className="go-tag go-tag-bad">取得失敗</span>
+          <span className="go-tag go-tag-bad">{t("globalOverview.platformPanel.fetchFailed")}</span>
         )}
       </header>
 
@@ -99,16 +97,17 @@ function PlatformPanel({ platform, snapshot }: { platform: Platform; snapshot: S
       <div className="go-plat-stats">
         <div className="go-stat">
           <span className="go-stat-value">{p.sites}</span>
-          <span className="go-stat-label">サイト</span>
+          <span className="go-stat-label">{t("globalOverview.platformPanel.sites")}</span>
         </div>
         <div className="go-stat">
           <span className="go-stat-value">{p.clients}</span>
-          <span className="go-stat-label">クライアント</span>
+          <span className="go-stat-label">{t("globalOverview.platformPanel.clients")}</span>
         </div>
-        <div className="go-stat" title={ALERT_DESC[platform]}>
+        <div className="go-stat" title={alertDesc(t, platform)}>
           <span className={`go-stat-value${p.alerts > 0 ? " go-warn" : ""}`}>{p.alerts}</span>
           <span className="go-stat-label">
-            アラート<span className="go-alert-tag">{ALERT_LABEL[platform]}</span>
+            {t("globalOverview.platformPanel.alerts")}
+            <span className="go-alert-tag">{alertLabel(t, platform)}</span>
           </span>
         </div>
         <div className="go-stat">
@@ -116,7 +115,7 @@ function PlatformPanel({ platform, snapshot }: { platform: Platform; snapshot: S
             {p.deviceUp}
             <span className="go-stat-of">/{p.deviceTotal}</span>
           </span>
-          <span className="go-stat-label">デバイス Up</span>
+          <span className="go-stat-label">{t("globalOverview.platformPanel.devicesUp")}</span>
         </div>
       </div>
 
@@ -127,7 +126,7 @@ function PlatformPanel({ platform, snapshot }: { platform: Platform; snapshot: S
       </div>
 
       <div className="go-plat-foot">
-        <span className="go-mono">{ALERT_DESC[platform]}</span>
+        <span className="go-mono">{alertDesc(t, platform)}</span>
       </div>
     </section>
   );
@@ -160,6 +159,7 @@ function SiteTable({
   highlight: string | null;
   onPick: (s: SiteRow) => void;
 }) {
+  const t = useT();
   const [filter, setFilter] = useState<"all" | Platform>("all");
   const [sortKey, setSortKey] = useState<SortKey>("site");
   const [asc, setAsc] = useState(true);
@@ -206,7 +206,7 @@ function SiteTable({
           setAsc(key === "site");
         }
       }}
-      title="クリックで並び替え"
+      title={t("globalOverview.siteTable.sortHint")}
     >
       <span className="go-th-line">
         {label}
@@ -219,8 +219,8 @@ function SiteTable({
   return (
     <section className="go-panel go-table-panel">
       <header className="go-panel-head">
-        <span className="go-panel-title">サイト別内訳</span>
-        <span className="go-panel-note">{rows.length} サイト</span>
+        <span className="go-panel-title">{t("globalOverview.siteTable.title")}</span>
+        <span className="go-panel-note">{t("globalOverview.siteTable.count", { n: rows.length })}</span>
         <div className="go-filter">
           {(["all", "central", "mist"] as const).map((f) => (
             <button
@@ -228,7 +228,7 @@ function SiteTable({
               className={`go-chip${filter === f ? " go-chip-on" : ""}`}
               onClick={() => setFilter(f)}
             >
-              {f === "all" ? "すべて" : PLATFORM_SHORT[f]}
+              {f === "all" ? t("globalOverview.siteTable.filterAll") : PLATFORM_SHORT[f]}
             </button>
           ))}
         </div>
@@ -238,16 +238,16 @@ function SiteTable({
         <table className="go-table">
           <thead>
             <tr>
-              {th("site", "サイト")}
+              {th("site", t("globalOverview.siteTable.col.site"))}
               <th className="go-col-plat">Platform</th>
               <th className="go-col-kind">AP</th>
               <th className="go-col-kind">Switch</th>
               <th className="go-col-kind">Gateway</th>
-              {th("devices", "デバイス計", "go-col-num")}
+              {th("devices", t("globalOverview.siteTable.col.devices"), "go-col-num")}
               {th("down", "Down", "go-col-num")}
-              {th("clients", "クライアント", "go-col-num")}
-              {th("alerts", "アラート", "go-col-num", "Central=Active / Mist=過去24h")}
-              {th("health", "健全性", "go-col-num", "Central のみ / Mist は未取得")}
+              {th("clients", t("globalOverview.siteTable.col.clients"), "go-col-num")}
+              {th("alerts", t("globalOverview.siteTable.col.alerts"), "go-col-num", t("globalOverview.siteTable.noteAlerts"))}
+              {th("health", t("globalOverview.siteTable.col.health"), "go-col-num", t("globalOverview.siteTable.noteHealth"))}
             </tr>
           </thead>
           <tbody>
@@ -264,12 +264,12 @@ function SiteTable({
                     <span
                       className="go-dot"
                       style={{ background: STATE_COLOR[st], borderColor: PLATFORM_COLOR[s.platform] }}
-                      title={STATE_LABEL[st]}
+                      title={stateLabel(t, st)}
                     />
                     <span className="go-site-name">{s.siteName}</span>
                     {!s.inSiteMap && (
-                      <span className="go-tag go-tag-dim" title="サイト対応表(site-platform-map.json)に未登録">
-                        未登録
+                      <span className="go-tag go-tag-dim" title={t("globalOverview.siteTable.unregisteredTitle")}>
+                        {t("globalOverview.siteTable.unregisteredTag")}
                       </span>
                     )}
                   </td>
@@ -290,13 +290,13 @@ function SiteTable({
                     {s.deviceDown > 0 ? <span className="go-down">{s.deviceDown}</span> : <span className="go-zero">0</span>}
                   </td>
                   <td className="go-col-num">{s.clients}</td>
-                  <td className="go-col-num" title={ALERT_DESC[s.platform]}>
+                  <td className="go-col-num" title={alertDesc(t, s.platform)}>
                     {s.alerts > 0 ? <span className="go-warn">{s.alerts}</span> : <span className="go-zero">0</span>}
-                    <span className="go-alert-tag">{ALERT_LABEL[s.platform]}</span>
+                    <span className="go-alert-tag">{alertLabel(t, s.platform)}</span>
                   </td>
                   <td className="go-col-num">
                     {s.healthScore === null ? (
-                      <span className="go-na" title="このプラットフォームでは健全性スコアを取得していません(値なし)">
+                      <span className="go-na" title={t("globalOverview.siteTable.healthUnavailableTitle")}>
                         —
                       </span>
                     ) : (
@@ -311,7 +311,7 @@ function SiteTable({
             {rows.length === 0 && (
               <tr>
                 <td className="go-empty-row" colSpan={10}>
-                  該当するサイトがありません
+                  {t("globalOverview.siteTable.empty")}
                 </td>
               </tr>
             )}
@@ -328,12 +328,19 @@ export function GlobalOverview({
   active,
   theme,
   onInvestigate,
+  pendingSiteFocus,
+  onConsumePendingSiteFocus,
 }: {
   active: boolean;
   theme: "dark" | "light";
   /** サイト詳細ページの「調査する」ボタン押下時(15番)。SiteDetailPage へそのまま渡す */
   onInvestigate?: (req: InvestigationRequest) => void;
+  /** レポートタブから「このサイトの詳細を開く」で渡ってくるサイト(43番) */
+  pendingSiteFocus?: SiteFocusRequest | null;
+  /** 反映したら呼ぶ(共有stateのクリア) */
+  onConsumePendingSiteFocus?: () => void;
 }) {
+  const t = useT();
   const [env, setEnv] = useState<SnapshotEnvelope | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -363,14 +370,14 @@ export function GlobalOverview({
       const e = await fetchSnapshot();
       if (!mounted.current) return;
       setEnv(e);
-      setError(e.snapshot ? null : (e.error ?? "スナップショットがまだありません。"));
+      setError(e.snapshot ? null : (e.error ?? t("globalOverview.error.snapshotMissing")));
     } catch (err) {
       if (!mounted.current) return;
       setError(err instanceof Error ? err.message : String(err));
     } finally {
       if (mounted.current) setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   // 初回 + 自動再読込。GET はキャッシュ読みなので外部 API は起きない。
   // タブが非表示のあいだは止める(見えていない画面のために叩き続けない)。
@@ -418,7 +425,7 @@ export function GlobalOverview({
       const e = await refreshSnapshot();
       if (!mounted.current) return;
       setEnv(e);
-      if (!e.snapshot) setError(e.error ?? "取得に失敗しました。");
+      if (!e.snapshot) setError(e.error ?? t("globalOverview.error.refreshFailed"));
       // サーバの最短間隔ぶんは押せないようにする(押しても外部 API は叩かれないが、
       // 「効いていないのに押せる」ボタンにしない)。
       setCooldownUntil(Date.now() + (e.minRefreshMs ?? 60_000));
@@ -429,7 +436,7 @@ export function GlobalOverview({
     } finally {
       if (mounted.current) setRefreshing(false);
     }
-  }, []);
+  }, [t]);
 
   const snapshot = env?.snapshot ?? null;
   const cooldownLeft = Math.max(0, Math.ceil((cooldownUntil - now) / 1000));
@@ -444,6 +451,20 @@ export function GlobalOverview({
     setDetailTarget(s);
   }, []);
 
+  // レポートタブからのサイト詳細ジャンプ(43番)。
+  // 詳細ページはスナップショットの行(SiteRow)を必要とするので、まだ読めていなければ
+  // 到着を待つ(このタブが active になった時点で load() が走る)。読めているのに一致が無い
+  // ケース(サイトが消えた・名前が変わった)は、開けないまま溜め込まないよう静かに捨てる。
+  useEffect(() => {
+    if (!pendingSiteFocus) return;
+    if (!snapshot) return;
+    const hit = snapshot.sites.find(
+      (s) => s.platform === pendingSiteFocus.platform && s.siteName === pendingSiteFocus.siteName,
+    );
+    if (hit) onPick(hit);
+    onConsumePendingSiteFocus?.();
+  }, [pendingSiteFocus, snapshot, onPick, onConsumePendingSiteFocus]);
+
   // 一覧は「詳細を開いているあいだも hidden でマウントしたまま」にする。
   // 条件レンダリングにすると Leaflet 地図が作り直されて視点・スナップショットの表示状態が飛ぶため。
   return (
@@ -452,14 +473,14 @@ export function GlobalOverview({
       <div className="go-head">
         <div className="go-head-main">
           <h1 className="go-h1">Global Overview</h1>
-          <span className="go-head-sub">HPE Aruba Central / Juniper Mist — 直接 API</span>
+          <span className="go-head-sub">{t("globalOverview.headerSub")}</span>
         </div>
         <div className="go-head-meta">
           <div className="go-updated">
-            <span className="go-updated-label">最終更新</span>
+            <span className="go-updated-label">{t("globalOverview.updatedLabel")}</span>
             <span className="go-updated-value">{fmtTime(snapshot?.generatedAt)}</span>
-            <span className="go-updated-age">({fmtAge(ageMs)})</span>
-            {env?.stale && <span className="go-tag go-tag-warn">古い可能性</span>}
+            <span className="go-updated-age">({fmtAge(t, ageMs)})</span>
+            {env?.stale && <span className="go-tag go-tag-warn">{t("globalOverview.staleTag")}</span>}
           </div>
           <button
             className="go-refresh"
@@ -467,25 +488,29 @@ export function GlobalOverview({
             disabled={refreshing || cooldownLeft > 0}
             title={
               cooldownLeft > 0
-                ? `サーバ側の最短取得間隔(${Math.round((env?.minRefreshMs ?? 60000) / 1000)} 秒)を待っています`
-                : "Central / Mist から取り直します"
+                ? t("globalOverview.refresh.titleCooldown", { s: Math.round((env?.minRefreshMs ?? 60000) / 1000) })
+                : t("globalOverview.refresh.titleReady")
             }
           >
-            {refreshing ? "更新中…" : cooldownLeft > 0 ? `更新 (${cooldownLeft}s)` : "更新"}
+            {refreshing
+              ? t("globalOverview.refresh.running")
+              : cooldownLeft > 0
+                ? t("globalOverview.refresh.countdown", { s: cooldownLeft })
+                : t("globalOverview.refresh.button")}
           </button>
         </div>
       </div>
 
       {error && <div className="go-error">{error}</div>}
 
-      {loading && !snapshot && <div className="go-loading">読み込み中…</div>}
+      {loading && !snapshot && <div className="go-loading">{t("globalOverview.loading")}</div>}
 
       {snapshot && (
         <>
           {/* ---- Global Summary ---- */}
           <section className="go-cards">
             <SummaryCard
-              label="総サイト数"
+              label={t("globalOverview.cards.totalSites")}
               value={snapshot.totals.sites}
               sub={
                 <>
@@ -496,7 +521,7 @@ export function GlobalOverview({
               }
             />
             <SummaryCard
-              label="総デバイス数"
+              label={t("globalOverview.cards.totalDevices")}
               value={snapshot.totals.devices}
               tone={snapshot.totals.devicesDown > 0 ? "warn" : "ok"}
               sub={
@@ -510,7 +535,7 @@ export function GlobalOverview({
               }
             />
             <SummaryCard
-              label="接続クライアント数"
+              label={t("globalOverview.cards.connectedClients")}
               value={snapshot.totals.clients}
               sub={
                 <>
@@ -521,24 +546,27 @@ export function GlobalOverview({
               }
             />
             <SummaryCard
-              label="アラート合計"
+              label={t("globalOverview.cards.totalAlerts")}
               value={snapshot.totals.alerts}
               tone={snapshot.totals.alerts > 0 ? "bad" : "ok"}
-              title={`${ALERT_DESC.central}\n${ALERT_DESC.mist}`}
+              title={`${alertDesc(t, "central")}\n${alertDesc(t, "mist")}`}
               sub={
                 <>
                   Central {central?.alerts ?? 0}
-                  <span className="go-alert-tag">{ALERT_LABEL.central}</span>
+                  <span className="go-alert-tag">{alertLabel(t, "central")}</span>
                   <span className="go-sep">/</span>
                   Mist {mist?.alerts ?? 0}
-                  <span className="go-alert-tag">{ALERT_LABEL.mist}</span>
+                  <span className="go-alert-tag">{alertLabel(t, "mist")}</span>
                 </>
               }
             />
           </section>
           <div className="go-note">
-            アラートは定義が異なるため単純合算では比較できません — Central は <b>status = Active</b>(未解消)、
-            Mist は <b>直近 24 時間</b>のアラーム(解消済みを含む)です。
+            {t("globalOverview.alertNote.prefix")}
+            <b>status = Active</b>
+            {t("globalOverview.alertNote.centralSuffix")}
+            <b>{t("globalOverview.alertNote.mistPart")}</b>
+            {t("globalOverview.alertNote.mistSuffix")}
           </div>
 
           {/* ---- プラットフォーム別 ---- */}
@@ -550,9 +578,12 @@ export function GlobalOverview({
           {/* ---- MAP ---- */}
           <section className="go-panel go-map-panel">
             <header className="go-panel-head">
-              <span className="go-panel-title">サイトマップ</span>
+              <span className="go-panel-title">{t("globalOverview.map.title")}</span>
               <span className="go-panel-note">
-                {snapshot.sites.filter((s) => s.lat !== null && s.lng !== null).length} / {snapshot.sites.length} サイトに位置情報
+                {t("globalOverview.map.locatedCount", {
+                  n: snapshot.sites.filter((s) => s.lat !== null && s.lng !== null).length,
+                  total: snapshot.sites.length,
+                })}
               </span>
               <button
                 className="go-chip"
@@ -560,13 +591,13 @@ export function GlobalOverview({
                   setPicked(null);
                   setFitToken((v) => v + 1);
                 }}
-                title="全サイトが入る範囲に戻す"
+                title={t("globalOverview.map.fitAllTitle")}
               >
-                全体表示
+                {t("globalOverview.map.fitAll")}
               </button>
               <div className="go-legend">
                 <span className="go-legend-group">
-                  <span className="go-legend-cap">枠 =</span>
+                  <span className="go-legend-cap">{t("globalOverview.map.legendBorder")}</span>
                   <span className="go-legend-item">
                     <span className="go-dot" style={{ background: "transparent", borderColor: PLATFORM_COLOR.central }} />
                     Central
@@ -577,11 +608,11 @@ export function GlobalOverview({
                   </span>
                 </span>
                 <span className="go-legend-group">
-                  <span className="go-legend-cap">塗り =</span>
+                  <span className="go-legend-cap">{t("globalOverview.map.legendFill")}</span>
                   {(["down", "alert", "ok", "empty"] as const).map((st) => (
                     <span className="go-legend-item" key={st}>
                       <span className="go-dot" style={{ background: STATE_COLOR[st], borderColor: "transparent" }} />
-                      {STATE_LABEL[st]}
+                      {stateLabel(t, st)}
                     </span>
                   ))}
                 </span>
@@ -604,38 +635,41 @@ export function GlobalOverview({
 
           {snapshot.siteMapOnly.length > 0 && (
             <div className="go-note go-note-warn">
-              サイト対応表にあるが今回の API 応答に現れなかったサイト({snapshot.siteMapOnly.length} 件):{" "}
-              {snapshot.siteMapOnly.map((s) => `${s.siteName}(${PLATFORM_SHORT[s.platform]})`).join(", ")}
+              {t("globalOverview.siteMapOnlyNote", {
+                n: snapshot.siteMapOnly.length,
+                list: snapshot.siteMapOnly.map((s) => `${s.siteName}(${PLATFORM_SHORT[s.platform]})`).join(", "),
+              })}
             </div>
           )}
 
           <div className="go-foot go-mono">
             <span className="go-foot-interval">
-              ポーリング間隔
+              {t("globalOverview.footer.pollInterval")}
               <select
                 className="go-interval-select"
                 value={settings?.pollIntervalMs ?? env?.pollIntervalMs ?? 300000}
                 disabled={savingInterval || !settings}
                 onChange={(e) => void onChangeInterval(Number(e.target.value))}
-                title="定期ポーリングの間隔を変更します(サーバに保存され、コンテナ再作成後も保持されます)"
+                title={t("globalOverview.footer.intervalTitle")}
               >
                 {(settings?.optionsMs ?? [60000, 180000, 300000, 600000, 900000]).map((ms) => (
                   <option key={ms} value={ms}>
-                    {ms % 60000 === 0 ? `${ms / 60000} 分` : `${Math.round(ms / 1000)} 秒`}
+                    {ms % 60000 === 0
+                      ? t("globalOverview.footer.minutes", { n: ms / 60000 })
+                      : t("globalOverview.footer.seconds", { n: Math.round(ms / 1000) })}
                   </option>
                 ))}
               </select>
-              {savingInterval && <span className="go-interval-saving"> 保存中…</span>}
+              {savingInterval && <span className="go-interval-saving"> {t("globalOverview.footer.savingInterval")}</span>}
               {/* 14 番: Event / Alert タブは別方式(オンデマンド取得)なので、ここで取り違えないようにする。 */}
-              <span
-                className="go-foot-hint"
-                title="Event / Alert タブは自動更新されず、タブを開いたとき・「更新」を押したときだけ取得します(サーバ側 60 秒キャッシュ)。"
-              >
-                (この設定は Global Overview の自動更新のみ / Event / Alert タブには適用されません)
+              <span className="go-foot-hint" title={t("globalOverview.footer.eventTabHint")}>
+                {t("globalOverview.footer.eventTabNote")}
               </span>
             </span>
-            {" / "}手動更新の最短間隔 {Math.round((env?.minRefreshMs ?? 0) / 1000)} 秒 ・ 直近取得の HTTP 本数: Central{" "}
-            {central?.requests ?? 0} / Mist {mist?.requests ?? 0}
+            {" / "}
+            {t("globalOverview.footer.minRefresh", { s: Math.round((env?.minRefreshMs ?? 0) / 1000) })}
+            {" ・ "}
+            {t("globalOverview.footer.httpCount", { c: central?.requests ?? 0, m: mist?.requests ?? 0 })}
           </div>
         </>
       )}

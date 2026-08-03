@@ -18,30 +18,29 @@ import { PLATFORM_SHORT } from "./types";
 import { buildInvestigationQuery } from "./investigate";
 import { LogoBadge } from "../../network-investigation/view/LogoBadge";
 import type { InvestigationRequest } from "../../../src/shell";
+import { useT } from "../../../src/i18n/LanguageContext";
+import type { TFunc } from "../../../src/i18n/LanguageContext";
+import { formatDateTime, formatRelative } from "../../../src/i18n";
 import "./styles.css";
 
 /** 一度に描画する行数。全件は数百〜千件になるので、既定は先頭ぶんだけ出す。 */
 const PAGE_SIZE = 300;
 
-const SEV_LABEL: Record<FeedSeverity, string> = {
-  critical: "重大",
-  warning: "警告",
-  info: "情報",
-};
-
-function fmtTime(iso: string | null): string {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? "—" : d.toLocaleString("ja-JP", { hour12: false });
+function sevLabel(t: TFunc, s: FeedSeverity): string {
+  return t(`eventFeed.severity.${s}`);
 }
 
-function fmtAge(ms: number | null): string {
+function fmtTime(iso: string | null): string {
+  // 33 L-10: toLocaleString("ja-JP") のハードコードをやめ、表示言語に追従させる
+  // (ja のときの出力は従来と同じ)。
+  return formatDateTime(iso);
+}
+
+function fmtAge(t: TFunc, ms: number | null): string {
   if (ms === null || !Number.isFinite(ms)) return "—";
-  const s = Math.max(0, Math.round(ms / 1000));
-  if (s < 60) return `${s} 秒前`;
-  const m = Math.floor(s / 60);
-  if (m < 60) return `${m} 分前`;
-  return `${Math.floor(m / 60)} 時間前`;
+  // 33 L-11: 分岐は src/i18n/format.ts に集約した(4 タブの重複実装を 1 箇所へ)。
+  // このタブは 30〜32 の時点で日をまたいでも「n 時間前」だったので maxUnit で踏襲する。
+  return formatRelative(t, ms, { maxUnit: "hour" });
 }
 
 export function EventFeed({
@@ -52,6 +51,7 @@ export function EventFeed({
   /** 「調査する」ボタン押下時。ネットワーク調査タブへの切り替えは呼び出し側(main.tsx)が行う */
   onInvestigate?: (req: InvestigationRequest) => void;
 }) {
+  const t = useT();
   const [feed, setFeed] = useState<FeedEnvelope | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -152,43 +152,40 @@ export function EventFeed({
       <div className="go-head">
         <div className="go-head-main">
           <h1 className="go-h1">Event / Alert</h1>
-          <span className="go-head-sub">全サイト横断 — 直近 {hours}h・オンデマンド取得</span>
+          <span className="go-head-sub">{t("eventFeed.headerSub", { hours })}</span>
         </div>
         <div className="go-head-meta">
           <div className="go-updated">
-            <span className="go-updated-label">最終取得</span>
+            <span className="go-updated-label">{t("eventFeed.lastFetched")}</span>
             <span className="go-updated-value">{fmtTime(feed?.fetchedAt ?? null)}</span>
-            <span className="go-updated-age">({fmtAge(ageMs)})</span>
-            {feed?.cached && <span className="go-tag go-tag-dim">キャッシュ</span>}
-            <span
-              className="go-tag go-tag-dim"
-              title={`このタブは自動更新されません。タブを開いたとき・「更新」を押したときだけ Central / Mist から取得し、サーバ側で ${ttlSec} 秒キャッシュします(Global Overview のポーリング間隔設定は適用されません)。`}
-            >
-              自動更新なし
+            <span className="go-updated-age">({fmtAge(t, ageMs)})</span>
+            {feed?.cached && <span className="go-tag go-tag-dim">{t("eventFeed.cachedTag")}</span>}
+            <span className="go-tag go-tag-dim" title={t("eventFeed.noAutoUpdateTitle", { ttl: ttlSec })}>
+              {t("eventFeed.noAutoUpdateTag")}
             </span>
           </div>
           <button
             className="go-refresh"
             onClick={() => void load(true)}
             disabled={loading}
-            title="Central / Mist から取り直します(定期ポーリングには含まれません)"
+            title={t("eventFeed.refreshBtnTitle")}
           >
-            {loading ? "取得中…" : "更新"}
+            {loading ? t("eventFeed.refreshBtnLoading") : t("eventFeed.refreshBtn")}
           </button>
         </div>
       </div>
 
       {error && <div className="go-error">{error}</div>}
-      {loading && !feed && <div className="go-loading">Event / Alert を取得中…(Central はサイト単位で取得するため数秒かかります)</div>}
+      {loading && !feed && <div className="go-loading">{t("eventFeed.loading")}</div>}
 
       {feed && (
         <>
           {/* 取得元ごとの成否。1 本でも落ちたら、どれが落ちたか分かるようにする。 */}
           <section className="go-panel">
             <header className="go-panel-head">
-              <span className="go-panel-title">取得元</span>
+              <span className="go-panel-title">{t("eventFeed.sources.title")}</span>
               <span className="go-panel-note">
-                HTTP {feed.requests} 本 · 全 {items.length} 件
+                {t("eventFeed.sources.summary", { n: feed.requests, total: items.length })}
               </span>
             </header>
             <div className="go-src-list">
@@ -201,11 +198,11 @@ export function EventFeed({
                       <span className="go-src-count">
                         {s.count}
                         {s.total !== null && s.total > s.count && (
-                          <span className="go-src-of"> / 全 {s.total}</span>
+                          <span className="go-src-of">{t("eventFeed.sources.ofTotal", { n: s.total })}</span>
                         )}
                       </span>
                     ) : (
-                      <span className="go-tag go-tag-bad">失敗</span>
+                      <span className="go-tag go-tag-bad">{t("eventFeed.sources.failed")}</span>
                     )}
                     <span className="go-src-req go-mono">HTTP {s.requests}</span>
                   </div>
@@ -213,19 +210,23 @@ export function EventFeed({
                   {s.error && <div className="go-src-err">{s.error}</div>}
                 </div>
               ))}
-              {feed.sources.length === 0 && (
-                <div className="go-dp-empty">取得元がありません(Central / Mist の資格情報が未設定です)</div>
-              )}
+              {feed.sources.length === 0 && <div className="go-dp-empty">{t("eventFeed.sources.empty")}</div>}
             </div>
           </section>
 
           {/* フィルタ */}
           <section className="go-panel">
             <header className="go-panel-head">
-              <span className="go-panel-title">フィルタ</span>
+              <span className="go-panel-title">{t("eventFeed.filter.title")}</span>
               <span className="go-panel-note">
-                {filtered.length} / {items.length} 件(アラート {counts.alert} · イベント {counts.event} ·
-                重大 {counts.critical} · 警告 {counts.warning})
+                {t("eventFeed.filter.summary", {
+                  filtered: filtered.length,
+                  total: items.length,
+                  alert: counts.alert,
+                  event: counts.event,
+                  critical: counts.critical,
+                  warning: counts.warning,
+                })}
               </span>
               <button
                 className="go-chip"
@@ -237,17 +238,21 @@ export function EventFeed({
                   setCategory("all");
                   setQ("");
                 }}
-                title="すべてのフィルタを解除する"
+                title={t("eventFeed.filter.clearTitle")}
               >
-                クリア
+                {t("eventFeed.filter.clear")}
               </button>
             </header>
             <div className="go-fbar">
               <div className="go-fgroup">
-                <span className="go-flabel">種別</span>
+                <span className="go-flabel">{t("eventFeed.filter.kind")}</span>
                 {(["all", "alert", "event"] as const).map((k) => (
                   <button key={k} className={`go-chip${kind === k ? " go-chip-on" : ""}`} onClick={() => setKind(k)}>
-                    {k === "all" ? "すべて" : k === "alert" ? "アラート" : "イベント"}
+                    {k === "all"
+                      ? t("eventFeed.filter.kindAll")
+                      : k === "alert"
+                        ? t("eventFeed.filter.kindAlert")
+                        : t("eventFeed.filter.kindEvent")}
                   </button>
                 ))}
               </div>
@@ -259,22 +264,22 @@ export function EventFeed({
                     className={`go-chip${platform === p ? " go-chip-on" : ""}`}
                     onClick={() => setPlatform(p)}
                   >
-                    {p === "all" ? "すべて" : PLATFORM_SHORT[p]}
+                    {p === "all" ? t("eventFeed.filter.kindAll") : PLATFORM_SHORT[p]}
                   </button>
                 ))}
               </div>
               <div className="go-fgroup">
-                <span className="go-flabel">重要度</span>
+                <span className="go-flabel">{t("eventFeed.filter.severity")}</span>
                 {(["all", "critical", "warning", "info"] as const).map((s) => (
                   <button key={s} className={`go-chip${sev === s ? " go-chip-on" : ""}`} onClick={() => setSev(s)}>
-                    {s === "all" ? "すべて" : SEV_LABEL[s]}
+                    {s === "all" ? t("eventFeed.filter.kindAll") : sevLabel(t, s)}
                   </button>
                 ))}
               </div>
               <div className="go-fgroup">
-                <span className="go-flabel">サイト</span>
+                <span className="go-flabel">{t("eventFeed.filter.site")}</span>
                 <select className="go-fsel" value={site} onChange={(e) => setSite(e.target.value)}>
-                  <option value="all">すべて({siteNames.length})</option>
+                  <option value="all">{t("eventFeed.filter.siteAllOption", { n: siteNames.length })}</option>
                   {siteNames.map((n) => (
                     <option key={n} value={n}>
                       {n}
@@ -283,9 +288,9 @@ export function EventFeed({
                 </select>
               </div>
               <div className="go-fgroup">
-                <span className="go-flabel">カテゴリ</span>
+                <span className="go-flabel">{t("eventFeed.filter.category")}</span>
                 <select className="go-fsel" value={category} onChange={(e) => setCategory(e.target.value)}>
-                  <option value="all">すべて({categories.length})</option>
+                  <option value="all">{t("eventFeed.filter.categoryAllOption", { n: categories.length })}</option>
                   {categories.map((c) => (
                     <option key={c} value={c}>
                       {c}
@@ -298,7 +303,7 @@ export function EventFeed({
                   className="go-fsearch"
                   value={q}
                   onChange={(e) => setQ(e.target.value)}
-                  placeholder="本文 / 種別 / デバイスで絞り込み"
+                  placeholder={t("eventFeed.filter.searchPlaceholder")}
                 />
               </div>
             </div>
@@ -307,23 +312,23 @@ export function EventFeed({
           {/* 一覧 */}
           <section className="go-panel go-table-panel">
             <header className="go-panel-head">
-              <span className="go-panel-title">タイムライン</span>
+              <span className="go-panel-title">{t("eventFeed.timeline.title")}</span>
               <span className="go-panel-note">
-                新しい順 · {shown.length} / {filtered.length} 件を表示
+                {t("eventFeed.timeline.summary", { shown: shown.length, total: filtered.length })}
               </span>
             </header>
             <div className="go-table-scroll">
               <table className="go-table go-feed-table">
                 <thead>
                   <tr>
-                    <th className="go-fc-time">時刻</th>
-                    <th className="go-fc-sev">重要度</th>
-                    <th className="go-fc-kind">種別</th>
+                    <th className="go-fc-time">{t("eventFeed.timeline.col.time")}</th>
+                    <th className="go-fc-sev">{t("eventFeed.timeline.col.severity")}</th>
+                    <th className="go-fc-kind">{t("eventFeed.timeline.col.kind")}</th>
                     <th className="go-fc-plat">Platform</th>
-                    <th className="go-fc-site">サイト</th>
-                    <th className="go-fc-cat">カテゴリ</th>
-                    <th>内容</th>
-                    <th className="go-fc-act" aria-label="操作" />
+                    <th className="go-fc-site">{t("eventFeed.timeline.col.site")}</th>
+                    <th className="go-fc-cat">{t("eventFeed.timeline.col.category")}</th>
+                    <th>{t("eventFeed.timeline.col.content")}</th>
+                    <th className="go-fc-act" aria-label={t("eventFeed.timeline.col.action")} />
                   </tr>
                 </thead>
                 <tbody>
@@ -333,7 +338,7 @@ export function EventFeed({
                   {filtered.length === 0 && (
                     <tr>
                       <td className="go-empty-row" colSpan={8}>
-                        条件に一致する Event / Alert はありません
+                        {t("eventFeed.timeline.empty")}
                       </td>
                     </tr>
                   )}
@@ -343,7 +348,7 @@ export function EventFeed({
             {shown.length < filtered.length && (
               <div className="go-feed-more">
                 <button className="go-chip" onClick={() => setLimit((v) => v + PAGE_SIZE)}>
-                  さらに {Math.min(PAGE_SIZE, filtered.length - shown.length)} 件を表示
+                  {t("eventFeed.timeline.showMore", { n: Math.min(PAGE_SIZE, filtered.length - shown.length) })}
                 </button>
               </div>
             )}
@@ -355,29 +360,35 @@ export function EventFeed({
       {/* 取得方式の明示(14 番)。Global Overview のフッタ「ポーリング間隔」と対になる位置。
           データが無い(初回・失敗時)ときも出したいので feed の外に置く。 */}
       <div className="go-foot go-mono">
-        <b>自動更新なし</b> — このタブはタブを開いたとき・「更新」を押したときだけ Central / Mist から取得し、
-        サーバ側で {ttlSec} 秒キャッシュします(Global Overview のポーリング間隔設定は適用されません)。
-        {feed && " Central のイベントのみサイト単位で取得しています。"}
+        <b>{t("eventFeed.noAutoUpdateTag")}</b> — {t("eventFeed.footer", { ttl: ttlSec })}
+        {feed && t("eventFeed.footerCentralNote")}
       </div>
     </div>
   );
 }
 
 function Row({ item, onInvestigate }: { item: FeedItem; onInvestigate?: (req: InvestigationRequest) => void }) {
+  const t = useT();
   return (
     <tr>
       <td className="go-fc-time go-mono">{fmtTime(item.timestamp)}</td>
       <td className="go-fc-sev">
         <span
           className={`go-fsev go-fsev-${item.severity}`}
-          title={item.severityRaw ? `API の値: ${item.severityRaw}` : "この API は重要度を返しません"}
+          title={
+            item.severityRaw
+              ? t("eventFeed.row.apiValueTitle", { v: item.severityRaw })
+              : t("eventFeed.row.noSeverityTitle")
+          }
         >
-          {SEV_LABEL[item.severity]}
+          {sevLabel(t, item.severity)}
           {item.severityRaw === null && <span className="go-fsev-na">*</span>}
         </span>
       </td>
       <td className="go-fc-kind">
-        <span className={`go-fkind go-fkind-${item.kind}`}>{item.kind === "alert" ? "アラート" : "イベント"}</span>
+        <span className={`go-fkind go-fkind-${item.kind}`}>
+          {item.kind === "alert" ? t("eventFeed.filter.kindAlert") : t("eventFeed.filter.kindEvent")}
+        </span>
         {item.state && <span className="go-fstate">{item.state}</span>}
       </td>
       <td className="go-fc-plat">
@@ -396,14 +407,14 @@ function Row({ item, onInvestigate }: { item: FeedItem; onInvestigate?: (req: In
         {onInvestigate && (
           <button
             className="go-investigate-btn"
-            title="この事案の要約をクエリ文にして、ネットワーク調査タブへ渡します(実行はされません)"
+            title={t("eventFeed.investigateBtnTitle")}
             onClick={() =>
               onInvestigate(
                 buildInvestigationQuery({
                   siteName: item.siteName,
                   platform: item.platform,
                   kind: item.kind,
-                  severity: SEV_LABEL[item.severity],
+                  severity: sevLabel(t, item.severity),
                   category: item.category,
                   text: item.text,
                   time: fmtTime(item.timestamp),
@@ -411,7 +422,7 @@ function Row({ item, onInvestigate }: { item: FeedItem; onInvestigate?: (req: In
               )
             }
           >
-            調査する
+            {t("eventFeed.investigateBtn")}
           </button>
         )}
       </td>

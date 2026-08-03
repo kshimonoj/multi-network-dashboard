@@ -89,6 +89,20 @@ export interface MistRaw {
   requests: number;
 }
 
+/**
+ * SLE(Service Level Expectation)の指標定義。値は 0-1 で返るので ×100 して % にする。
+ * サイト詳細(fetchMistHealth)と org 一括(fetchOrgSiteSle。41 の日次サンプリング)で共用する。
+ */
+const SLE_METRICS: Array<{ key: string; label: string }> = [
+  { key: "coverage", label: "Coverage" },
+  { key: "capacity", label: "Capacity" },
+  { key: "throughput", label: "Throughput" },
+  { key: "roaming", label: "Roaming" },
+  { key: "time-to-connect", label: "Time to Connect" },
+  { key: "successful-connect", label: "Successful Connect" },
+  { key: "ap-health", label: "AP Health" },
+];
+
 function toNum(v: unknown): number {
   const n = typeof v === "number" ? v : Number(v);
   return Number.isFinite(n) ? n : 0;
@@ -217,6 +231,42 @@ export class MistClient {
   }
 
   /**
+   * org の全サイトの SLE を 1 本の HTTP でまとめて取る(41 番の日次サンプリング用)。
+   *
+   * getSiteDetail() 内の fetchMistHealth() と同じ insights/sites-sle を叩くが、
+   * あちらは 1 サイトぶんの詳細パネル用で、site_id で 1 行だけ引いて捨てている。
+   * 日次レポートは「全サイトの当日平均」が要るので、org 一括の応答をそのまま畳んで返す。
+   * ポーラー(5 分間隔)には組み込まず、呼び出し側(reports/sampler.ts)が
+   * 粗い間隔(既定 30 分)で呼ぶ。
+   *
+   * @param windowSec SLE の集計窓(秒)。既定 1 時間。
+   */
+  async fetchOrgSiteSle(
+    windowSec = 3600,
+  ): Promise<Record<string, { score: number | null; metrics: Array<{ label: string; value: number | null }> }>> {
+    const orgId = await this.resolveOrgId();
+    const end = Math.floor(Date.now() / 1000);
+    const start = end - Math.max(300, windowSec);
+    const res = await this.get(`api/v1/orgs/${orgId}/insights/sites-sle`, { start, end });
+    const rows: any[] = Array.isArray(res?.results) ? res.results : Array.isArray(res) ? res : [];
+    const out: Record<string, { score: number | null; metrics: Array<{ label: string; value: number | null }> }> = {};
+    for (const row of rows) {
+      const siteId = String(row?.site_id ?? "");
+      if (!siteId) continue;
+      const metrics = SLE_METRICS.map((m) => {
+        const v = toNullableNum(row[m.key]);
+        return { label: m.label, value: v === null ? null : Math.round(v * 100) };
+      });
+      const vals = metrics.map((m) => m.value).filter((v): v is number => v !== null);
+      out[siteId] = {
+        score: vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : null,
+        metrics,
+      };
+    }
+    return out;
+  }
+
+  /**
    * サイト 1 件ぶんの詳細(11 番。オンデマンド)。ポーラーからは呼ばれない。
    * 出す HTTP は 5 本(sites-sle / clients / devices / alarms / device-events)。
    * SLE は org 一括(insights/sites-sle)で返るのを site_id で引く(05/06 の「null」を解消)。
@@ -245,16 +295,8 @@ export class MistClient {
     start: number,
     end: number,
   ): Promise<DetailHealth> {
-    // SLE 各指標(0-1)。総合は取得できた指標の平均 ×100。
-    const METRICS: Array<{ key: string; label: string }> = [
-      { key: "coverage", label: "Coverage" },
-      { key: "capacity", label: "Capacity" },
-      { key: "throughput", label: "Throughput" },
-      { key: "roaming", label: "Roaming" },
-      { key: "time-to-connect", label: "Time to Connect" },
-      { key: "successful-connect", label: "Successful Connect" },
-      { key: "ap-health", label: "AP Health" },
-    ];
+    // SLE 各指標(0-1)。総合は取得できた指標の平均 ×100。定義は SLE_METRICS(モジュール先頭)。
+    const METRICS = SLE_METRICS;
     try {
       const res = await this.get(`api/v1/orgs/${orgId}/insights/sites-sle`, { start, end });
       const row = (res?.results ?? []).find((r: any) => String(r?.site_id ?? "") === siteId);

@@ -4,6 +4,8 @@
 // import しており、そのまま view から参照すると node:fs 等がバンドルに巻き込まれる。
 // そこで「API のレスポンス形」だけをここに写す。サーバ側の型を変えたらここも合わせる。
 
+import type { TFunc } from "../../../src/i18n/LanguageContext";
+
 export type Platform = "central" | "mist";
 export type DeviceKind = "ap" | "switch" | "gateway";
 
@@ -103,16 +105,14 @@ export const PLATFORM_SHORT: Record<Platform, string> = {
 };
 
 /** アラート件数の定義(短いラベル。数値の直後に添える) */
-export const ALERT_LABEL: Record<Platform, string> = {
-  central: "Active",
-  mist: "過去24h",
-};
+export function alertLabel(t: TFunc, p: Platform): string {
+  return t(`globalOverview.alertLabel.${p}`);
+}
 
 /** アラート件数の定義(説明文。tooltip や凡例で使う) */
-export const ALERT_DESC: Record<Platform, string> = {
-  central: "Central: status = Active のアラート件数(未解消のもの)",
-  mist: "Mist: 直近 24 時間に発生したアラーム件数(解消済みを含む)",
-};
+export function alertDesc(t: TFunc, p: Platform): string {
+  return t(`globalOverview.alertDesc.${p}`);
+}
 
 export const DEVICE_KIND_LABEL: Record<DeviceKind, string> = {
   ap: "AP",

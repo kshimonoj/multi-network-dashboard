@@ -15,7 +15,9 @@
 import { useEffect, useMemo, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { ALERT_LABEL, PLATFORM_SHORT, type SiteRow } from "./types";
+import { alertLabel, PLATFORM_SHORT, type SiteRow } from "./types";
+import { useT } from "../../../src/i18n/LanguageContext";
+import type { TFunc } from "../../../src/i18n/LanguageContext";
 
 const PLATFORM_COLOR: Record<"central" | "mist", string> = {
   central: "#ff8a3d",
@@ -31,12 +33,9 @@ const STATE_COLOR: Record<SiteState, string> = {
   empty: "#8892a0",
 };
 
-export const STATE_LABEL: Record<SiteState, string> = {
-  down: "Down あり",
-  alert: "アラートあり",
-  ok: "正常",
-  empty: "デバイス未登録",
-};
+export function stateLabel(t: TFunc, s: SiteState): string {
+  return t(`globalOverview.stateLabel.${s}`);
+}
 
 export function siteState(s: SiteRow): SiteState {
   if (s.deviceDown > 0) return "down";
@@ -69,25 +68,31 @@ function markerHtml(s: SiteRow): string {
   );
 }
 
-function popupHtml(s: SiteRow): string {
+function popupHtml(t: TFunc, s: SiteRow): string {
   const st = siteState(s);
   const health = s.healthScore === null ? "—" : String(s.healthScore);
-  const healthNote = s.healthScore === null ? '<span class="go-pop-note">(未取得)</span>' : "";
+  const healthNote =
+    s.healthScore === null ? `<span class="go-pop-note">${escapeHtml(t("globalOverview.map.popup.unavailableNote"))}</span>` : "";
+  const devicesValue = t("globalOverview.map.popup.devicesValue", {
+    total: s.deviceTotal,
+    up: s.deviceUp,
+    down: s.deviceDown,
+  });
   return `
     <div class="go-pop">
       <div class="go-pop-head">
         <span class="go-pop-dot" style="background:${STATE_COLOR[st]};border-color:${PLATFORM_COLOR[s.platform]}"></span>
         <span class="go-pop-name">${escapeHtml(s.siteName)}</span>
       </div>
-      <div class="go-pop-plat">${PLATFORM_SHORT[s.platform]} — ${STATE_LABEL[st]}</div>
+      <div class="go-pop-plat">${PLATFORM_SHORT[s.platform]} — ${escapeHtml(stateLabel(t, st))}</div>
       <table class="go-pop-tbl">
-        <tr><th>デバイス</th><td>${s.deviceTotal} 台 (Up ${s.deviceUp} / Down ${s.deviceDown})</td></tr>
+        <tr><th>${escapeHtml(t("globalOverview.map.popup.devicesLabel"))}</th><td>${escapeHtml(devicesValue)}</td></tr>
         <tr><th>AP</th><td>${s.devices.ap.total} (Up ${s.devices.ap.up} / Down ${s.devices.ap.down})</td></tr>
         <tr><th>Switch</th><td>${s.devices.switch.total} (Up ${s.devices.switch.up} / Down ${s.devices.switch.down})</td></tr>
         <tr><th>Gateway</th><td>${s.devices.gateway.total} (Up ${s.devices.gateway.up} / Down ${s.devices.gateway.down})</td></tr>
-        <tr><th>クライアント</th><td>${s.clients}</td></tr>
-        <tr><th>アラート</th><td>${s.alerts} <span class="go-pop-note">(${ALERT_LABEL[s.platform]})</span></td></tr>
-        <tr><th>健全性</th><td>${health} ${healthNote}</td></tr>
+        <tr><th>${escapeHtml(t("globalOverview.map.popup.clientsLabel"))}</th><td>${s.clients}</td></tr>
+        <tr><th>${escapeHtml(t("globalOverview.map.popup.alertsLabel"))}</th><td>${s.alerts} <span class="go-pop-note">(${escapeHtml(alertLabel(t, s.platform))})</span></td></tr>
+        <tr><th>${escapeHtml(t("globalOverview.map.popup.healthLabel"))}</th><td>${health} ${healthNote}</td></tr>
       </table>
     </div>`;
 }
@@ -143,6 +148,7 @@ export function SiteMap({
   fitToken?: number;
   onSelect?: (site: SiteRow) => void;
 }) {
+  const t = useT();
   const elRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
   const tileRef = useRef<L.TileLayer | null>(null);
@@ -207,7 +213,7 @@ export function SiteMap({
         // Down しているサイトを他のピンより前面に出す。
         zIndexOffset: siteState(p.site) === "down" ? 1000 : siteState(p.site) === "alert" ? 500 : 0,
       });
-      marker.bindPopup(popupHtml(p.site), { className: "go-pop-wrap", maxWidth: 300 });
+      marker.bindPopup(popupHtml(t, p.site), { className: "go-pop-wrap", maxWidth: 300 });
       if (onSelect) marker.on("click", () => onSelect(p.site));
       marker.addTo(layer);
       markersRef.current.set(siteKey(p.site), marker);
@@ -219,7 +225,7 @@ export function SiteMap({
       map.fitBounds(bounds, { padding: [36, 36], maxZoom: 11 });
       fittedRef.current = true;
     }
-  }, [points, onSelect]);
+  }, [points, onSelect, t]);
 
   // 「全体表示」。初回の fitBounds と同じ範囲へ戻す(fitToken の初期値では動かさない)。
   useEffect(() => {

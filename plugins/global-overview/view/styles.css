@@ -1095,16 +1095,20 @@
 /* --- タイムライン表 --- */
 .go-feed-table td { vertical-align: top; }
 .go-fc-time { width: 150px; white-space: nowrap; font-size: 11px; }
-.go-fc-sev { width: 70px; }
+/* 84px(30 番): 日本語「重大」(2字)なら 70px で足りるが、英語 "Critical"(8字)だと
+   バッジがはみ出すため広げた。table-layout は auto のままなので、これは最小幅の目安。 */
+.go-fc-sev { width: 84px; }
 .go-fc-kind { width: 96px; }
 .go-fc-plat { width: 80px; }
 .go-fc-site { width: 150px; }
 .go-fc-cat { width: 110px; color: var(--text-muted); }
 /* 「調査する」列(16番)。本文が長い行だと横スクロールしないと右端まで届かないため、
    スクロール位置に関わらず常に見えるよう右端に固定する。背景を明示しないと
-   スクロールで隠れるはずの手前のセルが透けて見えてしまうため var(--panel) で塗る。 */
+   スクロールで隠れるはずの手前のセルが透けて見えてしまうため var(--panel) で塗る。
+   幅は 108px(30 番): 日本語「調査する」(4字)なら 84px で足りるが、
+   英語 "Investigate"(11字)だとボタンがはみ出すため広げた。 */
 .go-fc-act {
-  width: 84px;
+  width: 108px;
   text-align: right;
   white-space: nowrap;
   position: sticky;

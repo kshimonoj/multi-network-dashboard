@@ -4,6 +4,7 @@
 
 import type { InvestigationRequest } from "../../../src/shell";
 import { PLATFORM_SHORT, type Platform } from "./types";
+import { getLang, translate } from "../../../src/i18n/i18n";
 
 export interface InvestigationSource {
   siteName: string;
@@ -18,11 +19,17 @@ export interface InvestigationSource {
 }
 
 export function buildInvestigationQuery(src: InvestigationSource): InvestigationRequest {
-  const kindLabel = src.kind === "alert" ? "アラート" : "イベント";
+  const lang = getLang();
+  const kind = translate(lang, src.kind === "alert" ? "eventFeed.investigateQuery.kindAlert" : "eventFeed.investigateQuery.kindEvent");
   const tags = [src.severity, src.category].filter((v): v is string => Boolean(v && v.trim()));
   const tag = tags.length > 0 ? `[${tags.join(" / ")}] ` : "";
-  const query =
-    `${src.siteName}(${PLATFORM_SHORT[src.platform]})で発生した以下の${kindLabel}について、` +
-    `原因や影響範囲を調査して: ${tag}${src.text}(${src.time})`;
+  const query = translate(lang, "eventFeed.investigateQuery.template", {
+    site: src.siteName,
+    platform: PLATFORM_SHORT[src.platform],
+    kind,
+    tag,
+    text: src.text,
+    time: src.time,
+  });
   return { query, site: src.siteName };
 }

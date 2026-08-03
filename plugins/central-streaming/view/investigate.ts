@@ -4,29 +4,39 @@
 
 import type { InvestigationRequest } from "../../../src/shell";
 import { STREAM_SHORT, type StreamEvent } from "./types";
+import { formatDateTime, getLang, translate } from "../../../src/i18n";
 
 function fmt(iso: string | null): string {
-  if (!iso) return "時刻不明";
-  const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? "時刻不明" : d.toLocaleString("ja-JP", { hour12: false });
+  const lang = getLang();
+  // 33 L-10: 日時は表示言語のロケールで整形する(解釈できない値は「時刻不明」)。
+  return formatDateTime(iso, lang, translate(lang, "centralStreaming.investigateQuery.timeUnknown"));
 }
 
 export function buildStreamInvestigationQuery(ev: StreamEvent): InvestigationRequest {
+  const lang = getLang();
   const when = fmt(ev.eventAt ?? ev.receivedAt);
   const tags = [STREAM_SHORT[ev.stream], ev.typeLabel, ev.category].filter(
     (v): v is string => Boolean(v && v.trim()),
   );
-  const where = ev.siteName ?? (ev.siteId ? `サイト ID ${ev.siteId}` : null);
-  const device = ev.deviceLabel ? `関連デバイス: ${ev.deviceLabel}。` : "";
-  const actor = ev.actor ? `実行者: ${ev.actor}。` : "";
+  const where =
+    ev.siteName ??
+    (ev.siteId ? translate(lang, "centralStreaming.investigateQuery.siteIdFallback", { id: ev.siteId }) : null);
+  const siteSuffix = where ? translate(lang, "centralStreaming.investigateQuery.siteSuffix", { site: where }) : "";
+  const deviceSuffix = ev.deviceLabel
+    ? translate(lang, "centralStreaming.investigateQuery.deviceSuffix", { device: ev.deviceLabel })
+    : "";
+  const actorSuffix = ev.actor
+    ? translate(lang, "centralStreaming.investigateQuery.actorSuffix", { actor: ev.actor })
+    : "";
 
-  const query =
-    `New Central の Streaming API で受信した以下のイベントについて、` +
-    `背景・影響範囲・対応の要否を調査して: ` +
-    `[${tags.join(" / ")}] ${ev.summary}(${when})。` +
-    (where ? `対象サイト: ${where}。` : "") +
-    device +
-    actor;
+  const query = translate(lang, "centralStreaming.investigateQuery.template", {
+    tags: tags.join(" / "),
+    summary: ev.summary,
+    when,
+    siteSuffix,
+    deviceSuffix,
+    actorSuffix,
+  }).trimEnd();
 
   return { query, site: ev.siteName };
 }

@@ -321,6 +321,26 @@ export function storedCount(): number {
   return events.length;
 }
 
+/**
+ * 指定区間([fromMs, toMs))に発生したイベントを新しい順で返す(41 の日次レポート用)。
+ *
+ * 一覧 API(getEvents)は画面に流し込む量の上限 API_MAX_ITEMS で頭打ちになるが、
+ * 日次集計は「その日に起きた全件」が要るので、保持しているメモリ上の配列を
+ * 期間で絞ってそのまま返す(Retention の範囲内にあるものが対象)。
+ * 判定は eventAt(発生時刻)を優先し、無ければ receivedAt を使う。
+ */
+export function getEventsInRange(fromMs: number, toMs: number): StreamEvent[] {
+  return events.filter((e) => {
+    const t = Date.parse(e.eventAt ?? e.receivedAt);
+    return Number.isFinite(t) && t >= fromMs && t < toMs;
+  });
+}
+
+/** Retention の現在値(日次レポートが「その日のデータが残っているか」を判断するのに使う)。 */
+export function retentionDays(): number {
+  return settings.retentionDays;
+}
+
 export function purgeInfo(): { lastPurgeAt: string | null; lastPurged: number } {
   return { lastPurgeAt, lastPurged };
 }

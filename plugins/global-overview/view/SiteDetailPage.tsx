@@ -18,7 +18,7 @@
 //   unavailable … 「このプラットフォームでは取得できません」(グレーの注記)
 
 import { Fragment, useEffect, useRef, useState } from "react";
-import { ALERT_DESC, ALERT_LABEL, PLATFORM_SHORT, type Platform, type SiteRow } from "./types";
+import { alertDesc, alertLabel, PLATFORM_SHORT, type Platform, type SiteRow } from "./types";
 import type {
   ClientDetailEnvelope,
   DetailAlert,
@@ -31,15 +31,18 @@ import type {
   SiteDetailEnvelope,
 } from "./detailTypes";
 import { fetchClientDetail, fetchSiteDetail } from "./api";
-import { siteState, siteKey, STATE_COLOR, STATE_LABEL, PLATFORM_COLOR } from "./SiteMap";
+import { siteState, siteKey, STATE_COLOR, stateLabel, PLATFORM_COLOR } from "./SiteMap";
 import { buildInvestigationQuery } from "./investigate";
 import { LogoBadge } from "../../network-investigation/view/LogoBadge";
 import type { InvestigationRequest } from "../../../src/shell";
+import { useT } from "../../../src/i18n/LanguageContext";
+import type { TFunc } from "../../../src/i18n/LanguageContext";
+import { formatDateTime } from "../../../src/i18n";
 
 function fmtTime(iso: string | null): string {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? "—" : d.toLocaleString("ja-JP", { hour12: false });
+  // 33 L-10: toLocaleString("ja-JP") のハードコードをやめ、表示言語に追従させる
+  // (ja のときの出力は従来と同じ)。
+  return formatDateTime(iso);
 }
 
 function fmtUptime(ms: number | null): string {
@@ -65,7 +68,7 @@ function Section({
   note,
   status,
   error,
-  emptyLabel = "なし",
+  emptyLabel,
   children,
 }: {
   title: string;
@@ -76,6 +79,7 @@ function Section({
   emptyLabel?: string;
   children?: React.ReactNode;
 }) {
+  const t = useT();
   return (
     <section className="go-dp-sec">
       <header className="go-dp-sec-head">
@@ -84,11 +88,14 @@ function Section({
         {note && <span className="go-dp-sec-note">{note}</span>}
       </header>
       {status === "error" ? (
-        <div className="go-dp-err">取得に失敗しました — {error}</div>
+        <div className="go-dp-err">
+          {t("globalOverview.detail.fetchFailedPrefix")}
+          {error}
+        </div>
       ) : status === "unavailable" ? (
-        <div className="go-dp-unavail">{note ?? "このプラットフォームでは取得できません"}</div>
+        <div className="go-dp-unavail">{note ?? t("globalOverview.detail.unavailableDefault")}</div>
       ) : count === 0 ? (
-        <div className="go-dp-empty">{emptyLabel}</div>
+        <div className="go-dp-empty">{emptyLabel ?? t("globalOverview.detail.none")}</div>
       ) : (
         children
       )}
@@ -97,16 +104,24 @@ function Section({
 }
 
 function HealthSection({ h }: { h: DetailHealth }) {
+  const t = useT();
   return (
     <section className="go-dp-sec">
       <header className="go-dp-sec-head">
-        <span className="go-dp-sec-title">Health / SLE</span>
+        <span className="go-dp-sec-title">{t("globalOverview.detail.sections.health")}</span>
         <span className="go-dp-sec-note">
-          {h.source === "mist-sle" ? "Mist SLE(指標平均)" : h.source === "central-groups" ? "Central 健全性" : ""}
+          {h.source === "mist-sle"
+            ? t("globalOverview.detail.health.mistSource")
+            : h.source === "central-groups"
+              ? t("globalOverview.detail.health.centralSource")
+              : ""}
         </span>
       </header>
       {h.status === "error" ? (
-        <div className="go-dp-err">取得に失敗しました — {h.error}</div>
+        <div className="go-dp-err">
+          {t("globalOverview.detail.fetchFailedPrefix")}
+          {h.error}
+        </div>
       ) : (
         <div className="go-dp-health">
           <div className="go-dp-score">
@@ -114,7 +129,7 @@ function HealthSection({ h }: { h: DetailHealth }) {
             <span className="go-dp-score-unit">/ 100</span>
           </div>
           <div className="go-dp-metrics">
-            {h.metrics.length === 0 && <span className="go-dp-empty">内訳なし</span>}
+            {h.metrics.length === 0 && <span className="go-dp-empty">{t("globalOverview.detail.health.noBreakdown")}</span>}
             {h.metrics.map((m) => (
               <div className="go-dp-metric" key={m.label}>
                 <span className="go-dp-metric-label">{m.label}</span>
@@ -136,34 +151,39 @@ function HealthSection({ h }: { h: DetailHealth }) {
   );
 }
 
-const KIND_LABEL: Record<DetailDevice["kind"], string> = {
-  ap: "AP",
-  switch: "Switch",
-  gateway: "Gateway",
-  other: "その他",
-};
+function kindLabel(t: TFunc, k: DetailDevice["kind"]): string {
+  if (k === "other") return t("globalOverview.detail.devices.kindOther");
+  return { ap: "AP", switch: "Switch", gateway: "Gateway" }[k];
+}
 
 function DevicesSection({ sec, platform }: { sec: DetailSection<DetailDevice>; platform: string }) {
+  const t = useT();
   const kinds: DetailDevice["kind"][] = ["ap", "switch", "gateway", "other"];
   const byKind = kinds
     .map((k) => ({ k, items: sec.items.filter((d) => d.kind === k) }))
     .filter((g) => g.items.length > 0);
   return (
-    <Section title="デバイス" count={sec.items.length} status={sec.status} error={sec.error} emptyLabel="デバイスなし">
+    <Section
+      title={t("globalOverview.detail.sections.devices")}
+      count={sec.items.length}
+      status={sec.status}
+      error={sec.error}
+      emptyLabel={t("globalOverview.detail.devices.empty")}
+    >
       <div className="go-dp-tbl-wrap">
         {byKind.map((g) => (
           <div key={g.k}>
             <div className="go-dp-kind-head">
-              {KIND_LABEL[g.k]} <span className="go-dp-kind-n">{g.items.length}</span>
+              {kindLabel(t, g.k)} <span className="go-dp-kind-n">{g.items.length}</span>
             </div>
             <table className="go-dp-tbl">
               <thead>
                 <tr>
-                  <th>名前</th>
-                  <th>モデル</th>
-                  <th>状態</th>
+                  <th>{t("globalOverview.detail.devices.col.name")}</th>
+                  <th>{t("globalOverview.detail.devices.col.model")}</th>
+                  <th>{t("globalOverview.detail.devices.col.status")}</th>
                   <th>FW</th>
-                  <th>稼働</th>
+                  <th>{t("globalOverview.detail.devices.col.uptime")}</th>
                   <th>IP</th>
                   {platform === "mist" && <th className="go-col-num">Cl</th>}
                 </tr>
@@ -205,6 +225,7 @@ function ClientsSection({
   platform: Platform;
   siteId: string;
 }) {
+  const t = useT();
   const [openMac, setOpenMac] = useState<string | null>(null);
   // mac → 取得状態(取得済みは detail、失敗は error)。同一 mac を再展開しても再取得しない。
   const [details, setDetails] = useState<Record<string, ClientDetailEnvelope>>({});
@@ -227,19 +248,25 @@ function ClientsSection({
 
   const COLS = 7;
   return (
-    <Section title="接続クライアント" count={sec.items.length} status={sec.status} error={sec.error} emptyLabel="接続クライアントなし">
+    <Section
+      title={t("globalOverview.detail.sections.clients")}
+      count={sec.items.length}
+      status={sec.status}
+      error={sec.error}
+      emptyLabel={t("globalOverview.detail.clients.empty")}
+    >
       <div className="go-dp-tbl-wrap">
         <div className="go-dp-scroll">
           <table className="go-dp-tbl">
             <thead>
               <tr>
-                <th>クライアント</th>
+                <th>{t("globalOverview.detail.clients.col.client")}</th>
                 <th>OS</th>
                 <th>SSID</th>
-                <th>帯域/CH</th>
+                <th>{t("globalOverview.detail.clients.col.bandCh")}</th>
                 <th>SNR/RSSI</th>
                 <th>IP</th>
-                <th>接続先</th>
+                <th>{t("globalOverview.detail.clients.col.connectedTo")}</th>
               </tr>
             </thead>
             <tbody>
@@ -250,7 +277,7 @@ function ClientsSection({
                     <tr
                       className={`go-dp-crow${open ? " go-dp-crow-open" : ""}`}
                       onClick={() => toggle(c.mac)}
-                      title="クリックでイベント履歴を表示"
+                      title={t("globalOverview.detail.clients.rowTitle")}
                     >
                       <td title={c.mac}>
                         <span className={`go-dp-caret${open ? " go-dp-caret-open" : ""}`}>▸</span>
@@ -275,10 +302,17 @@ function ClientsSection({
                         <td colSpan={COLS}>
                           <div className="go-dp-cdetail">
                             <div className="go-dp-cdetail-head">
-                              イベント履歴 <span className="go-mono">{c.mac}</span>
+                              {t("globalOverview.detail.clients.eventHistory")} <span className="go-mono">{c.mac}</span>
                             </div>
-                            {loadingMac === c.mac && <div className="go-dp-loading">取得中…</div>}
-                            {errors[c.mac] && <div className="go-dp-err">取得に失敗しました — {errors[c.mac]}</div>}
+                            {loadingMac === c.mac && (
+                              <div className="go-dp-loading">{t("globalOverview.detail.clients.loading")}</div>
+                            )}
+                            {errors[c.mac] && (
+                              <div className="go-dp-err">
+                                {t("globalOverview.detail.fetchFailedPrefix")}
+                                {errors[c.mac]}
+                              </div>
+                            )}
                             {details[c.mac] && <ClientEvents sec={details[c.mac].events} />}
                           </div>
                         </td>
@@ -297,8 +331,21 @@ function ClientsSection({
 
 /** クライアント展開時のイベント履歴(Task 3)。サイト Event と同じ描画を再利用。 */
 function ClientEvents({ sec }: { sec: DetailSection<DetailEvent> }) {
-  if (sec.status === "error") return <div className="go-dp-err">取得に失敗しました — {sec.error}</div>;
-  if (sec.items.length === 0) return <div className="go-dp-empty">直近のイベントはありません{sec.note ? `(${sec.note})` : ""}</div>;
+  const t = useT();
+  if (sec.status === "error")
+    return (
+      <div className="go-dp-err">
+        {t("globalOverview.detail.fetchFailedPrefix")}
+        {sec.error}
+      </div>
+    );
+  if (sec.items.length === 0)
+    return (
+      <div className="go-dp-empty">
+        {t("globalOverview.detail.clients.noRecentEvents")}
+        {sec.note ? `(${sec.note})` : ""}
+      </div>
+    );
   return (
     <>
       {sec.note && <div className="go-dp-sec-note go-dp-cdetail-note">{sec.note}</div>}
@@ -325,14 +372,15 @@ function AlertsSection({
   siteName: string;
   onInvestigate?: (req: InvestigationRequest) => void;
 }) {
+  const t = useT();
   return (
     <Section
-      title="アラート"
+      title={t("globalOverview.detail.sections.alerts")}
       count={sec.items.length}
-      note={sec.note ?? ALERT_LABEL[platform]}
+      note={sec.note ?? alertLabel(t, platform)}
       status={sec.status}
       error={sec.error}
-      emptyLabel="アラートなし"
+      emptyLabel={t("globalOverview.detail.alerts.empty")}
     >
       <ul className="go-dp-list">
         {sec.items.map((a, i) => (
@@ -349,7 +397,7 @@ function AlertsSection({
             {onInvestigate && (
               <button
                 className="go-investigate-btn"
-                title="この事案の要約をクエリ文にして、ネットワーク調査タブへ渡します(実行はされません)"
+                title={t("globalOverview.detail.investigateBtnTitle")}
                 onClick={() =>
                   onInvestigate(
                     buildInvestigationQuery({
@@ -364,7 +412,7 @@ function AlertsSection({
                   )
                 }
               >
-                調査する
+                {t("globalOverview.detail.investigateBtn")}
               </button>
             )}
           </li>
@@ -398,6 +446,7 @@ function EventList({
   platform?: Platform;
   onInvestigate?: (req: InvestigationRequest) => void;
 }) {
+  const t = useT();
   return (
     <ul className="go-dp-list">
       {items.map((e, i) => (
@@ -420,7 +469,7 @@ function EventList({
           {onInvestigate && siteName && platform && (
             <button
               className="go-investigate-btn"
-              title="この事案の要約をクエリ文にして、ネットワーク調査タブへ渡します(実行はされません)"
+              title={t("globalOverview.detail.investigateBtnTitle")}
               onClick={() =>
                 onInvestigate(
                   buildInvestigationQuery({
@@ -435,7 +484,7 @@ function EventList({
                 )
               }
             >
-              調査する
+              {t("globalOverview.detail.investigateBtn")}
             </button>
           )}
         </li>
@@ -455,14 +504,15 @@ function EventsSection({
   siteName: string;
   onInvestigate?: (req: InvestigationRequest) => void;
 }) {
+  const t = useT();
   return (
     <Section
-      title="イベント"
+      title={t("globalOverview.detail.sections.events")}
       count={sec.items.length}
       note={sec.note}
       status={sec.status}
       error={sec.error}
-      emptyLabel="イベントなし"
+      emptyLabel={t("globalOverview.detail.events.empty")}
     >
       <EventList items={sec.items} siteName={siteName} platform={platform} onInvestigate={onInvestigate} />
     </Section>
@@ -479,6 +529,7 @@ export function SiteDetailPage({
   /** 「調査する」ボタン押下時(15番)。ネットワーク調査タブへの切り替えは呼び出し側が行う */
   onInvestigate?: (req: InvestigationRequest) => void;
 }) {
+  const t = useT();
   const [detail, setDetail] = useState<SiteDetailEnvelope | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -507,7 +558,7 @@ export function SiteDetailPage({
     setDetail(null);
     if (!site.siteId) {
       setLoading(false);
-      setError("このサイトには siteId が無いため詳細を取得できません(未割り当てデバイス等)。");
+      setError(t("globalOverview.detail.noSiteId"));
       return;
     }
     fetchSiteDetail(site.platform, site.siteId, site.siteName)
@@ -522,18 +573,18 @@ export function SiteDetailPage({
       .finally(() => {
         if (reqSeq.current === seq) setLoading(false);
       });
-  }, [site.platform, site.siteId, site.siteName]);
+  }, [site.platform, site.siteId, site.siteName, t]);
 
   return (
     <div className="go-root go-sd-root">
       <header className="go-sd-head">
-        <button className="go-sd-back" onClick={onBack} title="Global Overview の一覧に戻る (Esc)">
-          ← 一覧に戻る
+        <button className="go-sd-back" onClick={onBack} title={t("globalOverview.detail.backToListTitle")}>
+          {t("globalOverview.detail.backToList")}
         </button>
         <span
           className="go-dp-dot go-dp-dot-lg"
           style={{ background: STATE_COLOR[st], borderColor: PLATFORM_COLOR[site.platform] }}
-          title={STATE_LABEL[st]}
+          title={stateLabel(t, st)}
         />
         <div className="go-dp-head-main">
           <div className="go-sd-title">{site.siteName}</div>
@@ -541,27 +592,27 @@ export function SiteDetailPage({
             <LogoBadge target={site.platform} size={14} />
             <span>{PLATFORM_SHORT[site.platform]}</span>
             <span className="go-dp-sep">·</span>
-            <span>{STATE_LABEL[st]}</span>
+            <span>{stateLabel(t, st)}</span>
             <span className="go-dp-sep">·</span>
-            <span>デバイス {site.deviceUp}/{site.deviceTotal}</span>
+            <span>{t("globalOverview.detail.deviceCount", { up: site.deviceUp, total: site.deviceTotal })}</span>
             <span className="go-dp-sep">·</span>
-            <span>クライアント {site.clients}</span>
+            <span>{t("globalOverview.detail.clientCount", { n: site.clients })}</span>
             <span className="go-dp-sep">·</span>
-            <span title={ALERT_DESC[site.platform]}>
-              アラート {site.alerts}
-              <span className="go-alert-tag">{ALERT_LABEL[site.platform]}</span>
+            <span title={alertDesc(t, site.platform)}>
+              {t("globalOverview.detail.alertCount", { n: site.alerts })}
+              <span className="go-alert-tag">{alertLabel(t, site.platform)}</span>
             </span>
           </div>
         </div>
         {detail && !loading && (
           <div className="go-sd-fetched go-mono">
-            取得 {fmtTime(detail.fetchedAt)}
-            {detail.cached ? "(キャッシュ)" : ` · HTTP ${detail.requests} 本`}
+            {t("globalOverview.detail.fetched", { time: fmtTime(detail.fetchedAt) })}
+            {detail.cached ? t("globalOverview.detail.cached") : t("globalOverview.detail.httpCount", { n: detail.requests })}
           </div>
         )}
       </header>
 
-      {loading && <div className="go-dp-loading">詳細を取得中…</div>}
+      {loading && <div className="go-dp-loading">{t("globalOverview.detail.loading")}</div>}
       {error && !loading && <div className="go-dp-err go-dp-err-top">{error}</div>}
 
       {detail && !loading && (
