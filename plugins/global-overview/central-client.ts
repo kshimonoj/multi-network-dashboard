@@ -195,6 +195,20 @@ export class CentralClient {
   }
 
   /**
+   * 任意の monitoring エンドポイントを 1 本叩く(59: タグ付き Client/Device タブ用)。
+   *
+   * このクラスはトークンのキャッシュとレート制御(rate-limit.ts)を持っているので、
+   * 別プラグインが Central を直接叩くときも必ずここを通す(57 §2-4)。
+   * **読み取り(GET)専用**。設定変更の口はこのクラスに持たせない。
+   *
+   * @throws 404 等の非 2xx はメッセージに HTTP ステータスを含む Error になる。
+   *         「見つからない」を分岐したい呼び出し元は isNotFound() を使う。
+   */
+  async apiGet(path: string, params: Record<string, string | number> = {}): Promise<any> {
+    return this.get(path, params);
+  }
+
+  /**
    * ダッシュボード 1 画面ぶんのデータを bulk で取得する。
    * 出す HTTP リクエストは 3 本(+ トークンが切れていればトークン取得 1 本)。
    */

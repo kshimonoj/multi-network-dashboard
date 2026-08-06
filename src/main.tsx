@@ -25,6 +25,7 @@ import { CentralStreaming } from "../plugins/central-streaming/view/CentralStrea
 import { Reports } from "../plugins/reports/view/Reports";
 import { Knowledge } from "../plugins/knowledge/view/Knowledge";
 import { BestPractice } from "../plugins/best-practice/view/BestPractice";
+import { TaggedTargets } from "../plugins/tagged-targets/view/TaggedTargets";
 import { fetchPendingCount } from "../plugins/knowledge/view/api";
 import {
   TopbarModelContext,
@@ -46,7 +47,8 @@ type TabId =
   | "reports"
   | "knowledge"
   | "network-investigation"
-  | "best-practice";
+  | "best-practice"
+  | "tagged-targets";
 
 // タブの並びと、辞書のキー接頭辞だけをここに持つ(表示文言は src/i18n/*.json)。
 const TABS: Array<{ id: TabId; key: string }> = [
@@ -58,6 +60,7 @@ const TABS: Array<{ id: TabId; key: string }> = [
   { id: "knowledge", key: "tabs.knowledge" },
   { id: "network-investigation", key: "tabs.networkInvestigation" },
   { id: "best-practice", key: "tabs.bestPractice" },
+  { id: "tagged-targets", key: "tabs.taggedTargets" },
 ];
 
 /** 未承認のナレッジ候補を見失わないための、タブ名横のバッジ更新間隔(46 Task 4-5)。 */
@@ -333,6 +336,11 @@ function App() {
           {visited.has("best-practice") && (
             <div className="app-pane" hidden={tab !== "best-practice"}>
               <BestPractice active={tab === "best-practice"} />
+            </div>
+          )}
+          {visited.has("tagged-targets") && (
+            <div className="app-pane" hidden={tab !== "tagged-targets"}>
+              <TaggedTargets active={tab === "tagged-targets"} />
             </div>
           )}
         </div>

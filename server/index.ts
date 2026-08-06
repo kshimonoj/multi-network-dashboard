@@ -49,6 +49,9 @@ const { router: knowledgeRouter, initKnowledge } = await import("../plugins/know
 const { router: bestPracticeRouter, initBestPractice } = await import(
   "../plugins/best-practice/api.js"
 );
+const { router: taggedTargetsRouter, initTaggedTargets } = await import(
+  "../plugins/tagged-targets/api.js"
+);
 
 async function createServer(): Promise<void> {
   const app = express();
@@ -117,6 +120,15 @@ async function createServer(): Promise<void> {
   // 画面(タブ UI)は未実装。ここでは実行エンジンと API まで。
   app.use("/api/best-practice", bestPracticeRouter);
   await initBestPractice();
+
+  // ---- タグ付き Client / Device(59)----
+  // 「今気にしている特定の端末・機器」だけに絞った専用ビュー。タグはこのダッシュボード固有の
+  // ローカル機能で、Central / Mist の設定には一切書き込まない(data/tagged-targets/tags.json)。
+  // 取得は MCP を経由せず Global Overview の CentralClient / MistClient を共有した直接 REST
+  // (cache-proxy の 300 秒 TTL を挟まず即時性を優先。57 §2-4 / 58 §4 判断事項 #2)。
+  // Global Overview の初期化(getClients のトークン・レート制御)より後に載せる。
+  app.use("/api/tagged-targets", taggedTargetsRouter);
+  await initTaggedTargets();
 
   // ---- MCP サーバー定義の初期読み込み(07)----
   // 単一ファイル bind mount はコンテナ作成時の inode に固定され、ホスト側が

@@ -169,6 +169,20 @@ export class MistClient {
   }
 
   /**
+   * 任意の Mist エンドポイントを 1 本叩く(59: タグ付き Client/Device タブ用)。
+   * トークンとレート制御(rate-limit.ts)をこのクラスと共有するため、別プラグインからの
+   * 直接 REST も必ずここを通す(57 §2-4)。**読み取り(GET)専用**。
+   */
+  async apiGet(path: string, params: Record<string, string | number> = {}): Promise<any> {
+    return this.get(path, params);
+  }
+
+  /** org_id を外から使う(59)。MIST_ORG_ID があればそれ、無ければ /self から解決してキャッシュ。 */
+  async getOrgId(): Promise<string> {
+    return this.resolveOrgId();
+  }
+
+  /**
    * ダッシュボード 1 画面ぶんのデータを bulk で取得する。
    * 出す HTTP リクエストは 3 本(MIST_ORG_ID 未設定なら self 解決の 1 本が初回だけ増える)。
    */

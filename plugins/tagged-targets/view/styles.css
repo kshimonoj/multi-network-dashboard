@@ -1,0 +1,614 @@
+/* タグ付き Client / Device View(59)。
+ *
+ * .go-root(global-overview/view/styles.css)を土台にし、tt-* だけを追加する
+ * (best-practice / webhook-feed と同じ構成)。--central / --mist / --up / --down / --warn は
+ * .go-root が定義する CSS 変数をそのまま使う。
+ * サブビュー切替は .bp-view-toggle / .bp-view-btn(best-practice の CSS)を流用するので、
+ * TaggedTargets.tsx は global-overview の styles.css と本ファイルの両方を import している。
+ * bp-* が要るぶんだけここに写して、best-practice への依存は作らない。
+ */
+
+.tt-root {
+  gap: 12px;
+}
+
+/* ---- サブビュー切替(best-practice の bp-view-* と同じ見た目) ---- */
+
+.tt-root .bp-view-toggle {
+  display: flex;
+  gap: 4px;
+}
+.tt-root .bp-view-btn {
+  background: var(--panel-2);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 5px 12px;
+  font-family: var(--sans);
+  font-size: 12px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.tt-root .bp-view-btn:hover {
+  color: var(--text);
+  border-color: var(--accent);
+}
+.tt-root .bp-view-btn.active {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  color: var(--accent);
+  border-color: var(--accent);
+  font-weight: 600;
+}
+.tt-root .bp-btn-secondary {
+  background: var(--panel-2);
+  color: var(--text-muted);
+}
+.tt-root .bp-btn-secondary:hover:not(:disabled) {
+  color: var(--text);
+}
+.tt-count {
+  font-family: var(--mono);
+  font-size: 10px;
+  padding: 0 5px;
+  border-radius: 8px;
+  background: var(--badge-bg);
+  border: 1px solid var(--border);
+}
+
+/* ---- 操作行 ---- */
+
+.tt-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.tt-panel {
+  overflow: hidden;
+}
+.tt-panel-body {
+  padding: 12px 14px;
+}
+
+.tt-input {
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 5px 8px;
+  font-family: var(--sans);
+  font-size: 12px;
+  min-width: 200px;
+}
+.tt-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.tt-danger-btn {
+  background: transparent;
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 2px 8px;
+  font-family: var(--sans);
+  font-size: 10px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.tt-danger-btn:hover {
+  color: var(--down);
+  border-color: var(--down);
+}
+
+/* ---- タグ ---- */
+
+.tt-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  padding: 1px 7px;
+  border-radius: 10px;
+  border: 1px solid;
+  white-space: nowrap;
+  line-height: 1.6;
+}
+.tt-tag-x {
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  font-size: 11px;
+  padding: 0 0 0 2px;
+  opacity: 0.6;
+}
+.tt-tag-x:hover {
+  opacity: 1;
+}
+
+/* パレット。ダーク/ライトどちらでも読めるよう色そのものを文字色にし、
+   背景は同じ色の薄い被せにする(color-mix でテーマ変数と混ぜない = 彩度を保つ)。 */
+.tt-tag-slate {
+  color: #94a3b8;
+  border-color: rgba(148, 163, 184, 0.5);
+  background: rgba(148, 163, 184, 0.12);
+}
+.tt-tag-blue {
+  color: #60a5fa;
+  border-color: rgba(96, 165, 250, 0.5);
+  background: rgba(96, 165, 250, 0.12);
+}
+.tt-tag-green {
+  color: #22c55e;
+  border-color: rgba(34, 197, 94, 0.5);
+  background: rgba(34, 197, 94, 0.12);
+}
+.tt-tag-amber {
+  color: #f59e0b;
+  border-color: rgba(245, 158, 11, 0.5);
+  background: rgba(245, 158, 11, 0.12);
+}
+.tt-tag-red {
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.5);
+  background: rgba(239, 68, 68, 0.12);
+}
+.tt-tag-purple {
+  color: #a78bfa;
+  border-color: rgba(167, 139, 250, 0.5);
+  background: rgba(167, 139, 250, 0.12);
+}
+.tt-tag-cyan {
+  color: #22d3ee;
+  border-color: rgba(34, 211, 238, 0.5);
+  background: rgba(34, 211, 238, 0.12);
+}
+.tt-tag-pink {
+  color: #f472b6;
+  border-color: rgba(244, 114, 182, 0.5);
+  background: rgba(244, 114, 182, 0.12);
+}
+
+.tt-tag-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.tt-tag-add {
+  background: transparent;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  color: var(--text-dim);
+  font-size: 10px;
+  padding: 1px 7px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.tt-tag-add:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.tt-tag-picker-wrap {
+  position: relative;
+}
+.tt-tag-picker {
+  position: absolute;
+  z-index: 20;
+  top: 100%;
+  left: 0;
+  margin-top: 4px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px;
+  min-width: 180px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.tt-tag-picker-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.tt-tag-picker-close {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  font-size: 10px;
+  padding: 3px 8px;
+  cursor: pointer;
+}
+
+.tt-tag-manager {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.tt-tag-manager-add {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.tt-tag-manager-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.tt-tag-manager-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.tt-tag-rename {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.tt-color-picker {
+  display: inline-flex;
+  gap: 3px;
+}
+.tt-color-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  cursor: pointer;
+  padding: 0;
+  border-width: 1px;
+  border-style: solid;
+}
+.tt-color-dot.on {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* ---- 対象の追加 ---- */
+
+.tt-add-panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.tt-add-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.tt-add-input {
+  min-width: min(420px, 100%);
+}
+.tt-add-tags {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.tt-add-results {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+.tt-add-result {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 5px 8px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  font-size: 12px;
+}
+.tt-add-result-label {
+  font-weight: 600;
+}
+.tt-add-manual {
+  border-style: dashed;
+}
+
+/* ---- 一覧 ---- */
+
+/* 一覧は「タグを付けた対象だけ」で件数が小さく、しかも行を開くと縦に長い詳細が入る。
+   .go-table-scroll 既定の max-height(62vh)のままだと展開した詳細がその枠内で切れるので、
+   このタブでは枠の高さ制限を外してページ側にスクロールさせる。
+   見出しの position:sticky は .go-root(ページのスクロール枠)に貼り付いて機能する。 */
+.tt-root .go-table-scroll {
+  max-height: none;
+  overflow: visible;
+}
+
+.tt-list td {
+  vertical-align: top;
+  white-space: normal;
+}
+.tt-row-missing td {
+  opacity: 0.55;
+}
+.tt-row-toggle {
+  width: 24px;
+}
+.tt-expand {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 11px;
+  padding: 0;
+}
+.tt-expand:hover {
+  color: var(--accent);
+}
+/* 縦 flex の既定 align-items:stretch だと、バッジ(ランダム MAC)がセル幅いっぱいに
+   引き伸ばされて枠だけの帯に見える。中身の幅で止める。 */
+.tt-target-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+.tt-target-label {
+  font-family: var(--sans);
+  font-weight: 600;
+}
+.tt-quality-cell {
+  display: inline-flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+/* ---- プラットフォームバッジ ---- */
+
+.tt-plat {
+  font-family: var(--mono);
+  font-size: 9px;
+  padding: 1px 6px;
+  border-radius: 2px;
+  border: 1px solid var(--border);
+  white-space: nowrap;
+}
+.tt-plat-central {
+  color: var(--central);
+  border-color: color-mix(in srgb, var(--central) 50%, transparent);
+}
+.tt-plat-mist {
+  color: var(--mist);
+  border-color: color-mix(in srgb, var(--mist) 50%, transparent);
+}
+
+/* ---- ランダム MAC 警告(57 §3-5) ---- */
+
+.tt-random-badge {
+  font-family: var(--mono);
+  font-size: 9px;
+  padding: 1px 6px;
+  border-radius: 2px;
+  color: var(--warn);
+  border: 1px solid color-mix(in srgb, var(--warn) 50%, transparent);
+  background: color-mix(in srgb, var(--warn) 10%, transparent);
+  white-space: nowrap;
+  cursor: help;
+}
+
+/* ---- 詳細 ---- */
+
+.tt-detail-row > td {
+  background: var(--panel-2);
+  padding: 0;
+}
+.tt-detail-wrap {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.tt-detail-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.tt-detail {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--panel);
+  display: flex;
+  flex-direction: column;
+}
+/* プラットフォームの色を上端に置く(Global Overview の .go-plat と同じ意味付け) */
+.tt-detail-central {
+  border-top: 2px solid var(--central);
+}
+.tt-detail-mist {
+  border-top: 2px solid var(--mist);
+}
+.tt-detail-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-soft);
+}
+.tt-detail-title {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.tt-section {
+  border-bottom: 1px solid var(--border-soft);
+}
+.tt-section:last-child {
+  border-bottom: none;
+}
+.tt-section-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px 4px;
+}
+.tt-section-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.tt-section-body {
+  padding: 4px 14px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.tt-field {
+  display: grid;
+  grid-template-columns: minmax(140px, 200px) 1fr;
+  gap: 10px;
+  align-items: baseline;
+  font-size: 12px;
+  padding: 2px 0;
+}
+@media (max-width: 700px) {
+  .tt-field {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+}
+.tt-field-label {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+.tt-field-value {
+  word-break: break-word;
+}
+
+.tt-unsupported {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--text-dim);
+  padding: 2px 0;
+}
+.tt-unsupported-badge {
+  font-family: var(--mono);
+  font-size: 9px;
+  padding: 1px 6px;
+  border-radius: 2px;
+  border: 1px dashed var(--border);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.tt-unsupported-reason {
+  line-height: 1.5;
+}
+
+/* ---- 信号品質バッジ ---- */
+
+.tt-signal {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  font-family: var(--mono);
+  font-size: 11px;
+  padding: 1px 7px;
+  border-radius: 2px;
+  border: 1px solid;
+  white-space: nowrap;
+}
+.tt-signal-label {
+  font-size: 9px;
+  opacity: 0.85;
+}
+.tt-signal-good {
+  color: var(--up);
+  border-color: rgba(34, 197, 94, 0.45);
+  background: rgba(34, 197, 94, 0.1);
+}
+.tt-signal-fair {
+  color: var(--warn);
+  border-color: rgba(242, 166, 90, 0.45);
+  background: rgba(242, 166, 90, 0.1);
+}
+.tt-signal-poor {
+  color: var(--down);
+  border-color: rgba(239, 68, 68, 0.5);
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.tt-chips {
+  display: inline-flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.tt-chip {
+  font-family: var(--mono);
+  font-size: 9px;
+  padding: 1px 6px;
+  border-radius: 2px;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  background: var(--badge-bg);
+  white-space: nowrap;
+}
+
+/* ---- 詳細内のテーブル ---- */
+
+.tt-table {
+  font-size: 11px;
+}
+.tt-table th {
+  font-size: 9px;
+}
+.tt-table td {
+  padding: 5px 8px;
+}
+.tt-table tbody tr {
+  cursor: default;
+}
+.tt-event-text {
+  white-space: normal;
+  font-family: var(--sans);
+  max-width: 520px;
+}
+
+/* アプリ別トラフィックの割合バー。数値の読み取りを邪魔しない薄さにする。 */
+.tt-app-bar {
+  display: block;
+  height: 2px;
+  margin-top: 3px;
+  background: var(--accent);
+  opacity: 0.5;
+  border-radius: 1px;
+}
+.tt-app-unknown td {
+  color: var(--text-dim);
+}
+.tt-app-unknown .tt-app-bar {
+  background: var(--text-dim);
+}
