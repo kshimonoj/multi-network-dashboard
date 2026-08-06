@@ -12,6 +12,7 @@
 
 import type { Platform, McpStreamEvent, McpHealth } from "./mcp.js";
 import { ALL_PLATFORMS, runClaudeWithMcp, parseMcpToolName } from "./mcp.js";
+import { classifyToolAiSource, type ToolAiSource } from "./ai-source.js";
 import { resolvePlatformForSite, type SitePlatformEntry } from "./site-map.js";
 
 // 回答末尾に付く「クリック可能な追い質問」1件。モデルが ```suggested-actions ブロックで
@@ -52,6 +53,9 @@ export interface McpCallEvent {
   status: "calling" | "done" | "error";
   detail?: string; // 引数の要約(例: site=Home)
   count?: number | null; // 結果件数(推定できたとき)
+  // 出所(56)。ベンダーのネイティブ AI 機能(Marvis Actions 等)から所見を取ってきた
+  // 呼び出しにだけ載る。生データ取得の呼び出しには載らない(= undefined)。
+  aiSource?: ToolAiSource;
   // ---- 失敗時の詳細(08 Task 1)。status="error" のときだけ載る ----
   // 「想定内の制限(ライセンス/権限)」なのか「呼び出し方の誤り」なのかを画面で判断できるように、
   // claude CLI の tool_result(is_error:true)の本文をそのまま持ち回る。
@@ -431,7 +435,16 @@ export async function runInsightAgent(
   //    「呼び出し(calling)→ 完了(done/error)」の McpCallEvent、および `[判断]` 宣言に変換して流す。
   const pending = new Map<
     string,
-    { server: string; platform: Platform | null; tool: string; detail?: string; input?: string }
+    {
+      server: string;
+      platform: Platform | null;
+      tool: string;
+      detail?: string;
+      input?: string;
+      // 出所分類(56)は引数を見て決まるので、tool_use の時点で判定して done/error 側へも持ち回る
+      // (tool_result 側には引数が載らないため)。
+      aiSource?: ToolAiSource;
+    }
   >();
   const judged = new Set<Platform>(); // 同じ platform の判断を二重に流さない
   const wantEvents = opts?.onMcpCall || opts?.onPlatformJudgment;
@@ -454,7 +467,16 @@ export async function runInsightAgent(
           // 失敗したときに初めて出す全文引数も、この時点で作って持っておく
           // (tool_result 側には input が載らないため)。
           const input = stringifyInput(e.input);
-          pending.set(e.id, { server: parsed.server, platform: parsed.platform, tool: parsed.tool, detail, input });
+          // 出所(56)。ネイティブ AI 由来のときだけ値が付く(生データ取得なら null)。
+          const aiSource = classifyToolAiSource(parsed.tool, e.input) ?? undefined;
+          pending.set(e.id, {
+            server: parsed.server,
+            platform: parsed.platform,
+            tool: parsed.tool,
+            detail,
+            input,
+            aiSource,
+          });
           opts.onMcpCall({
             id: e.id,
             server: parsed.server,
@@ -462,6 +484,7 @@ export async function runInsightAgent(
             tool: parsed.tool,
             status: "calling",
             detail,
+            ...(aiSource ? { aiSource } : {}),
           });
         } else {
           const p = pending.get(e.toolUseId);
@@ -475,6 +498,7 @@ export async function runInsightAgent(
             status: e.isError ? "error" : "done",
             detail: p.detail,
             count: estimateCount(e.text),
+            ...(p.aiSource ? { aiSource: p.aiSource } : {}),
             // 失敗時のみ詳細を載せる(成功時のレスポンス本文は大きいので流さない)。
             ...(e.isError
               ? {

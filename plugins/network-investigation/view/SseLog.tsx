@@ -148,6 +148,14 @@ export function SseLog({
         <span>
           <LogoBadge target="central" size={14} skipped /> {t("networkInvestigation.sse.legendSkipped")}
         </span>
+        {/* ネイティブ AI 由来の取得があったときだけ凡例を足す(56)。
+            生データ取得だけの実行では凡例も従来どおり 3 項目のまま。 */}
+        {calls.some((c) => c.aiSource) && (
+          <span>
+            <span className="ni-ai-badge">{t("networkInvestigation.aiSource.legendBadge")}</span>{" "}
+            {t("networkInvestigation.aiSource.legend")}
+          </span>
+        )}
       </div>
     </div>
   );

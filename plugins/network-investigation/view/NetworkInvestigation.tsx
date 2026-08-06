@@ -267,6 +267,8 @@ export function NetworkInvestigation({
             status: ev.status,
             detail: ev.detail,
             count: ev.count,
+            // 出所(56)。ネイティブ AI 由来の呼び出しにだけバッジを出すための材料。
+            aiSource: ev.aiSource,
             // 失敗詳細(08 Task 1)。実行中ログの行をクリックしたときに展開する材料。
             error: ev.error,
             errorStatus: ev.errorStatus,

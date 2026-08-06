@@ -118,6 +118,13 @@ export function Timeline({
                     {s.mcpServers.map((srv) => (
                       <LogoBadge key={srv} target={srv} size={16} title={srv} />
                     ))}
+                    {/* ベンダーのネイティブ AI 機能(Marvis 等)の所見を取りに行った実行(56)。
+                        一覧のまま「回答の一部がベンダー AI 由来かどうか」を見分けられるようにする。 */}
+                    {s.hasNativeAiCall && (
+                      <span className="ni-tag ai-source" title={t("networkInvestigation.aiSource.timelineTagTitle")}>
+                        {t("networkInvestigation.aiSource.timelineTag")}
+                      </span>
+                    )}
                     {s.first.site && <span className="ni-mono ni-dim">site={s.first.site}</span>}
                     {s.hasError && <span className="ni-tag error">{t("networkInvestigation.turn.failTag")}</span>}
                     {/* MCP サーバーに接続できていなかった実行を一覧からも気付けるようにする(09)。 */}

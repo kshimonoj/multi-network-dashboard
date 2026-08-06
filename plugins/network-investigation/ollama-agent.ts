@@ -10,6 +10,7 @@
 import { randomUUID } from "node:crypto";
 import { PLATFORM_TO_MCP_SERVER, parseMcpToolName, type Platform } from "./mcp.js";
 import { connectMcpTools, type OllamaToolDef } from "./ollama-mcp-client.js";
+import { classifyToolAiSource } from "./ai-source.js";
 import {
   buildSystemPrompt,
   detectPlatformJudgments,
@@ -223,6 +224,8 @@ export async function runOllamaAgent(
         const parsed = parseMcpToolName(fullName);
         const detail = summarizeInput(args);
         const inputJson = stringifyInput(args);
+        // 出所(56)。claude CLI 版(insight-agent.ts)と同じ分類関数を通す。
+        const aiSource = parsed ? classifyToolAiSource(parsed.tool, args) : null;
 
         if (parsed) {
           callCounts[parsed.server] = (callCounts[parsed.server] ?? 0) + 1;
@@ -233,6 +236,7 @@ export async function runOllamaAgent(
             tool: parsed.tool,
             status: "calling",
             detail,
+            ...(aiSource ? { aiSource } : {}),
           });
         }
 
@@ -247,6 +251,7 @@ export async function runOllamaAgent(
             status: outcome.isError ? "error" : "done",
             detail,
             count: estimateCount(outcome.text),
+            ...(aiSource ? { aiSource } : {}),
             ...(outcome.isError
               ? {
                   error: outcome.text ? truncate(outcome.text, ERROR_TEXT_MAX) : "エラー本文が空でした",

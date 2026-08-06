@@ -1,7 +1,8 @@
 import { useT } from "../../../src/i18n";
+import { AiSourceBadge } from "./AiSource";
 import { LogoBadge } from "./LogoBadge";
 import { toolLabel } from "./toolLabels";
-import type { ToolCallFailure } from "./types";
+import type { ToolAiSource, ToolCallFailure } from "./types";
 
 // MCP ツール呼び出し 1 行の共有部品(08 Task 1)。
 //
@@ -21,6 +22,8 @@ export interface ToolCallRowData extends ToolCallFailure {
   tool: string;
   status: "calling" | "done" | "error";
   detail?: string;
+  /** 出所(56)。ネイティブ AI 由来の行にだけバッジを足す(無ければ従来どおりの行)。 */
+  aiSource?: ToolAiSource;
 }
 
 function hasFailureDetail(c: ToolCallRowData): boolean {
@@ -52,6 +55,8 @@ export function ToolCallRow({
         {showRaw ? <span className="ni-dim ni-tool-raw"> {call.tool}</span> : null}
         {call.detail ? <span className="ni-dim">({call.detail})</span> : null}
       </span>
+      {/* ベンダーのネイティブ AI 機能から所見を取得した行(56)。生データ取得の行には出ない。 */}
+      {call.aiSource ? <AiSourceBadge source={call.aiSource} /> : null}
       <span className={`ni-status ${call.status}`}>
         {showDot && <span className="ni-dot" />}
         {statusText}

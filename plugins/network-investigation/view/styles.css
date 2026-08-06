@@ -1357,3 +1357,34 @@
   padding: 1px 7px;
   margin-right: 6px;
 }
+
+/* ---- 56: 出所(ベンダーのネイティブ AI 機能由来)の表示 ----
+   53 番の「AI 所見」バッジ(plugins/best-practice の bp-badge-llm / bp-note-llm)と同じ
+   表現に揃える: アクセント色の淡い塗り + 細い pill、注記は左罫線 + 控えめな文字色。
+   生データ取得だけの実行では、これらの要素自体が描画されない(従来どおりの表示)。 */
+.ni-ai-badge {
+  flex: 0 0 auto;
+  font-family: var(--mono);
+  font-size: 10px;
+  line-height: 1.5;
+  padding: 1px 7px;
+  border-radius: 9px;
+  white-space: nowrap;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  border: 1px solid currentColor;
+}
+
+.ni-ai-note {
+  margin: 8px 0;
+  padding-left: 8px;
+  border-left: 2px solid var(--accent);
+  font-size: 11.5px;
+  line-height: 1.7;
+  color: var(--text-muted);
+}
+
+.ni-tag.ai-source {
+  color: var(--accent);
+  border-color: var(--accent);
+}

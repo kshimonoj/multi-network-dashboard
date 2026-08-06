@@ -36,6 +36,7 @@ import {
   type SuggestedAction,
 } from "./insight-agent.js";
 import { runOllamaAgent } from "./ollama-agent.js";
+import type { ToolAiSource } from "./ai-source.js";
 import {
   ALL_PLATFORMS,
   PLATFORM_TO_MCP_SERVER,
@@ -230,6 +231,9 @@ export interface HistoryToolCall {
   status: "calling" | "done" | "error";
   detail?: string;
   count?: number | null;
+  // 出所(56)。ベンダーのネイティブ AI 機能(Marvis Actions 等)の所見を取得した呼び出しにだけ載る。
+  // 生データ取得の呼び出し・56 以前の履歴には無い(= 従来どおりの表示になる)。
+  aiSource?: ToolAiSource;
   // 失敗時の詳細(08 Task 1)。履歴からも失敗理由を辿れるように残す。古い履歴には無い。
   error?: string;
   errorStatus?: number | null;
@@ -507,6 +511,8 @@ async function runQuery(
         status: e.status,
         detail: e.detail,
         count: e.count,
+        // 出所(56)。ネイティブ AI 由来の呼び出しにだけ載る(生データ取得なら undefined のまま)。
+        aiSource: e.aiSource,
         // 失敗時の詳細(08 Task 1)。calling → error と上書きされるので最終状態だけが残る。
         error: e.error,
         errorStatus: e.errorStatus,

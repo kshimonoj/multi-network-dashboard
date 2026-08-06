@@ -9,6 +9,7 @@
 // (サーバー側 api.ts の sessionKey() と同じ規則)。
 
 import type { TFunc } from "../../../src/i18n";
+import { countNativeAiCalls } from "../ai-source";
 import type {
   HistoryRecord,
   HistoryToolCall,
@@ -141,6 +142,8 @@ export function turnFromRun(
       status: c.status,
       detail: c.detail,
       count: c.count,
+      // 出所(56)。実行直後のターン表示でも「Marvis AI 由来」バッジが出るように引き継ぐ。
+      aiSource: c.aiSource,
       // 失敗詳細(08 Task 1)。実行直後のターン表示でも展開できるように引き継ぐ。
       error: c.error,
       errorStatus: c.errorStatus,
@@ -174,6 +177,12 @@ export interface SessionGroup {
   mcpServers: string[]; // セッション全体で使った MCP サーバー(重複除去)
   /** セッション内で最も強い MCP 接続警告(09)。警告が無ければ "ok"。 */
   mcpHealthLevel: "ok" | "warn" | "unreachable";
+  /**
+   * セッション内にベンダーのネイティブ AI 機能(Marvis Actions 等)由来の呼び出しがあるか(56)。
+   * タイムラインのカードにタグを出して、一覧のまま出所を見分けられるようにする。
+   * 生データ取得だけのセッション・56 以前の履歴は false = 従来どおりの表示。
+   */
+  hasNativeAiCall: boolean;
 }
 
 // 履歴(新しい順)をセッションごとにまとめ、最終実行の新しい順に並べて返す。
@@ -198,6 +207,7 @@ export function groupSessions(history: HistoryRecord[]): SessionGroup[] {
       latestTs: sorted[sorted.length - 1].ts,
       hasError: sorted.some((r) => r.isError),
       mcpServers: [...servers],
+      hasNativeAiCall: sorted.some((r) => countNativeAiCalls(r.calls ?? []) > 0),
       mcpHealthLevel: sorted.some((r) => r.mcpHealth?.level === "unreachable")
         ? "unreachable"
         : sorted.some((r) => r.mcpHealth?.level === "warn")

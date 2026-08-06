@@ -1,4 +1,6 @@
 import { useT, type TFunc } from "../../../src/i18n";
+import { countNativeAiCalls } from "../ai-source";
+import { AiSourceNote } from "./AiSource";
 import { LogoBadge } from "./LogoBadge";
 import { Markdown } from "./Markdown";
 import { McpHealthNotice, mcpHealthTagLabel } from "./McpHealthNotice";
@@ -51,6 +53,8 @@ export function Turn({
   // MCP 接続の警告(09)。回答は返っているので isError とは独立に扱う。
   const healthLevel = turn.mcpHealth && turn.mcpHealth.level !== "ok" ? turn.mcpHealth.level : null;
   const healthTag = healthLevel ? mcpHealthTagLabel(t, healthLevel) : null;
+  // 出所(56)。ネイティブ AI 由来の呼び出し件数。0 なら見出しも注記も従来どおり出さない。
+  const nativeAiCalls = countNativeAiCalls(turn.calls);
 
   return (
     <article
@@ -158,6 +162,8 @@ export function Turn({
             t("networkInvestigation.turn.callsPlatforms", {
               platforms: turn.platformsUsed.map(platformName).join(" / "),
             })}
+          {/* 畳んだ状態でも「ネイティブ AI 由来の取得が含まれるか」が分かるようにする(56)。 */}
+          {nativeAiCalls > 0 && t("networkInvestigation.aiSource.callsSummary", { n: nativeAiCalls })}
         </summary>
         {turn.calls.length === 0 ? (
           <div className="ni-dim sm">{t("networkInvestigation.turn.callsEmpty")}</div>
@@ -173,6 +179,10 @@ export function Turn({
 
       {/* MCP サーバーに接続できていなかった警告(09)。回答の直前に出す。 */}
       <McpHealthNotice health={turn.mcpHealth} />
+
+      {/* 出所の注記(56)。ネイティブ AI 由来の取得があった実行にだけ出す。
+          「バッジの付いた行 = ベンダーの AI が生成した所見」「回答本文 = Insight Agent の分析」。 */}
+      <AiSourceNote calls={turn.calls} />
 
       {turn.isError ? (
         <div className="ni-answer error">

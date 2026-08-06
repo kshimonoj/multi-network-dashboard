@@ -1,6 +1,11 @@
 // Network Investigation View の型。サーバー(plugins/network-investigation/api.ts)が
 // SSE / REST で返す形と一致させる。
 
+// 出所分類(56)はサーバー・View 共通の単一ソース(../ai-source.ts)から型ごと借りる。
+// 分類ロジックは純関数で Node 依存が無いので、View からもそのまま import できる。
+export type { NativeAiFeature, ToolAiSource } from "../ai-source";
+import type { ToolAiSource } from "../ai-source";
+
 export type Platform = "central" | "mist";
 
 // クエリ実行・定期実行でUIから選べるモデル。常に明示的な値(opus/sonnet)を選ばせ、
@@ -65,6 +70,11 @@ export interface HistoryToolCall extends ToolCallFailure {
   status: "calling" | "done" | "error";
   detail?: string;
   count?: number | null;
+  /**
+   * 出所(56)。ベンダーのネイティブ AI 機能(Marvis Actions 等)が生成した所見を
+   * 取得した呼び出しにだけ載る。生データ取得の呼び出し・56 以前の履歴には無い。
+   */
+  aiSource?: ToolAiSource;
 }
 
 // ---- MCP サーバーの接続健全性(09)----
@@ -160,6 +170,8 @@ export interface McpCall extends ToolCallFailure {
   status: "calling" | "done" | "error";
   detail?: string;
   count?: number | null;
+  /** 出所(56)。ネイティブ AI 由来の呼び出しにだけ載る。 */
+  aiSource?: ToolAiSource;
 }
 
 export type NIEvent =
