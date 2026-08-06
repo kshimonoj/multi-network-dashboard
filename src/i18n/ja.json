@@ -42,6 +42,10 @@
     "bestPractice": {
       "label": "ベストプラクティス",
       "sub": "セキュリティ / RF 推奨設定チェック"
+    },
+    "taggedTargets": {
+      "label": "タグ付き対象",
+      "sub": "気になる Client / Device だけを追跡"
     }
   },
   "theme": {
@@ -691,6 +695,20 @@
       "noStatusCode": "ステータスコードなし",
       "serverError": "MCP サーバー({server})が返したエラー",
       "args": "呼び出し引数"
+    },
+    "aiSource": {
+      "feature": {
+        "marvisActions": "Marvis Actions",
+        "marvisTroubleshoot": "Marvis トラブルシュート"
+      },
+      "badge": "{feature} 由来",
+      "badgeTitle": "この行で取得した情報は、Mist のネイティブ AI 機能({feature})が生成した所見です。Insight Agent 自身の分析ではありません。",
+      "legendBadge": "AI 由来",
+      "legend": "ネイティブ AI 機能の所見",
+      "callsSummary": " / うち {n} 件はネイティブ AI 由来",
+      "note": "「{features}」のバッジが付いた行で取得した内容は、Mist のネイティブ AI 機能が生成した所見であり、Insight Agent 自身の分析ではありません。以下の回答本文は、Insight Agent(モデル)がその所見と取得した生データをもとに書いた分析です。",
+      "timelineTag": "ネイティブ AI 由来",
+      "timelineTagTitle": "ベンダーのネイティブ AI 機能(Marvis 等)が生成した所見を取得した実行です"
     },
     "turn": {
       "single": "調査",
@@ -1356,35 +1374,122 @@
       "error": "ルール一覧の取得に失敗しました: "
     },
     "rules": {
-      "SEC-01": { "title": "レガシー暗号方式の排除", "desc": "SSID の暗号方式に WEP・TKIP・オープン認証(暗号化なし)が使われていないかを確認します。" },
-      "SEC-02": { "title": "オープン SSID への OWE 適用", "desc": "オープン認証(暗号化なし)の SSID に OWE(Enhanced Open)を適用し、通信を暗号化しているかを確認します。" },
-      "SEC-03": { "title": "WPA3 への移行状況", "desc": "SSID が WPA2 に留まっていないか、WPA3(または OWE)へ移行済みかを確認します。" },
-      "SEC-04": { "title": "WPA2 SSID の PMF 設定", "desc": "WPA2 系 SSID で PMF(Protected Management Frames)が mfp-required または mfp-capable により有効化されているかを確認します。" },
-      "SEC-05": { "title": "WPA3 Transition Mode の常用回避", "desc": "WPA3 の Transition Mode(WPA2 との共存モード)が常時有効なままになっていないかを確認します。有効な間は WPA2 相当の接続も許容されます。" },
-      "SEC-06": { "title": "6GHz 帯での WPA3 必須化", "desc": "6GHz 帯を使用する SSID が、規格上必須の WPA3(または OWE)を満たしているかを確認します。" },
-      "SEC-07": { "title": "無線 IDS 検知(インフラ)の有効化", "desc": "インフラストラクチャに対する WIDS 検知レベルが off になっていないかを確認します。" },
-      "SEC-08": { "title": "無線 IDS 検知(クライアント)の有効化", "desc": "クライアントに対する WIDS 検知レベルが off になっていないかを確認します。" },
-      "SEC-09": { "title": "無線 IDS 検知レベルの過剰設定", "desc": "検知レベルが medium/high など高い設定になっていないか(誤検知増加のおそれ)を確認します。" },
-      "SEC-10": { "title": "無線封じ込め(Containment)の有効化状況", "desc": "無線 Containment(封じ込め)が有効になっていないかを確認します。有効化は電波法・近隣ネットワークへの影響に関わるため、法務・セキュリティ部門の確認を推奨します。" },
-      "SEC-11": { "title": "高リスクな保護ポリシーの有効化状況", "desc": "rogue-containment 等、高リスクな WIDS/WIPS 保護ポリシーが有効になっていないかを確認します。有効化には法務・セキュリティ部門の確認を推奨します。" },
-      "SEC-12": { "title": "認証・鍵配布構成の総合所見(AI)", "desc": "認証サーバの冗長性、SSID の用途と認証方式の整合、MPSK の使いどころについて、診断時のスナップショットのみを根拠に AI が所見を述べます。" },
-      "SEC-13": { "title": "SSID 構成のセキュリティ姿勢(AI)", "desc": "機械判定で挙がった問題の優先順位と、機械判定に現れない構成上の懸念について、診断時のスナップショットのみを根拠に AI が所見を述べます。" },
-      "RF-01": { "title": "2.4GHz のチャネル幅", "desc": "2.4GHz 無線のチャネル幅が 20MHz を超えていないかを確認します。" },
-      "RF-02": { "title": "5GHz のチャネル幅", "desc": "5GHz 無線のチャネル幅が 80MHz を超えていないかを確認します。" },
-      "RF-03": { "title": "帯域内のチャネル幅の統一", "desc": "同一サイト・同一帯域の無線間でチャネル幅が揃っているかを確認します。" },
-      "RF-04": { "title": "2.4GHz の非重複チャネルへの限定", "desc": "2.4GHz の許可チャネルが非重複チャネル(1/6/11)に限定されているかを確認します。" },
-      "RF-05": { "title": "同一無線の Tx 電力レンジ", "desc": "同一無線内の最大/最小 Tx 電力の差が大きくなりすぎていないか(ARM/RRM が収束しにくくなっていないか)を確認します。" },
-      "RF-06": { "title": "2.4GHz と 5GHz の Tx 電力差", "desc": "5GHz の最小 Tx 電力が 2.4GHz より十分高く(目安 6dB 以上)設定されているかを確認します。" },
-      "RF-07": { "title": "5GHz と 6GHz の Tx 電力差", "desc": "6GHz の最小 Tx 電力が、5GHz と比べて適正な範囲(目安 0〜+3dB)に収まっているかを確認します。" },
-      "RF-08": { "title": "基本レート(Basic Rate)の下限", "desc": "基本レートに低速(12Mbps 未満)なレートが含まれていないかを確認します。" },
-      "RF-09": { "title": "802.11k(Neighbor Report)の有効化", "desc": "802.11k が有効になっているかを確認します。" },
-      "RF-10": { "title": "OKC / PMK キャッシュの有効化", "desc": "OKC(Opportunistic Key Caching)が有効になっているかを確認します。" },
-      "RF-11": { "title": "ブロードキャスト/マルチキャストフィルタの有効化", "desc": "broadcast-filter と IPv6 RA フィルタが有効になっているかを確認します。" },
-      "RF-12": { "title": "Wi-Fi 6/7 機能の無効化状況", "desc": "HE(Wi-Fi 6)/EHT(Wi-Fi 7)の各機能が意図せず無効化されていないかを確認します。" },
-      "RF-13": { "title": "ARM(Adaptive Radio Management)の有効化", "desc": "ARM の scanning / client-match が有効になっているか(AOS8 のみ対象)を確認します。" },
-      "RF-14": { "title": "AP モデル系列の混在", "desc": "サイト内で AP のモデル系列(例: 5xx 系と 6xx 系)が混在していないかを確認します。" },
-      "RF-15": { "title": "高密度環境における 2.4GHz の扱い(AI)", "desc": "2.4GHz を使う SSID・AP 台数から、この環境で 2.4GHz をクライアント用途に開けておくべきかについて、環境依存であることを明記した上で AI が所見を述べます。" },
-      "RF-16": { "title": "静的チャネル/電力割当と RRM 運用の妥当性(AI)", "desc": "AirMatch / ARM / Mist RRM に任せられているか、静的なチャネル・電力割当が残っていないかについて AI が所見を述べます。" }
+      "SEC-01": {
+        "title": "レガシー暗号方式の排除",
+        "desc": "SSID の暗号方式に WEP・TKIP・オープン認証(暗号化なし)が使われていないかを確認します。"
+      },
+      "SEC-02": {
+        "title": "オープン SSID への OWE 適用",
+        "desc": "オープン認証(暗号化なし)の SSID に OWE(Enhanced Open)を適用し、通信を暗号化しているかを確認します。"
+      },
+      "SEC-03": {
+        "title": "WPA3 への移行状況",
+        "desc": "SSID が WPA2 に留まっていないか、WPA3(または OWE)へ移行済みかを確認します。"
+      },
+      "SEC-04": {
+        "title": "WPA2 SSID の PMF 設定",
+        "desc": "WPA2 系 SSID で PMF(Protected Management Frames)が mfp-required または mfp-capable により有効化されているかを確認します。"
+      },
+      "SEC-05": {
+        "title": "WPA3 Transition Mode の常用回避",
+        "desc": "WPA3 の Transition Mode(WPA2 との共存モード)が常時有効なままになっていないかを確認します。有効な間は WPA2 相当の接続も許容されます。"
+      },
+      "SEC-06": {
+        "title": "6GHz 帯での WPA3 必須化",
+        "desc": "6GHz 帯を使用する SSID が、規格上必須の WPA3(または OWE)を満たしているかを確認します。"
+      },
+      "SEC-07": {
+        "title": "無線 IDS 検知(インフラ)の有効化",
+        "desc": "インフラストラクチャに対する WIDS 検知レベルが off になっていないかを確認します。"
+      },
+      "SEC-08": {
+        "title": "無線 IDS 検知(クライアント)の有効化",
+        "desc": "クライアントに対する WIDS 検知レベルが off になっていないかを確認します。"
+      },
+      "SEC-09": {
+        "title": "無線 IDS 検知レベルの過剰設定",
+        "desc": "検知レベルが medium/high など高い設定になっていないか(誤検知増加のおそれ)を確認します。"
+      },
+      "SEC-10": {
+        "title": "無線封じ込め(Containment)の有効化状況",
+        "desc": "無線 Containment(封じ込め)が有効になっていないかを確認します。有効化は電波法・近隣ネットワークへの影響に関わるため、法務・セキュリティ部門の確認を推奨します。"
+      },
+      "SEC-11": {
+        "title": "高リスクな保護ポリシーの有効化状況",
+        "desc": "rogue-containment 等、高リスクな WIDS/WIPS 保護ポリシーが有効になっていないかを確認します。有効化には法務・セキュリティ部門の確認を推奨します。"
+      },
+      "SEC-12": {
+        "title": "認証・鍵配布構成の総合所見(AI)",
+        "desc": "認証サーバの冗長性、SSID の用途と認証方式の整合、MPSK の使いどころについて、診断時のスナップショットのみを根拠に AI が所見を述べます。"
+      },
+      "SEC-13": {
+        "title": "SSID 構成のセキュリティ姿勢(AI)",
+        "desc": "機械判定で挙がった問題の優先順位と、機械判定に現れない構成上の懸念について、診断時のスナップショットのみを根拠に AI が所見を述べます。"
+      },
+      "RF-01": {
+        "title": "2.4GHz のチャネル幅",
+        "desc": "2.4GHz 無線のチャネル幅が 20MHz を超えていないかを確認します。"
+      },
+      "RF-02": {
+        "title": "5GHz のチャネル幅",
+        "desc": "5GHz 無線のチャネル幅が 80MHz を超えていないかを確認します。"
+      },
+      "RF-03": {
+        "title": "帯域内のチャネル幅の統一",
+        "desc": "同一サイト・同一帯域の無線間でチャネル幅が揃っているかを確認します。"
+      },
+      "RF-04": {
+        "title": "2.4GHz の非重複チャネルへの限定",
+        "desc": "2.4GHz の許可チャネルが非重複チャネル(1/6/11)に限定されているかを確認します。"
+      },
+      "RF-05": {
+        "title": "同一無線の Tx 電力レンジ",
+        "desc": "同一無線内の最大/最小 Tx 電力の差が大きくなりすぎていないか(ARM/RRM が収束しにくくなっていないか)を確認します。"
+      },
+      "RF-06": {
+        "title": "2.4GHz と 5GHz の Tx 電力差",
+        "desc": "5GHz の最小 Tx 電力が 2.4GHz より十分高く(目安 6dB 以上)設定されているかを確認します。"
+      },
+      "RF-07": {
+        "title": "5GHz と 6GHz の Tx 電力差",
+        "desc": "6GHz の最小 Tx 電力が、5GHz と比べて適正な範囲(目安 0〜+3dB)に収まっているかを確認します。"
+      },
+      "RF-08": {
+        "title": "基本レート(Basic Rate)の下限",
+        "desc": "基本レートに低速(12Mbps 未満)なレートが含まれていないかを確認します。"
+      },
+      "RF-09": {
+        "title": "802.11k(Neighbor Report)の有効化",
+        "desc": "802.11k が有効になっているかを確認します。"
+      },
+      "RF-10": {
+        "title": "OKC / PMK キャッシュの有効化",
+        "desc": "OKC(Opportunistic Key Caching)が有効になっているかを確認します。"
+      },
+      "RF-11": {
+        "title": "ブロードキャスト/マルチキャストフィルタの有効化",
+        "desc": "broadcast-filter と IPv6 RA フィルタが有効になっているかを確認します。"
+      },
+      "RF-12": {
+        "title": "Wi-Fi 6/7 機能の無効化状況",
+        "desc": "HE(Wi-Fi 6)/EHT(Wi-Fi 7)の各機能が意図せず無効化されていないかを確認します。"
+      },
+      "RF-13": {
+        "title": "ARM(Adaptive Radio Management)の有効化",
+        "desc": "ARM の scanning / client-match が有効になっているか(AOS8 のみ対象)を確認します。"
+      },
+      "RF-14": {
+        "title": "AP モデル系列の混在",
+        "desc": "サイト内で AP のモデル系列(例: 5xx 系と 6xx 系)が混在していないかを確認します。"
+      },
+      "RF-15": {
+        "title": "高密度環境における 2.4GHz の扱い(AI)",
+        "desc": "2.4GHz を使う SSID・AP 台数から、この環境で 2.4GHz をクライアント用途に開けておくべきかについて、環境依存であることを明記した上で AI が所見を述べます。"
+      },
+      "RF-16": {
+        "title": "静的チャネル/電力割当と RRM 運用の妥当性(AI)",
+        "desc": "AirMatch / ARM / Mist RRM に任せられているか、静的なチャネル・電力割当が残っていないかについて AI が所見を述べます。"
+      }
     },
     "findings": {
       "SEC-01": {
@@ -1568,6 +1673,318 @@
         "llmFailed": "AI 所見の生成に失敗しました。",
         "llmEmpty": "AI からの所見が空でした。"
       }
+    }
+  },
+  "taggedTargets": {
+    "title": "タグ付き Client / Device",
+    "headerSub": "タグを付けた対象だけを Central / Mist 横断で追跡する(タグはこのダッシュボード内だけの情報)",
+    "view": {
+      "client": "Client",
+      "device": "Device"
+    },
+    "refresh": "更新",
+    "loading": "読み込み中…",
+    "fetchedAt": "取得",
+    "cached": "(キャッシュ {age})",
+    "noCredentials": "Central / Mist とも認証情報が未設定です。.env の CENTRAL_* / MIST_* を設定してください。",
+    "empty": {
+      "client": "タグを付けた Client がまだありません。「Client を追加」から登録してください。",
+      "device": "タグを付けた Device がまだありません。「Device を追加」から登録してください。"
+    },
+    "platform": {
+      "central": "Central",
+      "mist": "Mist"
+    },
+    "connectionType": {
+      "wireless": "無線",
+      "wired": "有線"
+    },
+    "deviceKind": {
+      "ap": "AP",
+      "switch": "スイッチ",
+      "gateway": "ゲートウェイ",
+      "other": "その他"
+    },
+    "bool": {
+      "yes": "はい",
+      "no": "いいえ"
+    },
+    "portState": {
+      "up": "Up",
+      "down": "Down"
+    },
+    "duplex": {
+      "full": "Full",
+      "half": "Half"
+    },
+    "signal": {
+      "good": "良好",
+      "fair": "可",
+      "poor": "不良"
+    },
+    "hardware": {
+      "cpu": "CPU",
+      "memory": "メモリ",
+      "temperature": "温度",
+      "fans": "ファン",
+      "powerSupplies": "電源"
+    },
+    "presence": {
+      "connected": "接続中",
+      "notConnected": "未接続",
+      "notFound": "見つかりません",
+      "lastSeenAt": "最終観測 {at}"
+    },
+    "col": {
+      "target": "対象",
+      "tags": "タグ",
+      "platform": "プラットフォーム",
+      "site": "サイト",
+      "state": "状態",
+      "connectedTo": "接続先",
+      "quality": "品質",
+      "model": "モデル",
+      "uptime": "稼働時間"
+    },
+    "source": {
+      "notConfigured": "{platform} の認証情報が未設定のため、この一覧には含まれていません。",
+      "failed": "{platform} からの取得に失敗しました: {error}"
+    },
+    "truncated": {
+      "mistSites": "Mist の現況取得を {n} サイトぶん打ち切りました(設定の maxMistSites 上限)。RSSI / SNR が空欄の行はこのためです。"
+    },
+    "notSupported": {
+      "badge": "取得不可"
+    },
+    "randomMac": {
+      "badge": "ランダム MAC",
+      "warning": "ランダム MAC を使う端末が含まれています。MAC が変わるとタグは自動的に外れます(対象は一覧に残るので、変更後の MAC で登録し直してください)。",
+      "rowTooltip": "登録時にランダム MAC と判定された対象です。MAC が変わるとタグが外れます。",
+      "tooltipCentral": "Central が製造元を Private として返しています(ランダム MAC)。",
+      "tooltipMist": "Mist が random_mac = true として返しています。",
+      "source": {
+        "mist": "判定元: Mist の random_mac",
+        "central": "判定元: Central の製造元 Private",
+        "mac-bit": "判定元: MAC のローカル管理ビット(推定)"
+      }
+    },
+    "tag": {
+      "manage": "タグを管理",
+      "localOnly": "タグはこのダッシュボードのローカル情報です。Central / Mist の設定は変更しません。",
+      "create": "タグを作成",
+      "namePlaceholder": "タグ名",
+      "color": "色",
+      "delete": "削除",
+      "deleteConfirm": "タグ「{name}」を削除します。{n} 件の対象から外れます。よろしいですか?",
+      "usage": "{n} 件",
+      "renameTitle": "クリックで名前を変更",
+      "assign": "タグ",
+      "assignTitle": "タグを付け外しする",
+      "close": "閉じる",
+      "noneDefined": "タグがありません",
+      "noneDefinedHint": "まだタグがありません。上の入力欄から作成してください。"
+    },
+    "target": {
+      "remove": "登録解除",
+      "removeTitle": "この対象の登録を解除する(タグ定義は残ります)",
+      "removeConfirm": "「{name}」の登録を解除します。よろしいですか?"
+    },
+    "add": {
+      "open": {
+        "client": "Client を追加",
+        "device": "Device を追加"
+      },
+      "title": {
+        "client": "Client を追加",
+        "device": "Device を追加"
+      },
+      "placeholder": {
+        "client": "MAC / ホスト名 / IP で検索",
+        "device": "MAC / デバイス名 / シリアルで検索"
+      },
+      "hint": "2 文字以上で Central と Mist の両方を検索します。見つからない対象は MAC を直接入力しても登録できます。",
+      "applyTags": "付けるタグ",
+      "searching": "検索中…",
+      "searchError": "{platform} の検索に失敗しました: {error}",
+      "button": "追加",
+      "buttonManual": "この MAC で追加",
+      "manualNote": "検索に一致しませんでした。入力された MAC をそのまま登録できます:"
+    },
+    "detail": {
+      "refresh": "この対象を再取得",
+      "loading": "詳細を取得中…",
+      "notFound": "この対象は Central / Mist のどちらにも見つかりませんでした。",
+      "lastSeenHint": "最後に確認できたのは {site}({at})です。"
+    },
+    "client": {
+      "section": {
+        "basic": "基本",
+        "connection": "接続",
+        "wireless": "無線",
+        "network": "ネットワーク / 認証",
+        "quality": "接続品質",
+        "apps": "アプリケーション",
+        "events": "イベント"
+      }
+    },
+    "device": {
+      "section": {
+        "basic": "基本",
+        "health": "稼働状況",
+        "radios": "無線",
+        "ports": "ポート",
+        "wlans": "WLAN",
+        "uplink": "上流 / 給電"
+      }
+    },
+    "central": {
+      "snrOnlyNote": "Central が返す無線品質は SNR のみ",
+      "noRssi": "RSSI(dBm)は Central では取得できません。API・AP CLI とも SNR(dB)しか返しません。",
+      "noThroughput": "現在スループット(bps)は Central のクライアント API に含まれていません。",
+      "noTimeSeries": "接続品質の時系列は Central では取得できません(スナップショットのみ)。",
+      "appsDpiOnly": "アプリ別トラフィックは AP の DPI show コマンド経由でしか取れず、IP キー・AP 単位・履歴なしという制約があるため、この画面では取得していません。",
+      "appsWiredNo": "有線クライアントは DPI の対象外のため、アプリ別トラフィックを取得できません。",
+      "noCertExpiry": "証明書の有効期限は Central では取得できません(Mist のみ)。"
+    },
+    "mist": {
+      "qualityNeedsConnection": "未接続のため、現在の RSSI / SNR / スループットはありません。",
+      "wiredNoQuality": "Mist は有線クライアントの RSSI / SNR / スループットを返しません。",
+      "wiredNoApps": "Mist は有線クライアントのバイト数・アプリ別トラフィックを返しません。",
+      "radioNote": "無効な帯域は行ごと省略"
+    },
+    "apps": {
+      "app": "アプリ",
+      "total": "合計",
+      "empty": "対象期間にアプリ別のデータがありませんでした。",
+      "unknown": "不明 / その他"
+    },
+    "events": {
+      "time": "時刻",
+      "type": "種別",
+      "text": "内容",
+      "empty": "イベントはありません。"
+    },
+    "radios": {
+      "empty": "無線の情報がありません。"
+    },
+    "ports": {
+      "empty": "ポートの情報がありません。"
+    },
+    "wlans": {
+      "empty": "WLAN の情報がありません。"
+    },
+    "field": {
+      "mac": "MAC",
+      "clientName": "クライアント名",
+      "hostName": "ホスト名",
+      "deviceName": "デバイス名",
+      "serial": "シリアル",
+      "ipv4": "IPv4",
+      "ipv6": "IPv6",
+      "publicIp": "グローバル IP",
+      "connectionType": "接続形態",
+      "status": "ステータス",
+      "category": "カテゴリ",
+      "function": "機能",
+      "os": "OS",
+      "family": "端末種別",
+      "model": "モデル",
+      "hwRev": "ハード版数",
+      "vendor": "ベンダー",
+      "manufacturer": "製造元",
+      "siteName": "サイト",
+      "centralClassification": "Central 分類",
+      "connectedTo": "接続先",
+      "connectedSwitch": "収容スイッチ",
+      "connectedDeviceType": "接続先の種別",
+      "connectedDeviceSerial": "接続先のシリアル",
+      "port": "ポート",
+      "portName": "ポート",
+      "bssid": "BSSID",
+      "radioMac": "Radio MAC",
+      "connectedAt": "接続開始",
+      "lastSeen": "最終観測",
+      "snr": "SNR",
+      "rssi": "RSSI",
+      "band": "バンド",
+      "channel": "チャネル",
+      "bandwidth": "帯域幅",
+      "phyType": "現行 PHY",
+      "mloOperMode": "MLO",
+      "ssid": "SSID",
+      "wlanId": "WLAN ID",
+      "wirelessSecurity": "暗号方式",
+      "securityLevel": "セキュリティ種別",
+      "keyManagement": "鍵管理",
+      "capabilities": "対応規格",
+      "vlanId": "VLAN ID",
+      "vlanName": "VLAN 名",
+      "role": "ロール",
+      "tunnelType": "トンネル種別",
+      "tunnelId": "トンネル ID",
+      "userName": "ユーザー名",
+      "pskName": "PSK 名",
+      "authentication": "認証方式",
+      "authMethod": "認証方式",
+      "authState": "認証状態",
+      "proto": "プロトコル",
+      "randomMac": "ランダム MAC",
+      "isGuest": "ゲスト",
+      "throughput": "現在スループット",
+      "bytes": "累積バイト数",
+      "retries": "リトライ",
+      "uptime": "稼働時間",
+      "idleTime": "アイドル時間",
+      "tx": "送信",
+      "rx": "受信",
+      "cpu": "CPU 使用率",
+      "memory": "メモリ使用率",
+      "firmware": "ファームウェア",
+      "clientCount": "クライアント数",
+      "numWlans": "WLAN 数",
+      "lastRebootReason": "前回の再起動理由",
+      "negotiatedPower": "PoE ネゴシエーション",
+      "mode": "動作モード",
+      "meshRole": "メッシュ役割",
+      "bandSelection": "バンド選択",
+      "countryCode": "国コード",
+      "uplinkInUse": "使用中アップリンク",
+      "uplink": "アップリンク",
+      "temperature": "温度",
+      "ambientTemp": "周囲温度",
+      "cpuTemp": "CPU 温度",
+      "humidity": "湿度",
+      "poe": "PoE 消費 / 供給可能",
+      "poeStatus": "PoE",
+      "certExpiry": "証明書の有効期限",
+      "lastTrouble": "直近の障害コード",
+      "lastTroubleAt": "直近の障害時刻",
+      "macTable": "MAC テーブル",
+      "lldpSystemName": "上流スイッチ",
+      "lldpPortId": "上流ポート",
+      "lldpChassisId": "上流シャーシ ID",
+      "lldpSystemDesc": "上流の説明",
+      "powerSrc": "給電元",
+      "powerDraw": "PoE 実消費 / 割当",
+      "powerConstrained": "電力制約",
+      "speed": "速度",
+      "duplex": "デュプレックス",
+      "connector": "コネクタ",
+      "vlanMode": "VLAN モード",
+      "nativeVlan": "Native VLAN",
+      "neighbour": "隣接",
+      "portUsage": "用途",
+      "rxErrors": "受信エラー",
+      "power": "送信出力",
+      "noiseFloor": "ノイズフロア",
+      "nonWifi": "非 Wi-Fi 干渉",
+      "channelUtil": "チャネル使用率",
+      "channelQuality": "チャネル品質",
+      "utilAll": "利用率(全体)",
+      "utilNonWifi": "利用率(非 Wi-Fi)",
+      "utilTx": "利用率(送信)",
+      "utilRxInBss": "利用率(自 BSS 受信)",
+      "utilRxOtherBss": "利用率(他 BSS 受信)"
     }
   }
 }
