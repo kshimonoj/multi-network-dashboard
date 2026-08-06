@@ -31,3 +31,9 @@ npm-debug.log*
 Thumbs.db
 .idea/
 .vscode/
+
+# --- instructions配下で実データ(サイト名/SSID/機器ホスト名等)が伏字化されずに
+#     残っていることが63番の監査で判明したファイル。個別除外(63番) ---
+instructions/56_findings.md
+instructions/62_findings.md
+instructions/62_opus_vs_local_differentiator_search.md
