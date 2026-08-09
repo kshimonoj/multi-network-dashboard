@@ -1176,7 +1176,7 @@
       "logEmpty": "No extraction has run since this start-up.",
       "settingsSummary": "up to {max} per investigation / answers under {min} chars skipped / similarity threshold {threshold} / model {model}",
       "defaultModel": "default",
-      "logCreated": "created {n} candidate(s) ({dup} skipped as duplicates, {similar} flagged as merge proposals)",
+      "logCreated": "created {n} candidate(s) ({dup} skipped as already seen, {dupApproved} skipped as already approved, {similar} flagged as merge proposals)",
       "status": {
         "created": "created",
         "empty": "no insight",
@@ -1190,7 +1190,7 @@
         "answerTooShort": "The answer was too short to mine",
         "alreadyExtracted": "This investigation has already been mined",
         "noInsight": "No reusable insight was found",
-        "allDuplicates": "Every candidate duplicated an existing pending one",
+        "allDuplicates": "Every candidate duplicated an existing candidate or approved entry",
         "llmFailed": "The extraction run failed"
       }
     },
@@ -1279,6 +1279,19 @@
       "on": "Injection into investigations: on (up to {max})",
       "off": "Injection into investigations: off",
       "summary": "up to {max} entries per investigation prompt / relevance threshold {threshold}"
+    },
+    "dedupe": {
+      "scan": "Find duplicates of approved",
+      "scanTitle": "Check whether the pending candidates just restate knowledge you have already approved (nothing changes yet)",
+      "scanning": "Checking…",
+      "title": "Candidates that restate approved knowledge",
+      "summary": "{n} of {scanned}",
+      "close": "Close",
+      "none": "No candidate restates an approved entry.",
+      "apply": "Merge all {n}",
+      "applyTitle": "Adds each candidate's sources to the approved entry and keeps the candidate as merged (the text is unchanged)",
+      "note": "Merging does not change any text. Candidates are kept under \"Rejected / merged\", so you can review this later.",
+      "degraded": "The judge could not run, so this falls back to plain text similarity. Check the pairs before merging."
     }
   },
   "bestPractice": {

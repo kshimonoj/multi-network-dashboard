@@ -65,6 +65,8 @@ export interface ExtractionLogEntry {
   status: "created" | "empty" | "skipped" | "error";
   created: number;
   duplicatePending: number;
+  /** 承認済みと同じ知見だったため作らなかった数(71)。 */
+  duplicateApproved: number;
   similarApproved: number;
   reasonCode: string | null;
   reasonDetail: string | null;
@@ -81,6 +83,28 @@ export interface KnowledgeSettings {
   similarityThreshold: number;
   /** 承認済みナレッジを次の調査プロンプトへ注入する設定(47)。 */
   inject: { enabled: boolean; maxEntries: number; threshold: number };
+  /** 承認済みナレッジとの重複判定(71)。 */
+  dedupe: { llm: boolean; shortlistMax: number; suppressDuplicates: boolean };
+}
+
+/** 71: 未承認候補のうち、承認済みと同じ知見だと判定されたもの。 */
+export interface DuplicateProposal {
+  id: string;
+  title: string;
+  targetId: string;
+  targetTitle: string;
+  score: number;
+  /** llm = LLM が判定 / lexical = 一致度のみ(LLM が使えなかった場合)。 */
+  by: string;
+}
+
+export interface DedupeScanResponse {
+  scanned: number;
+  duplicates: DuplicateProposal[];
+  applied: number;
+  llmCalls: number;
+  error: string | null;
+  counts: KnowledgeCounts;
 }
 
 export interface KnowledgeStatusResponse {

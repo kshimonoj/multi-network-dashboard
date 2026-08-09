@@ -119,6 +119,8 @@ export interface ExtractionLogEntry {
   created: number;
   /** 既に同じ内容の未承認候補があったため作らなかった数 */
   duplicatePending: number;
+  /** 承認済みと同じ知見だったため作らなかった数(71)。出典だけ既存エントリに足す。 */
+  duplicateApproved: number;
   /** 承認済みと類似していたためマージ提案として出した数 */
   similarApproved: number;
   /** skipped / error の理由(機械可読なコード)。画面は辞書で文にする。 */
@@ -147,6 +149,25 @@ export interface KnowledgeSettings {
   similarityThreshold: number;
   /** 承認済みナレッジを次の調査プロンプトへ注入する設定(47)。 */
   inject: KnowledgeInjectSettings;
+  /** 承認済みナレッジとの重複判定(71)。 */
+  dedupe: KnowledgeDedupeSettings;
+}
+
+/**
+ * 重複判定の設定(71)。
+ * 文字一致度だけでは「言い換えた同じ知見」と「別の事象」を切り分けられないため、
+ * 絞り込み(無料)→ LLM 判定 の 2 段構えにしている(dedupe.ts の冒頭に根拠)。
+ */
+export interface KnowledgeDedupeSettings {
+  /** LLM による判定を使うか。false なら 46 と同じ「一致度だけ」の挙動に戻る。 */
+  llm: boolean;
+  /** 1 候補あたり LLM に見せる承認済みエントリの上限。 */
+  shortlistMax: number;
+  /**
+   * duplicate と判定された候補を自動で見送るか。
+   * false にすると候補は作られ、マージ提案(similar)だけが付く(46 の挙動)。
+   */
+  suppressDuplicates: boolean;
 }
 
 export interface KnowledgeInjectSettings {

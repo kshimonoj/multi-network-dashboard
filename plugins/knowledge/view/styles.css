@@ -570,3 +570,64 @@ button.kb-tag:hover {
   width: auto;
   min-width: 12rem;
 }
+
+/* ---- Coach(65)の根拠リンクから飛んできたエントリのハイライト ----
+   ベストプラクティスの .bp-ref-highlight と同じ見た目・同じ寿命(2 秒)にする。 */
+
+.kb-card.kb-card-highlight {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, var(--panel));
+}
+
+/* ---- 71: 承認済みと重複した未承認候補の整理 ----
+   「検出 → 中身を見る → まとめて統合」の 2 ステップを 1 枚のパネルに収める。
+   マージ提案(.kb-similar)と同じ色味にして、同じ性質の操作だと分かるようにする。 */
+
+.kb-dedupe {
+  border-color: color-mix(in srgb, var(--accent-amber) 45%, var(--border));
+}
+.kb-dedupe-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 12px;
+  max-height: 18rem;
+  overflow-y: auto;
+}
+.kb-dedupe-row {
+  display: grid;
+  /* 候補 → 相手。狭い画面では 1 列に折り返す(矢印は縦並びでも意味が通る)。 */
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.kb-dedupe-cand {
+  color: var(--text);
+  min-width: 0;
+}
+.kb-dedupe-arrow {
+  color: var(--text-dim);
+  font-size: 11px;
+}
+.kb-dedupe-target {
+  color: var(--text-muted);
+  min-width: 0;
+}
+.kb-dedupe-note {
+  padding: 0 12px 10px;
+  border-left: none;
+}
+@media (max-width: 720px) {
+  .kb-dedupe-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .kb-dedupe-arrow {
+    display: none;
+  }
+  .kb-dedupe-target::before {
+    content: "→ ";
+    color: var(--text-dim);
+  }
+}

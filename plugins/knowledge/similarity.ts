@@ -106,3 +106,70 @@ export function findSimilar(
   hits.sort((x, y) => y.score - x.score);
   return hits.slice(0, limit);
 }
+
+// ---- 71: 重複判定の下ごしらえ(絞り込み)----
+//
+// score() は「同じことを言っているか」の **判定** には使えない。
+// 実データ(data/knowledge)で測ると、日本語の言い換えでほぼ同義の rogue AP 系エントリが
+// 0.25〜0.38、まったく別の事象(スイッチ全断 ⇄ 仮想ラボ再起動)が 0.32 で、
+// 両者の帯が重なっていて 1 本のしきい値では切れない(71 の調査結果)。
+//
+// そこで 71 では役割を分けた:
+//   ここ(lexical)  … 再現率だけを重視して「比べる価値のある相手」を数件に絞る
+//   dedupe.ts(LLM) … 絞り込んだ相手と本当に同じ知見かを判定する
+//
+// 絞り込みでタグの共有も見るのは、**言語をまたぐため**。タグは日英どちらの
+// エントリでも英語(rogue-ap 等)で付くので、和文エントリと英文エントリの
+// 唯一の橋渡しになる(文字 bigram はまったく重ならない)。
+
+/** 共有しているタグの数(正規化して比較)。 */
+export function sharedTagCount(a: string[], b: string[]): number {
+  const B = new Set((b || []).map(normalizeText).filter(Boolean));
+  let n = 0;
+  for (const t of new Set((a || []).map(normalizeText).filter(Boolean))) if (B.has(t)) n += 1;
+  return n;
+}
+
+export interface ShortlistHit extends SimilarHit {
+  /** 共有タグ数(絞り込みの根拠。ログ・動作確認用)。 */
+  sharedTags: number;
+}
+
+export interface ShortlistOptions {
+  /** これ以上の一致度なら相手に含める(既定 0.15。判定用ではなく絞り込み用の低い値)。 */
+  threshold?: number;
+  /** 共有タグがこの数以上なら、一致度が低くても相手に含める(既定 1)。 */
+  minSharedTags?: number;
+  /** 返す上限。 */
+  limit?: number;
+}
+
+/**
+ * LLM に投げる前の絞り込み。「一致度が低くない」か「タグを共有している」相手を、
+ * タグ共有ぶんを加点した順に上位 limit 件返す。
+ *
+ * ここで取りこぼすと LLM が判定する機会そのものが無くなるので、
+ * しきい値は **判定用(similarityThreshold)より意図的に低く** してある。
+ */
+export function shortlistSimilar(
+  candidate: KnowledgeEntry,
+  pool: KnowledgeEntry[],
+  opts: ShortlistOptions = {},
+): ShortlistHit[] {
+  const threshold = opts.threshold ?? 0.15;
+  const minSharedTags = opts.minSharedTags ?? 1;
+  const limit = opts.limit ?? 5;
+  const hits: ShortlistHit[] = [];
+  for (const e of pool) {
+    if (e.id === candidate.id) continue;
+    const s = score(candidate, e);
+    const shared = sharedTagCount(candidate.tags, e.tags);
+    if (s < threshold && shared < minSharedTags) continue;
+    hits.push({ entry: e, score: s, sharedTags: shared });
+  }
+  // 並び順は「一致度 + タグ共有ぶんの加点」。タグは 2 個までしか効かせない
+  // (mist / security のような広いタグが 3 個並んだだけで上位に来ないように)。
+  const rank = (h: ShortlistHit) => h.score + 0.15 * Math.min(2, h.sharedTags);
+  hits.sort((x, y) => rank(y) - rank(x));
+  return hits.slice(0, limit);
+}

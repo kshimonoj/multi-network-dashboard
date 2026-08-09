@@ -12,7 +12,12 @@
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
-import type { ExtractionLogEntry, KnowledgeEntry, KnowledgeSettings } from "./types.js";
+import type {
+  ExtractionLogEntry,
+  KnowledgeEntry,
+  KnowledgeSettings,
+  KnowledgeSource,
+} from "./types.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -64,6 +69,13 @@ const DEFAULT_SETTINGS: KnowledgeSettings = {
     maxEntries: clampInt(process.env.KNOWLEDGE_INJECT_MAX, 1, 5, 3),
     threshold: clampFloat(process.env.KNOWLEDGE_INJECT_THRESHOLD, 0.05, 0.99, 0.3),
   },
+  // 71: 承認済みとの重複判定。既定で LLM 判定を使い、duplicate は候補にしない。
+  // 一致度だけの 46 の挙動に戻したい場合は KNOWLEDGE_DEDUPE_LLM=0。
+  dedupe: {
+    llm: String(process.env.KNOWLEDGE_DEDUPE_LLM ?? "1") !== "0",
+    shortlistMax: clampInt(process.env.KNOWLEDGE_DEDUPE_SHORTLIST_MAX, 1, 10, 5),
+    suppressDuplicates: String(process.env.KNOWLEDGE_DEDUPE_SUPPRESS ?? "1") !== "0",
+  },
 };
 
 let settings: KnowledgeSettings = { ...DEFAULT_SETTINGS };
@@ -96,6 +108,7 @@ export function normalizeSettings(
   const p = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
   const s = (p.sources && typeof p.sources === "object" ? p.sources : {}) as Record<string, unknown>;
   const inj = (p.inject && typeof p.inject === "object" ? p.inject : {}) as Record<string, unknown>;
+  const ded = (p.dedupe && typeof p.dedupe === "object" ? p.dedupe : {}) as Record<string, unknown>;
   const model =
     typeof p.model === "string" && p.model.trim() && MODEL_RE.test(p.model.trim())
       ? p.model.trim()
@@ -130,11 +143,27 @@ export function normalizeSettings(
           ? base.inject.threshold
           : clampFloat(inj.threshold, 0.05, 0.99, base.inject.threshold),
     },
+    dedupe: {
+      llm: typeof ded.llm === "boolean" ? ded.llm : base.dedupe.llm,
+      shortlistMax:
+        ded.shortlistMax === undefined
+          ? base.dedupe.shortlistMax
+          : clampInt(ded.shortlistMax, 1, 10, base.dedupe.shortlistMax),
+      suppressDuplicates:
+        typeof ded.suppressDuplicates === "boolean"
+          ? ded.suppressDuplicates
+          : base.dedupe.suppressDuplicates,
+    },
   };
 }
 
 export function getSettings(): KnowledgeSettings {
-  return { ...settings, sources: { ...settings.sources }, inject: { ...settings.inject } };
+  return {
+    ...settings,
+    sources: { ...settings.sources },
+    inject: { ...settings.inject },
+    dedupe: { ...settings.dedupe },
+  };
 }
 
 export async function loadSettings(): Promise<KnowledgeSettings> {
@@ -253,6 +282,30 @@ export async function replaceEntries(list: KnowledgeEntry[]): Promise<void> {
     if (i >= 0) entries[i] = next;
   }
   await persistEntries();
+}
+
+/**
+ * 再確認の記録(71)。承認済みエントリと同じ知見が別の調査からもう一度出てきたとき、
+ * 候補は作らずに **出典だけ** を既存エントリに足す。
+ *
+ * 本文には一切手を入れない(承認は必ず人が押す、という 46 の原則を崩さないため)。
+ * 足すのは「その知見が今回の調査でも当てはまった」という事実だけで、
+ * 承認画面の出典一覧からその調査へ飛べるようになる。
+ * 同じ runId は二重に足さない。
+ */
+export async function addSources(id: string, list: KnowledgeSource[]): Promise<KnowledgeEntry | null> {
+  const i = entries.findIndex((e) => e.id === id);
+  if (i < 0) return null;
+  const known = new Set(entries[i].sources.map((s) => s.runId));
+  const fresh = list.filter((s) => !known.has(s.runId));
+  if (fresh.length === 0) return entries[i];
+  entries[i] = {
+    ...entries[i],
+    sources: [...entries[i].sources, ...fresh],
+    updatedAt: new Date().toISOString(),
+  };
+  await persistEntries();
+  return entries[i];
 }
 
 /**

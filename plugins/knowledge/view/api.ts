@@ -4,6 +4,7 @@
 // モジュールスコープのキャッシュは持たない(操作のたびに取り直す方が状態がずれない)。
 
 import type {
+  DedupeScanResponse,
   EntryPatch,
   KnowledgeCounts,
   KnowledgeEntry,
@@ -104,6 +105,24 @@ export async function updateEntry(id: string, patch: EntryPatch): Promise<Knowle
     body: JSON.stringify(patch),
   })) as { entry: KnowledgeEntry };
   return parsed.entry;
+}
+
+/**
+ * 71: 未承認候補のうち、承認済みと同じ知見のものを検出する(下見。何も変えない)。
+ * LLM 判定を挟むので候補の件数によっては数十秒かかる。
+ */
+export async function scanPendingDuplicates(lang: string): Promise<DedupeScanResponse> {
+  return (await post("/dedupe-pending", { lang })) as DedupeScanResponse;
+}
+
+/**
+ * 71: 検出した重複候補を既存の承認済みエントリへまとめて統合する。
+ * 判定はやり直さず、画面に出ていた組(id → targetId)をそのまま適用する。
+ */
+export async function applyPendingDuplicates(
+  pairs: Array<{ id: string; targetId: string }>,
+): Promise<DedupeScanResponse> {
+  return (await post("/dedupe-pending", { pairs })) as DedupeScanResponse;
 }
 
 // 設定変更(PUT /settings)と過去の調査からの抽出(POST /extract)はサーバ側に口があるが、

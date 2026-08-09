@@ -25,14 +25,13 @@
 // 元調査の回答言語(query-history.jsonl の lang。旧履歴には無いので既定 ja)で書かせ、
 // entry.lang に残す。画面のラベルだけが表示言語に追従する。
 
-import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { mkdir } from "node:fs/promises";
-import os from "node:os";
-import path from "node:path";
+import { judgeAgainstApproved } from "./dedupe.js";
+import { DEFAULT_MODEL, extractJsonObject, runClaudePlain } from "./llm.js";
 import { findSimilar } from "./similarity.js";
 import {
   addEntries,
+  addSources,
   getSettings,
   isExtracted,
   listByStatus,
@@ -47,25 +46,6 @@ import type {
   KnowledgeSource,
   RawCandidate,
 } from "./types.js";
-
-const AGENT_CWD = path.join(os.tmpdir(), "multi-network-dashboard-knowledge");
-const DEFAULT_MODEL = process.env.NETINV_MODEL || process.env.CORSTACK_NETINV_MODEL || "sonnet";
-const TIMEOUT_MS = Math.max(30_000, Number(process.env.KNOWLEDGE_LLM_TIMEOUT_MS ?? 180_000));
-
-/** 抽出に外部ツールは要らない(調査結果はプロンプトに全部載っている)。組み込みツールも塞ぐ。 */
-const DISALLOWED_TOOLS = [
-  "Bash",
-  "Read",
-  "Write",
-  "Edit",
-  "Glob",
-  "Grep",
-  "WebFetch",
-  "WebSearch",
-  "Task",
-  "TodoWrite",
-  "NotebookEdit",
-];
 
 export type ExtractLang = "ja" | "en";
 
@@ -181,111 +161,12 @@ export function buildPrompt(input: InvestigationInput, lang: ExtractLang): strin
   return head + JSON.stringify(payload, null, 1);
 }
 
-// ---- claude CLI(MCP なし)。reports/analyze.ts と同じ形 ----
-
-interface RunResult {
-  text: string;
-  isError: boolean;
-  reason: string | null;
-}
-
-async function runClaudePlain(prompt: string, systemPrompt: string, model: string): Promise<RunResult> {
-  await mkdir(AGENT_CWD, { recursive: true });
-  const args = [
-    "--print",
-    "--output-format",
-    "json",
-    "--strict-mcp-config",
-    "--mcp-config",
-    '{"mcpServers":{}}',
-    "--disallowedTools",
-    ...DISALLOWED_TOOLS,
-    "--append-system-prompt",
-    systemPrompt,
-    "--model",
-    model,
-  ];
-
-  return await new Promise<RunResult>((resolve) => {
-    const child = spawn("claude", args, { cwd: AGENT_CWD, env: process.env });
-    let out = "";
-    let err = "";
-    let settled = false;
-
-    const done = (r: RunResult) => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timer);
-      resolve(r);
-    };
-
-    const timer = setTimeout(() => {
-      child.kill("SIGKILL");
-      done({ text: "", isError: true, reason: `claude timed out after ${TIMEOUT_MS}ms` });
-    }, TIMEOUT_MS);
-
-    child.stdout.on("data", (d) => (out += d.toString()));
-    child.stderr.on("data", (d) => (err += d.toString()));
-    child.on("error", (e) =>
-      done({ text: "", isError: true, reason: e instanceof Error ? e.message : String(e) }),
-    );
-    child.on("close", (code) => {
-      let envelope: any = null;
-      try {
-        envelope = JSON.parse(out);
-      } catch {
-        /* パースできない場合は下でそのまま扱う */
-      }
-      if (code !== 0) {
-        const detail =
-          (envelope && typeof envelope.result === "string" && envelope.result.trim()) ||
-          err.trim().slice(0, 300) ||
-          "(stderr・result ともに情報なし)";
-        done({ text: "", isError: true, reason: `claude exited ${code}: ${detail}` });
-        return;
-      }
-      if (envelope && envelope.is_error === true) {
-        done({
-          text: typeof envelope.result === "string" ? envelope.result : "",
-          isError: true,
-          reason: `claude result is_error: ${envelope.api_error_status ?? envelope.subtype ?? "unknown"}`,
-        });
-        return;
-      }
-      const text = envelope && typeof envelope.result === "string" ? envelope.result : out;
-      done({ text: text.trim(), isError: false, reason: null });
-    });
-
-    child.stdin.write(prompt);
-    child.stdin.end();
-  });
-}
-
 // ---- 応答のパースと正規化 ----
-
-/** 応答テキストから JSON オブジェクトを取り出す(reports/analyze.ts と同じ救済順)。 */
-export function extractJsonObject(text: string): any | null {
-  const src = (text || "").trim();
-  if (!src) return null;
-  const candidates: string[] = [];
-  const fence = /```(?:json)?\s*([\s\S]*?)```/g;
-  let m: RegExpExecArray | null;
-  while ((m = fence.exec(src))) candidates.push(m[1].trim());
-  candidates.push(src);
-  const first = src.indexOf("{");
-  const last = src.lastIndexOf("}");
-  if (first >= 0 && last > first) candidates.push(src.slice(first, last + 1));
-  for (const c of candidates) {
-    if (!c) continue;
-    try {
-      const parsed = JSON.parse(c);
-      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) return parsed;
-    } catch {
-      /* 次の候補へ */
-    }
-  }
-  return null;
-}
+//
+// claude CLI の起動(runClaudePlain)と JSON の取り出し(extractJsonObject)は
+// 71 で llm.ts へ移した。71 の重複判定(dedupe.ts)が同じ呼び方をするため。
+// 46 からの再エクスポート(既存の import 先を壊さないため)。
+export { extractJsonObject } from "./llm.js";
 
 function str(v: unknown, max: number): string {
   if (typeof v !== "string") return "";
@@ -404,6 +285,8 @@ export interface ExtractOutcome {
   status: ExtractionLogEntry["status"];
   created: KnowledgeEntry[];
   duplicatePending: number;
+  /** 承認済みと同じ知見だったため候補にしなかった数(71)。 */
+  duplicateApproved: number;
   similarApproved: number;
   reasonCode: string | null;
   reasonDetail: string | null;
@@ -443,6 +326,7 @@ export async function extractFromInvestigation(
     status: "skipped",
     created: [],
     duplicatePending: 0,
+    duplicateApproved: 0,
     similarApproved: 0,
     reasonCode: null,
     reasonDetail: null,
@@ -504,40 +388,93 @@ export async function extractFromInvestigation(
     return outcome;
   }
 
-  // ---- 重複検出(Task 2)----
-  // 未承認の候補と重複するものは **作らない**(承認待ちが同じ内容で埋まるのを防ぐ)。
-  // 承認済みと類似するものは作り、マージ提案(similar)として承認画面に出す。
+  // ---- 重複検出(46 Task 2 / 71 で承認済みとの突き合わせを判定に格上げ)----
+  //
+  // 1 段目(文字一致度・無料): 未承認 / 却下済みと重なるものは作らない。
+  //   同じ調査観点が続くと同じ候補が何度も並ぶため。却下済みも見るのは 71 の追加で、
+  //   人が一度「要らない」と判断した知見が黙って戻ってくるのを防ぐ。
+  //
+  // 2 段目(71・LLM 判定): 承認済みと **同じ知見** なら候補にしない。
+  //   46 はここで作ってマージ提案を添えるだけだったので、言い換えた同じ知見が
+  //   毎回 pending に積み上がっていた(rogue AP 系で顕著)。
+  //   同じ知見と判定されたものは、出典だけを既存エントリに足して再確認の記録にする。
+  //   「関連はするが別の知見(related)」は従来どおり候補にしてマージ提案を添える。
   const threshold = settings.similarityThreshold;
-  const pendingPool = listByStatus("pending");
+  const seenPool = [...listByStatus("pending"), ...listByStatus("rejected")];
   const approvedPool = listByStatus("approved");
-  const keep: KnowledgeEntry[] = [];
+  const kept: KnowledgeEntry[] = [];
+  const survivors: KnowledgeEntry[] = [];
 
   for (const cand of normalized) {
-    const dupPending = findSimilar(cand, [...pendingPool, ...keep], threshold, 1);
-    if (dupPending.length > 0) {
+    const dupSeen = findSimilar(cand, [...seenPool, ...survivors], threshold, 1);
+    if (dupSeen.length > 0) {
       outcome.duplicatePending += 1;
       console.log(
-        `[knowledge] 未承認の候補と重複するため見送り: "${cand.title.slice(0, 40)}" ` +
-          `(既存 "${dupPending[0].entry.title.slice(0, 40)}" と ${dupPending[0].score})`,
+        `[knowledge] 既出の候補と重複するため見送り: "${cand.title.slice(0, 40)}" ` +
+          `(${dupSeen[0].entry.status} "${dupSeen[0].entry.title.slice(0, 40)}" と ${dupSeen[0].score})`,
       );
       continue;
     }
-    const similar = findSimilar(cand, approvedPool, threshold, 3);
-    if (similar.length > 0) {
-      cand.similar = similar.map((h) => ({ id: h.entry.id, score: h.score, title: h.entry.title }));
-      outcome.similarApproved += 1;
-    }
-    keep.push(cand);
+    survivors.push(cand);
   }
 
-  await addEntries(keep);
-  outcome.created = keep;
-  outcome.status = keep.length > 0 ? "created" : "empty";
-  if (keep.length === 0) outcome.reasonCode = "allDuplicates";
+  const judged = await judgeAgainstApproved(survivors, approvedPool, {
+    lang,
+    model,
+    useLlm: settings.dedupe.llm,
+    relatedThreshold: threshold,
+    shortlistMax: settings.dedupe.shortlistMax,
+  });
+  if (judged.error) {
+    console.error(
+      `[knowledge] 重複判定に失敗したため一致度のみで判断します: ${judged.error.slice(0, 200)}`,
+    );
+  }
+
+  for (const cand of survivors) {
+    const v = judged.verdicts.get(cand.id);
+    if (v && v.relation === "duplicate" && v.targetId && settings.dedupe.suppressDuplicates) {
+      outcome.duplicateApproved += 1;
+      // 本文には触らず、出典だけ足す(この知見が今回の調査でも当てはまった記録)。
+      await addSources(v.targetId, cand.sources);
+      console.log(
+        `[knowledge] 承認済みと同じ知見のため見送り(${v.by}): "${cand.title.slice(0, 40)}" ` +
+          `→ "${(v.targetTitle ?? "").slice(0, 40)}"`,
+      );
+      continue;
+    }
+    // related のときは、判定した相手を含めて一致度上位をマージ提案として添える。
+    const similar = findSimilar(cand, approvedPool, threshold, 3).map((h) => ({
+      id: h.entry.id,
+      score: h.score,
+      title: h.entry.title,
+    }));
+    if (v && v.relation === "related" && v.targetId && !similar.some((s) => s.id === v.targetId)) {
+      similar.unshift({ id: v.targetId, score: v.score, title: v.targetTitle ?? "" });
+    }
+    if (similar.length > 0) {
+      cand.similar = similar.slice(0, 3);
+      outcome.similarApproved += 1;
+    }
+    if (v?.relation === "related" && v.novelty) {
+      // 判定が渋い / 甘いときに追えるように、「既存に無いとされた点」を残す。
+      console.log(
+        `[knowledge] 承認済みと関連するが別の知見: "${cand.title.slice(0, 40)}" ` +
+          `(既存に無い点: ${v.novelty})`,
+      );
+    }
+    kept.push(cand);
+  }
+
+  await addEntries(kept);
+  outcome.created = kept;
+  outcome.status = kept.length > 0 ? "created" : "empty";
+  if (kept.length === 0) outcome.reasonCode = "allDuplicates";
   pushLog(toLog(input, outcome, Date.now() - startedAt, model));
   console.log(
-    `[knowledge] 候補を ${keep.length} 件作成: runId=${input.runId} origin=${input.origin}` +
-      (outcome.duplicatePending ? ` / 重複で見送り ${outcome.duplicatePending} 件` : "") +
+    `[knowledge] 候補を ${kept.length} 件作成: runId=${input.runId} origin=${input.origin}` +
+      (outcome.duplicatePending ? ` / 既出で見送り ${outcome.duplicatePending} 件` : "") +
+      (outcome.duplicateApproved ? ` / 承認済みと同一で見送り ${outcome.duplicateApproved} 件` : "") +
       (outcome.similarApproved ? ` / マージ提案 ${outcome.similarApproved} 件` : ""),
   );
   return outcome;
@@ -556,6 +493,7 @@ function toLog(
     status: outcome.status,
     created: outcome.created.length,
     duplicatePending: outcome.duplicatePending,
+    duplicateApproved: outcome.duplicateApproved,
     similarApproved: outcome.similarApproved,
     reasonCode: outcome.reasonCode,
     reasonDetail: outcome.reasonDetail,
@@ -593,6 +531,7 @@ function emptyOutcome(runId: string): ExtractOutcome {
     status: "skipped",
     created: [],
     duplicatePending: 0,
+    duplicateApproved: 0,
     similarApproved: 0,
     reasonCode: null,
     reasonDetail: null,

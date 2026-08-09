@@ -18,12 +18,14 @@ import { useLanguage } from "../../../src/i18n/LanguageContext";
 import { formatDateTime } from "../../../src/i18n";
 import type { PendingHistoryFocus } from "../../../src/shell";
 import {
+  applyPendingDuplicates,
   approveEntry,
   approveMany,
   fetchEntries,
   fetchStatus,
   mergeEntry,
   rejectEntry,
+  scanPendingDuplicates,
   updateEntry,
 } from "./api";
 import { CandidateCard } from "./CandidateCard";
@@ -39,7 +41,12 @@ import {
   toPatch,
   type Draft,
 } from "./EntryBody";
-import type { EntryPatch, KnowledgeEntry, KnowledgeStatusResponse } from "./types";
+import type {
+  DedupeScanResponse,
+  EntryPatch,
+  KnowledgeEntry,
+  KnowledgeStatusResponse,
+} from "./types";
 import "./styles.css";
 
 type Section = "pending" | "approved" | "archive";
@@ -66,6 +73,8 @@ function ApprovedCard({
   onTag,
   activeTag,
   onOpenHistoryFocus,
+  highlighted,
+  onHighlightDone,
 }: {
   entry: KnowledgeEntry;
   busy: boolean;
@@ -74,13 +83,30 @@ function ApprovedCard({
   onTag: (tag: string) => void;
   activeTag: string | null;
   onOpenHistoryFocus?: (runId: PendingHistoryFocus) => void;
+  /** Coach の根拠リンク(65)から飛んできた対象か。 */
+  highlighted?: boolean;
+  onHighlightDone?: () => void;
 }) {
   const { lang, t } = useLanguage();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<Draft>(() => toDraft(entry));
+  const cardRef = useRef<HTMLDivElement | null>(null);
+
+  // 65: 特定エントリへの deep-link。ベストプラクティスの RuleReference と同じ作法
+  // (scrollIntoView + 2 秒だけハイライトして自分で消える)。
+  useEffect(() => {
+    if (!highlighted) return;
+    cardRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    const timer = window.setTimeout(() => onHighlightDone?.(), 2000);
+    return () => window.clearTimeout(timer);
+  }, [highlighted, onHighlightDone]);
 
   return (
-    <div className="go-panel kb-card">
+    <div
+      ref={cardRef}
+      id={`kb-entry-${entry.id}`}
+      className={`go-panel kb-card${highlighted ? " kb-card-highlight" : ""}`}
+    >
       <div className="kb-card-head">
         <span className="kb-card-title">{editing ? t("knowledge.actions.editing") : entry.title}</span>
         <EntryBadges entry={entry} />
@@ -194,12 +220,22 @@ export function Knowledge({
   active,
   onOpenHistoryFocus,
   onPendingCount,
+  pendingEntryFocus,
+  onConsumePendingEntryFocus,
 }: {
   active: boolean;
   /** 出典の調査スレッドへ直接ジャンプする(18/19 番の pendingHistoryFocus と同じ経路)。 */
   onOpenHistoryFocus?: (runId: PendingHistoryFocus) => void;
   /** タブ名の横に出す未承認件数バッジの更新。 */
   onPendingCount?: (n: number) => void;
+  /**
+   * Coach タブの根拠リンク(65)から渡される「開きたい承認済みエントリの id」。
+   * 受け取ったら承認済みセクションへ切り替え、検索・タグ絞り込みを解除してから
+   * 対象カードへスクロールしてハイライトする(絞り込みが残っていると対象が
+   * 一覧に居らず、リンクを押しても何も起きないように見える)。
+   */
+  pendingEntryFocus?: string | null;
+  onConsumePendingEntryFocus?: () => void;
 }) {
   const { lang, t } = useLanguage();
   const [entries, setEntries] = useState<KnowledgeEntry[]>([]);
@@ -213,6 +249,14 @@ export function Knowledge({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showLog, setShowLog] = useState(false);
+  /**
+   * 71: 承認済みと同じ知見の未承認候補。「検出」を押した結果を保持する。
+   * null = まだ検出していない。検出しただけでは何も変わらず、統合を押して初めて反映する。
+   */
+  const [dupes, setDupes] = useState<DedupeScanResponse | null>(null);
+  const [scanning, setScanning] = useState(false);
+  /** Coach から飛んできたエントリ(65)。2 秒だけハイライトして自分で消える。 */
+  const [highlightEntryId, setHighlightEntryId] = useState<string | null>(null);
   const mounted = useRef(true);
 
   useEffect(() => {
@@ -261,6 +305,17 @@ export function Knowledge({
   );
   const byId = useMemo(() => new Map(entries.map((e) => [e.id, e])), [entries]);
   const approvedById = useMemo(() => new Map(approved.map((e) => [e.id, e])), [approved]);
+
+  // Coach の根拠リンク(65)から飛んできたときの受け口。
+  // 他タブの pendingXxx と同じ「マウント時 / 更新時に消費してクリアする」形にする。
+  useEffect(() => {
+    if (!pendingEntryFocus) return;
+    setSection("approved");
+    setQ("");
+    setTag(null);
+    setHighlightEntryId(pendingEntryFocus);
+    onConsumePendingEntryFocus?.();
+  }, [pendingEntryFocus, onConsumePendingEntryFocus]);
 
   /** 承認済みのタグ(件数の多い順)。絞り込みチップに使う。 */
   const tags = useMemo(() => {
@@ -337,6 +392,31 @@ export function Knowledge({
       setSelected(new Set());
     });
   }, [run, selected]);
+
+  // ---- 71: 承認済みと重複した未承認候補の整理 ----
+  //
+  // 検出は LLM 判定を挟むので候補の件数によっては数十秒かかる。走っている間は
+  // 一覧の自動再読込(POLL_MS)で結果が消えないよう、dupes は load() では触らない。
+  const onScanDupes = useCallback(async () => {
+    setScanning(true);
+    try {
+      setDupes(await scanPendingDuplicates(lang));
+      setError(null);
+    } catch (err) {
+      if (mounted.current) setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      if (mounted.current) setScanning(false);
+    }
+  }, [lang]);
+
+  const onApplyDupes = useCallback(() => {
+    const pairs = (dupes?.duplicates ?? []).map((d) => ({ id: d.id, targetId: d.targetId }));
+    if (pairs.length === 0) return;
+    void run(async () => {
+      await applyPendingDuplicates(pairs);
+      setDupes(null);
+    });
+  }, [dupes, run]);
 
   const toggleSelect = useCallback((id: string) => {
     setSelected((prev) => {
@@ -428,6 +508,8 @@ export function Knowledge({
                     ? t("knowledge.extract.logCreated", {
                         n: l.created,
                         dup: l.duplicatePending,
+                        // 71: 承認済みと同じ知見だったため作らなかった数。
+                        dupApproved: l.duplicateApproved ?? 0,
                         similar: l.similarApproved,
                       })
                     : l.reasonCode
@@ -477,7 +559,65 @@ export function Knowledge({
             >
               {t("knowledge.bulk.approve")}
             </button>
+            {/* 71: 承認済みと同じ知見の候補を洗い出して、まとめて統合する。 */}
+            <button
+              className="kb-btn kb-dedupe-scan"
+              disabled={busy || scanning || pending.length === 0}
+              onClick={() => void onScanDupes()}
+              title={t("knowledge.dedupe.scanTitle")}
+            >
+              {scanning ? t("knowledge.dedupe.scanning") : t("knowledge.dedupe.scan")}
+            </button>
           </div>
+
+          {dupes && (
+            <div className="go-panel kb-dedupe">
+              <div className="go-panel-head">
+                <span className="go-panel-title">{t("knowledge.dedupe.title")}</span>
+                <span className="go-panel-note">
+                  {t("knowledge.dedupe.summary", {
+                    n: dupes.duplicates.length,
+                    scanned: dupes.scanned,
+                  })}
+                </span>
+                <button className="kb-btn" onClick={() => setDupes(null)}>
+                  {t("knowledge.dedupe.close")}
+                </button>
+              </div>
+              {dupes.error && (
+                <div className="go-note kb-dedupe-note">{t("knowledge.dedupe.degraded")}</div>
+              )}
+              {dupes.duplicates.length === 0 ? (
+                <div className="kb-empty-inner go-note">{t("knowledge.dedupe.none")}</div>
+              ) : (
+                <>
+                  <div className="kb-dedupe-list">
+                    {dupes.duplicates.map((d) => (
+                      <div className="kb-dedupe-row" key={d.id}>
+                        <span className="kb-dedupe-cand">{d.title}</span>
+                        <span className="kb-dedupe-arrow" aria-hidden>
+                          →
+                        </span>
+                        <span className="kb-dedupe-target">{d.targetTitle}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="kb-actions">
+                    <button
+                      className="kb-btn kb-btn-merge"
+                      disabled={busy}
+                      onClick={onApplyDupes}
+                      title={t("knowledge.dedupe.applyTitle")}
+                    >
+                      {t("knowledge.dedupe.apply", { n: dupes.duplicates.length })}
+                    </button>
+                  </div>
+                  <div className="go-note kb-dedupe-note">{t("knowledge.dedupe.note")}</div>
+                </>
+              )}
+            </div>
+          )}
+
           {pending.length === 0 && !loading && (
             <div className="go-panel kb-empty">
               <div className="go-note">{t("knowledge.pending.empty")}</div>
@@ -567,6 +707,8 @@ export function Knowledge({
                 onTag={(tg) => setTag(tag === tg ? null : tg)}
                 activeTag={tag}
                 onOpenHistoryFocus={onOpenHistoryFocus}
+                highlighted={highlightEntryId === e.id}
+                onHighlightDone={() => setHighlightEntryId(null)}
               />
             ))}
           </div>
