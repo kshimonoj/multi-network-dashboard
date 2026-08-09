@@ -140,6 +140,24 @@ services:
       KNOWLEDGE_SIMILARITY_THRESHOLD: ${KNOWLEDGE_SIMILARITY_THRESHOLD:-0.35}
       # 抽出 1 回あたりの claude CLI タイムアウト(回答 1 件を読むだけなので短め)。
       KNOWLEDGE_LLM_TIMEOUT_MS: ${KNOWLEDGE_LLM_TIMEOUT_MS:-180000}
+      # ---- 68: Coach のライブ層(MCP 経由で Central / Mist に「今」を問い合わせる)----
+      # 既定は有効。自社のナレッジ・調査履歴を先に引き、それが「薄い / 古い / 対象外」のとき、
+      # または「今どうなってる?」と聞かれたときにだけ MCP を叩く(plugins/coach/live.ts)。
+      #
+      # **Central API のレート制限はアカウント全体で共有(秒 10 回程度)**なので、
+      # 一番効くのは COACH_LIVE_CACHE_TTL_MS(同じ話題は使い回す)。次いで最小間隔。
+      # 同時実行は 1 本に固定してあり(コード側)、env では変えられない。
+      # 値はいずれも data/coach/settings.json(API から変更)が優先される。
+      COACH_LIVE_ENABLED: ${COACH_LIVE_ENABLED:-1}
+      # 静的素材の関連度がこの値未満なら「根拠が薄い」としてライブへ回す。
+      COACH_LIVE_STATIC_FLOOR: ${COACH_LIVE_STATIC_FLOOR:-0.45}
+      # 静的素材がこの日数より古ければ鮮度不足としてライブへ回す。
+      COACH_LIVE_STALE_DAYS: ${COACH_LIVE_STALE_DAYS:-14}
+      # ライブ 1 回のタイムアウト。対話の途中なので調査タブ(240 秒)より短くする。
+      COACH_LIVE_TIMEOUT_MS: ${COACH_LIVE_TIMEOUT_MS:-90000}
+      COACH_LIVE_CACHE_TTL_MS: ${COACH_LIVE_CACHE_TTL_MS:-300000}
+      COACH_LIVE_MIN_INTERVAL_MS: ${COACH_LIVE_MIN_INTERVAL_MS:-15000}
+      COACH_LIVE_MAX_PER_SESSION: ${COACH_LIVE_MAX_PER_SESSION:-4}
     volumes:
       # ホストの claude 設定(read-only)。コンテナはここから MCP 定義を読むだけ。
       #

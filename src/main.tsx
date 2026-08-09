@@ -26,11 +26,14 @@ import { Reports } from "../plugins/reports/view/Reports";
 import { Knowledge } from "../plugins/knowledge/view/Knowledge";
 import { BestPractice } from "../plugins/best-practice/view/BestPractice";
 import { TaggedTargets } from "../plugins/tagged-targets/view/TaggedTargets";
+import { Coach } from "../plugins/coach/view/Coach";
 import { fetchPendingCount } from "../plugins/knowledge/view/api";
 import {
   TopbarModelContext,
   type InvestigationRequest,
   type PendingHistoryFocus,
+  type PendingKnowledgeFocus,
+  type PendingRuleFocus,
   type PluginEntry,
   type SiteFocusRequest,
   type TopbarModel,
@@ -48,7 +51,8 @@ type TabId =
   | "knowledge"
   | "network-investigation"
   | "best-practice"
-  | "tagged-targets";
+  | "tagged-targets"
+  | "coach";
 
 // タブの並びと、辞書のキー接頭辞だけをここに持つ(表示文言は src/i18n/*.json)。
 const TABS: Array<{ id: TabId; key: string }> = [
@@ -61,6 +65,7 @@ const TABS: Array<{ id: TabId; key: string }> = [
   { id: "network-investigation", key: "tabs.networkInvestigation" },
   { id: "best-practice", key: "tabs.bestPractice" },
   { id: "tagged-targets", key: "tabs.taggedTargets" },
+  { id: "coach", key: "tabs.coach" },
 ];
 
 /** 未承認のナレッジ候補を見失わないための、タブ名横のバッジ更新間隔(46 Task 4-5)。 */
@@ -163,6 +168,10 @@ function App() {
   // シェル側で定期的に取りに行く(応答は数 KB)。ナレッジタブを開いている間は
   // そちらの操作結果(onPendingCount)が即座に上書きする。
   const [knowledgePending, setKnowledgePending] = useState(0);
+  // Coach タブの根拠リンク →「このナレッジを見る」/「このルールを見る」で渡す飛び先(65番)。
+  // 既存の pendingHistoryFocus と同じ形で、対象タブが消費したらクリアする。
+  const [pendingKnowledgeFocus, setPendingKnowledgeFocus] = useState<PendingKnowledgeFocus | null>(null);
+  const [pendingRuleFocus, setPendingRuleFocus] = useState<PendingRuleFocus | null>(null);
 
   // StrictMode の二重実行でも冪等(同じ属性を入れ直すだけ)。
   useEffect(() => {
@@ -231,6 +240,24 @@ function App() {
     (req: SiteFocusRequest) => {
       setPendingSiteFocus(req);
       onTab("global-overview");
+    },
+    [onTab],
+  );
+
+  // Coach の根拠リンクから呼ばれる(65番)。ナレッジタブ / ベストプラクティスタブの
+  // 該当エントリ・該当ルールを共有stateに積んで、そのタブへ切り替えるところまでを行う。
+  const onOpenKnowledgeEntry = useCallback(
+    (id: PendingKnowledgeFocus) => {
+      setPendingKnowledgeFocus(id);
+      onTab("knowledge");
+    },
+    [onTab],
+  );
+
+  const onOpenRule = useCallback(
+    (ruleId: PendingRuleFocus) => {
+      setPendingRuleFocus(ruleId);
+      onTab("best-practice");
     },
     [onTab],
   );
@@ -318,6 +345,8 @@ function App() {
                 active={tab === "knowledge"}
                 onOpenHistoryFocus={onOpenHistoryFocus}
                 onPendingCount={setKnowledgePending}
+                pendingEntryFocus={pendingKnowledgeFocus}
+                onConsumePendingEntryFocus={() => setPendingKnowledgeFocus(null)}
               />
             </div>
           )}
@@ -335,12 +364,29 @@ function App() {
           )}
           {visited.has("best-practice") && (
             <div className="app-pane" hidden={tab !== "best-practice"}>
-              <BestPractice active={tab === "best-practice"} />
+              <BestPractice
+                active={tab === "best-practice"}
+                pendingRuleFocus={pendingRuleFocus}
+                onConsumePendingRuleFocus={() => setPendingRuleFocus(null)}
+              />
             </div>
           )}
           {visited.has("tagged-targets") && (
             <div className="app-pane" hidden={tab !== "tagged-targets"}>
               <TaggedTargets active={tab === "tagged-targets"} />
+            </div>
+          )}
+          {/* Coach(65)。壁打ちは入力途中の文とセッション状態を抱えるので、
+              既存の visited + hidden パターンに乗せてマウントを維持する。 */}
+          {visited.has("coach") && (
+            <div className="app-pane" hidden={tab !== "coach"}>
+              <Coach
+                active={tab === "coach"}
+                onOpenKnowledgeEntry={onOpenKnowledgeEntry}
+                onOpenHistoryFocus={onOpenHistoryFocus}
+                onOpenRule={onOpenRule}
+                onInvestigate={onInvestigate}
+              />
             </div>
           )}
         </div>

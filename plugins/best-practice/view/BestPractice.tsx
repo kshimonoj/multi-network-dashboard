@@ -37,6 +37,13 @@ const MAX_POLL_ATTEMPTS = 150;
 
 interface Props {
   active: boolean;
+  /**
+   * Coach タブの根拠リンク(65)から渡される「開きたいルールの ID」。
+   * highlightRuleId の仕組み自体は 53 番からあり、ここでは外から渡せるようにしただけ。
+   * 受け取ったらルール一覧(リファレンス)へ切り替えてハイライトする。
+   */
+  pendingRuleFocus?: string | null;
+  onConsumePendingRuleFocus?: () => void;
 }
 
 function siteKey(platform: "central" | "mist", siteId: string): string {
@@ -94,7 +101,7 @@ function groupFindings(
   return byCategory;
 }
 
-export function BestPractice({ active }: Props) {
+export function BestPractice({ active, pendingRuleFocus, onConsumePendingRuleFocus }: Props) {
   const t = useT();
   const mounted = useRef(true);
   useEffect(() => {
@@ -125,6 +132,14 @@ export function BestPractice({ active }: Props) {
     setView("reference");
     setHighlightRuleId(ruleId);
   }, []);
+
+  // Coach の根拠リンク(65)から飛んできたときの受け口。
+  // 他タブの pendingXxx と同じ「マウント時 / 更新時に消費してクリアする」形。
+  useEffect(() => {
+    if (!pendingRuleFocus) return;
+    onViewRule(pendingRuleFocus);
+    onConsumePendingRuleFocus?.();
+  }, [pendingRuleFocus, onViewRule, onConsumePendingRuleFocus]);
 
   const [selected, setSelected] = useState<SiteEntry | null>(null);
   const [llmEnabled, setLlmEnabled] = useState(true);

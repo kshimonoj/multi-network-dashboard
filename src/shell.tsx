@@ -75,3 +75,15 @@ export interface SiteFocusRequest {
   siteName: string;
   platform: "central" | "mist";
 }
+
+// ---- Coach の根拠リンク(65番) ----
+//
+// Coach タブの回答に添える「元にした記録」から、その根拠そのものへ飛ぶための共有state。
+// 上の 3 つとまったく同じパターン(main.tsx が保持 → 対象タブが消費してクリアする)。
+//
+// 行き先は 3 つあり、必要だった作業量が違う:
+//   調査履歴 1 件      … 既存の onOpenHistoryFocus(PendingHistoryFocus)がそのまま使えた
+//   ナレッジのエントリ … 機構が無かったので 65 番で新設(Knowledge に highlight + scrollIntoView)
+//   ベストプラクティス … highlightRuleId の仕組みはあったが外から渡せなかったので props を追加
+export type PendingKnowledgeFocus = string;
+export type PendingRuleFocus = string;

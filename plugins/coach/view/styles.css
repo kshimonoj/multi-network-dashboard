@@ -1,0 +1,769 @@
+/* Coach タブ View(65)固有のスタイル。
+ *
+ * 画面の骨格は Global Overview の styles.css(.go-root / .go-panel / .go-head / .go-note)を
+ * そのまま借り、ここには「チャット吹き出し」「ヒント段階」「根拠リンク」「弱点」だけを足す
+ * (ナレッジ(.kb-*)・レポート(.rp-*)と同じ流儀)。
+ *
+ * ---- 配色の方針(64_findings.md §4-3)----
+ * 既存タブのアクセントは実測で **teal**(--accent: #4fd1c5 / #0f9488)。
+ * 「既存の配色と差別化する」の実体は teal を避けることなので、Coach は既にある
+ * --accent-amber を主色にする。**グローバルトークンは足さない / 触らない**
+ * (.go-root が --central / --mist をローカルに置いているのと同じ流儀)。
+ *
+ * ---- 角丸 ----
+ * 既存は --radius: 3px の角ばった見た目。Coach だけ 14px にして、
+ * 「ここは対話の場所であってログ画面ではない」ことを形で伝える。
+ *
+ * ---- フォント ----
+ * 本文は既存の --sans のまま。**--mono は Coach では使わない**(等幅はログ画面の顔)。
+ * 例外は失敗理由(.co-reason)だけ — あれは記録であって対話ではない。
+ */
+
+.co-root {
+  --coach: var(--accent-amber);
+  --coach-soft: rgba(242, 166, 90, 0.14);
+  --coach-line: rgba(242, 166, 90, 0.34);
+  --co-radius: 14px;
+  --co-avatar: 28px;
+
+  /* 情報密度を既存タブより下げる。1 画面に詰め込まない。 */
+  font-size: 13.5px;
+  line-height: 1.75;
+}
+
+/* ライトテーマでは amber が薄いと本文が読めないので、地の色を別に持つ
+   (既存のテーマ切替の仕組みにそのまま乗る)。 */
+html[data-theme="light"] .co-root {
+  --coach-soft: rgba(181, 105, 30, 0.1);
+  --coach-line: rgba(181, 105, 30, 0.28);
+}
+
+.co-mascot {
+  font-size: 20px;
+  margin-right: 8px;
+}
+
+.co-head-tools {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* ---- モード切替(壁打ち / クイズ)---- */
+
+.co-modes {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.co-mode {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--panel);
+  color: var(--text-muted);
+  border: none;
+  padding: 7px 18px;
+  font-family: var(--sans);
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.co-mode:hover {
+  background: var(--panel-2);
+}
+.co-mode-on {
+  background: var(--coach);
+  color: var(--on-accent);
+  font-weight: 600;
+}
+
+.co-panel {
+  border-radius: var(--co-radius);
+}
+.co-pool {
+  border-left-color: var(--coach-line);
+}
+
+/* ---- 障害対応中モード ---- */
+
+.co-incident {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+  cursor: pointer;
+  margin-left: auto;
+}
+.co-incident input {
+  accent-color: var(--coach);
+}
+
+.co-banner {
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 12.5px;
+  margin: 6px 0;
+}
+.co-banner-incident {
+  background: var(--coach-soft);
+  border: 1px solid var(--coach-line);
+  color: var(--text);
+}
+/* 「うちの記録には無い話」= 一般論から話している。自社の事実と混ぜないための表示。 */
+.co-banner-general {
+  background: var(--panel-2);
+  border: 1px dashed var(--border);
+  color: var(--text-muted);
+}
+
+/* ---- チャットスレッド ---- */
+
+.co-thread {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 14px 4px;
+  max-height: 56vh;
+  overflow-y: auto;
+}
+
+.co-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+/* 話者を色だけで区別しない(アバター + 左右配置 + aria-label)。 */
+.co-row-coach {
+  justify-content: flex-start;
+}
+.co-row-learner {
+  justify-content: flex-end;
+}
+
+.co-avatar {
+  width: var(--co-avatar);
+  height: var(--co-avatar);
+  min-width: var(--co-avatar);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--coach-soft);
+  border: 1px solid var(--coach-line);
+  font-size: 15px;
+}
+.co-avatar-learner {
+  background: var(--panel-2);
+  border-color: var(--border);
+}
+
+.co-bubble {
+  max-width: min(72ch, 78%);
+  padding: 12px 16px;
+  border-radius: var(--co-radius);
+  font-size: 13.5px;
+}
+/* コーチ側は左上の角だけ落とす吹き出し形、学習者側は右上。 */
+.co-bubble-coach {
+  background: var(--coach-soft);
+  border: 1px solid var(--coach-line);
+  border-top-left-radius: 4px;
+  color: var(--text);
+}
+.co-bubble-learner {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-top-right-radius: 4px;
+  color: var(--text);
+}
+.co-bubble-text {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.co-bubble-error {
+  color: var(--text-muted);
+}
+.co-thinking {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.co-bubble-foot {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--coach-line);
+}
+
+/* ---- ヒント段階(残り回数を見せる)----
+   出し渋られている不安を消すのと、粘る価値があることを同時に伝える。 */
+
+.co-hint-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 11.5px;
+}
+.co-hint-level {
+  color: var(--coach);
+  font-weight: 600;
+}
+.co-tag {
+  border-radius: 999px;
+  padding: 1px 9px;
+  font-size: 11px;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+}
+.co-tag-forced {
+  border-color: var(--coach-line);
+  color: var(--coach);
+}
+.co-tag-esc {
+  border-color: var(--coach-line);
+  background: var(--coach-soft);
+  color: var(--text);
+}
+
+/* 層(自社のナレッジ / 自社の記録 / 一般論)。**どの層から答えているかを必ず出す。** */
+.co-layer {
+  border-radius: 999px;
+  padding: 1px 9px;
+  font-size: 11px;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.co-layer-knowledge {
+  border-color: var(--coach-line);
+  color: var(--coach);
+}
+.co-layer-history {
+  border-color: var(--border);
+  color: var(--text);
+}
+/* ライブ確認(68)。**過去の記録と混ぜて見せない**のがこの層の存在意義なので、
+   実線 + 太字で「今の値まで見た回答」だと一目で分かるようにする。 */
+.co-layer-live {
+  border-color: var(--coach);
+  color: var(--coach);
+  font-weight: 600;
+}
+.co-layer-rule {
+  border-style: dashed;
+}
+
+/* ライブ素材の「確かめ方」(叩いた MCP ツール名)。原文のまま出すので等幅にする。 */
+.co-evidence-tools {
+  font-family: var(--mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 11px;
+  color: var(--text-muted);
+  word-break: break-all;
+}
+
+/* ---- 根拠リンク ---- */
+
+.co-evidence {
+  margin-top: 8px;
+  font-size: 12px;
+}
+.co-evidence-locked {
+  color: var(--text-muted);
+}
+.co-evidence-toggle {
+  background: none;
+  border: none;
+  color: var(--coach);
+  font-family: var(--sans);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 2px 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.co-caret {
+  font-size: 10px;
+}
+.co-evidence-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.co-evidence-item {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 12px;
+  background: var(--panel);
+}
+.co-evidence-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.co-cited {
+  font-size: 10.5px;
+  border-radius: 999px;
+  padding: 0 8px;
+  background: var(--coach-soft);
+  border: 1px solid var(--coach-line);
+  color: var(--text);
+}
+.co-evidence-title {
+  margin: 4px 0 6px;
+  color: var(--text);
+  word-break: break-word;
+}
+.co-evidence-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.co-link {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--coach);
+  font-family: var(--sans);
+  font-size: 12px;
+  cursor: pointer;
+  text-decoration: none;
+}
+.co-link:hover {
+  text-decoration: underline;
+}
+.co-link-ext {
+  color: var(--text-muted);
+}
+
+/* ---- 入力 / ボタン ---- */
+
+.co-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 6px 0;
+}
+
+.co-compose {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  padding-top: 8px;
+}
+.co-input {
+  flex: 1;
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-family: var(--sans);
+  font-size: 13.5px;
+  line-height: 1.6;
+  resize: vertical;
+}
+.co-input:focus {
+  outline: none;
+  border-color: var(--coach);
+}
+
+.co-btn {
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 8px 18px;
+  font-family: var(--sans);
+  font-size: 12.5px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.co-btn:hover:not(:disabled) {
+  border-color: var(--coach);
+}
+.co-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.co-btn-primary {
+  background: var(--coach);
+  color: var(--on-accent);
+  border-color: var(--coach);
+  font-weight: 600;
+}
+.co-btn-escalate {
+  border-color: var(--coach-line);
+  color: var(--coach);
+}
+.co-btn-ghost {
+  background: none;
+  color: var(--text-muted);
+}
+
+/* ---- 初回の空状態(白紙の入力欄は初学者を固まらせる)---- */
+
+.co-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 24px 12px;
+  text-align: center;
+}
+.co-empty-mascot {
+  font-size: 40px;
+}
+.co-empty-text {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+.co-chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+.co-chip {
+  background: var(--coach-soft);
+  border: 1px solid var(--coach-line);
+  border-radius: 999px;
+  padding: 7px 16px;
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 12.5px;
+  cursor: pointer;
+  text-align: left;
+}
+.co-chip:hover:not(:disabled) {
+  border-color: var(--coach);
+}
+
+.co-topics {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 11.5px;
+  color: var(--text-muted);
+  margin-left: auto;
+}
+.co-topic {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0 9px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.co-topic-weak {
+  border-color: var(--coach-line);
+  color: var(--coach);
+}
+
+.co-reason {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  word-break: break-all;
+}
+
+/* ---- クイズ ---- */
+
+.co-quiz {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 8px;
+}
+.co-quiz-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+.co-quiz-format {
+  border-radius: 999px;
+  padding: 1px 10px;
+  background: var(--coach-soft);
+  border: 1px solid var(--coach-line);
+  color: var(--text);
+}
+.co-quiz-diff {
+  color: var(--coach);
+  letter-spacing: 1px;
+}
+.co-quiz-at {
+  margin-left: auto;
+}
+.co-quiz-question {
+  background: var(--coach-soft);
+  border: 1px solid var(--coach-line);
+  border-radius: var(--co-radius);
+  padding: 16px 20px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 14px;
+}
+
+.co-verdict {
+  border: 1px solid var(--border);
+  border-radius: var(--co-radius);
+  padding: 14px 18px;
+  background: var(--panel-2);
+}
+.co-verdict-head {
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.co-verdict-correct {
+  border-color: var(--coach-line);
+}
+.co-verdict-correct .co-verdict-head {
+  color: var(--coach);
+}
+.co-verdict-partial .co-verdict-head {
+  color: var(--text);
+}
+.co-verdict-wrong .co-verdict-head {
+  color: var(--text-muted);
+}
+.co-verdict-revealed .co-verdict-head {
+  color: var(--coach);
+}
+
+/* ---- 弱点 ---- */
+
+.co-weak-note {
+  border-left-color: var(--coach-line);
+}
+.co-weak-effect {
+  border-left-color: var(--border);
+  color: var(--text-muted);
+}
+.co-weak-list {
+  list-style: none;
+  margin: 8px 0 12px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.co-weak-item {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 7px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel);
+  font-size: 12px;
+}
+.co-weak-item-on {
+  border-color: var(--coach-line);
+  background: var(--coach-soft);
+}
+.co-weak-stats {
+  color: var(--text-muted);
+}
+.co-weak-at {
+  margin-left: auto;
+  color: var(--text-muted);
+  font-size: 11.5px;
+}
+
+/* ---- 壁打ちの履歴(70)----
+ *
+ * 一覧は 1 行 1 セッション。**行を開くとその場で下に全文が伸びる**(別画面に飛ばさない)。
+ * 履歴は「あのとき何を聞いたっけ」を探す場所なので、探している最中に一覧を失わせない。
+ * 吹き出し(.co-row / .co-bubble)は壁打ち画面のものをそのまま使い、
+ * ここでは一覧の行と、詳細を包む枠だけを足す。 */
+
+.co-hist-count {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.co-hist-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.co-hist-item {
+  border: 1px solid var(--border);
+  border-radius: var(--co-radius);
+  background: var(--panel);
+  overflow: hidden;
+}
+.co-hist-item-open {
+  border-color: var(--coach-line);
+}
+
+.co-hist-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 9px 12px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.co-hist-row:hover {
+  background: var(--coach-soft);
+}
+
+.co-hist-caret {
+  color: var(--text-muted);
+  width: 10px;
+}
+.co-hist-when {
+  color: var(--text-muted);
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+.co-hist-mode {
+  font-size: 13px;
+}
+
+/* 見出し(最初の発話)。長い質問で行が崩れないよう 1 行に丸める。 */
+.co-hist-q {
+  flex: 1 1 240px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.co-hist-noq {
+  color: var(--text-muted);
+  font-style: normal;
+}
+
+.co-hist-badges {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 11.5px;
+}
+.co-hist-turns {
+  color: var(--text-muted);
+}
+.co-tag-incident {
+  border-color: var(--coach-line);
+  color: var(--coach);
+}
+/* 失敗のタグ。**赤は使わない。** Coach は失敗も .co-bubble-error と同じく
+   --text-muted で控えめに出す(責める画面にしない)。新しい色トークンも足さない。 */
+.co-tag-error {
+  border-style: dashed;
+  color: var(--text-muted);
+}
+.co-tag-intent {
+  border-color: var(--coach-line);
+}
+.co-verdict-tag-correct {
+  border-color: var(--coach-line);
+  color: var(--coach);
+}
+.co-verdict-tag-partial {
+  border-color: var(--border);
+}
+.co-verdict-tag-wrong {
+  border-style: dashed;
+}
+
+.co-hist-topics {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 12px 9px 30px;
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+.co-hist-dur {
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.co-hist-model {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+.co-hist-at {
+  color: var(--text-muted);
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+
+.co-hist-detail {
+  border-top: 1px solid var(--border);
+  padding: 10px 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.co-hist-turn {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.co-hist-turn + .co-hist-turn {
+  border-top: 1px dashed var(--border);
+  padding-top: 12px;
+}
+.co-hist-turn-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 11.5px;
+}
+.co-hist-turn-no {
+  color: var(--text-muted);
+  font-weight: 600;
+}
+.co-hist-quiz {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* ---- 狭い画面 ---- */
+
+@media (max-width: 900px) {
+  .co-bubble {
+    max-width: 88%;
+  }
+  .co-thread {
+    max-height: none;
+  }
+  .co-quiz-at,
+  .co-topics {
+    margin-left: 0;
+  }
+  /* 一覧の行は縦に積む(バッジ列が質問文を潰さないように)。 */
+  .co-hist-q {
+    flex-basis: 100%;
+    white-space: normal;
+  }
+  .co-hist-topics {
+    padding-left: 12px;
+  }
+}

@@ -596,8 +596,24 @@ export async function runClaudeWithMcp(opts: {
    * 対話・定期実行の調査(runInsightAgent)では true。内部用途(対応表生成・状態取得)では不要。
    */
   checkHealth?: boolean;
+  /**
+   * 明示的に禁止するツール(68 番。Coach のライブ層が使う)。
+   * allowedTools のワイルドカードは「そのサーバーの全ツール」なので、書き込み系
+   * (central_bounce_port 等)まで含んでしまう。読み取り専用で走らせたい呼び出し元が、
+   * ここに個別のツール名を渡して締め出す。未指定なら従来どおり。
+   */
+  disallowedTools?: string[];
 }): Promise<McpAskResult> {
-  const { prompt, platforms, systemPrompt, timeoutMs = DEFAULT_TIMEOUT_MS, onEvent, model, checkHealth } = opts;
+  const {
+    prompt,
+    platforms,
+    systemPrompt,
+    timeoutMs = DEFAULT_TIMEOUT_MS,
+    onEvent,
+    model,
+    checkHealth,
+    disallowedTools,
+  } = opts;
 
   let configPath: string;
   let serverNames: string[];
@@ -628,6 +644,9 @@ export async function runClaudeWithMcp(opts: {
     "--allowedTools",
     ...allowedToolsFor(platforms),
   ];
+  if (disallowedTools && disallowedTools.length > 0) {
+    args.push("--disallowedTools", ...disallowedTools);
+  }
   if (systemPrompt) args.push("--append-system-prompt", systemPrompt);
   // model は空文字も既定へ倒す(|| を使う)。DEFAULT_AGENT_MODEL は常に真値なので、
   // --model は必ず明示的な値付きで push される(フラグ無し呼び出しは発生しない)。

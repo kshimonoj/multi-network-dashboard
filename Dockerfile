@@ -49,6 +49,7 @@ RUN mkdir -p /app/data/network-investigation /app/data/global-overview /app/data
       /app/data/webhook-feed/daily /app/data/central-streaming \
       /app/data/reports/daily /app/data/reports/samples \
       /app/data/reports/weekly /app/data/reports/monthly \
+      /app/data/knowledge /app/data/best-practice /app/data/tagged-targets /app/data/coach \
   && chown -R node:node /app
 
 USER node

@@ -52,6 +52,7 @@ const { router: bestPracticeRouter, initBestPractice } = await import(
 const { router: taggedTargetsRouter, initTaggedTargets } = await import(
   "../plugins/tagged-targets/api.js"
 );
+const { router: coachRouter, initCoach } = await import("../plugins/coach/api.js");
 
 async function createServer(): Promise<void> {
   const app = express();
@@ -129,6 +130,17 @@ async function createServer(): Promise<void> {
   // Global Overview の初期化(getClients のトークン・レート制御)より後に載せる。
   app.use("/api/tagged-targets", taggedTargetsRouter);
   await initTaggedTargets();
+
+  // ---- Coach(65)----
+  // 経験の浅いメンバー向けの「壁打ち + クイズ」。教材は自社の記録(承認済みナレッジ・
+  // 調査履歴)を最優先し、ベンダーのベストプラクティスは補助として使う。
+  // **MCP は繋がない**(現在の状態は語らせず、調査タブへ誘導する。64_findings.md §2-1(b))。
+  // 「いつ答えを出すか」はモデルに判断させず、サーバが hintLevel 0→3 の状態機械として持つ。
+  // ナレッジの参照回数(refCount)は 47 番で「調査プロンプトに注入された回数」と定義済みなので、
+  // Coach は buildInjection() を使わず、Coach 側の利用実績を data/coach/ に別立てで持つ。
+  // ナレッジ・ベストプラクティスの読み取りに依存するので、両者の初期化より後に載せる。
+  app.use("/api/coach", coachRouter);
+  await initCoach();
 
   // ---- MCP サーバー定義の初期読み込み(07)----
   // 単一ファイル bind mount はコンテナ作成時の inode に固定され、ホスト側が

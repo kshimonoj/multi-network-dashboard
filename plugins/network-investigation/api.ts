@@ -316,6 +316,15 @@ export async function getHistoryRecord(id: string): Promise<QueryHistoryRecord |
   return (await readHistory()).find((r) => r.id === id) ?? null;
 }
 
+/**
+ * 履歴の全件(新しい順)。65 番の Coach が「手順の教材」を探すのに使う。
+ * 履歴は追記専用なので読み取りに副作用は無い。取得側で教材適格の絞り込みを行う。
+ */
+export async function listHistoryRecords(): Promise<QueryHistoryRecord[]> {
+  const all = await readHistory();
+  return all.slice().reverse();
+}
+
 // ---- 調査完了フック(46)----
 //
 // 1 回の調査(手動 / 定期 / 自動事前調査のいずれも runQuery を通る)が履歴に書かれた直後に

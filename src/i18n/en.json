@@ -46,6 +46,10 @@
     "taggedTargets": {
       "label": "Tagged Targets",
       "sub": "Track only the clients / devices you care about"
+    },
+    "coach": {
+      "label": "Coach",
+      "sub": "Learn by talking it through with a senior"
     }
   },
   "theme": {
@@ -1998,6 +2002,170 @@
       "utilTx": "Utilization (Tx)",
       "utilRxInBss": "Utilization (Rx in-BSS)",
       "utilRxOtherBss": "Utilization (Rx other-BSS)"
+    }
+  },
+  "coach": {
+    "title": "Coach",
+    "sub": "A study buddy that turns our own records into hints — not answers",
+    "modeAria": "Switch between talk-it-through and quiz",
+    "mode": {
+      "chat": "Talk it through",
+      "quiz": "Quiz",
+      "history": "History"
+    },
+    "pool": "Teaching material: {knowledge} approved knowledge entries / {history} investigation records / {rules} best practices",
+    "aria": {
+      "coach": "Coach said",
+      "learner": "You said"
+    },
+    "layer": {
+      "knowledge": "our knowledge",
+      "history": "our investigation",
+      "rule": "general advice",
+      "live": "checked just now"
+    },
+    "hint": {
+      "level": "Hint {n}/{max}",
+      "forced": "time to check the answer",
+      "escalated": "answer revealed"
+    },
+    "chat": {
+      "title": "Talk it through",
+      "greeting": "What's giving you trouble? Rough words are fine — just type it as it comes.",
+      "placeholder": "Tell me what you're stuck on (⌘/Ctrl + Enter to send)",
+      "send": "Send",
+      "thinking": "Hmm, let me think…",
+      "failed": "Sorry, that didn't go through. Try sending it again.",
+      "newSession": "Start fresh",
+      "hintMore": "One more hint",
+      "hintMoreTitle": "Get one step more of a hint",
+      "escalate": "Just tell me",
+      "escalateTitle": "Skip the hints and hear the answer with the reasoning",
+      "investigate": "Check the live state",
+      "investigateTitle": "For a deep dive, go to the Network Investigation tab. Coach checks the current state when it needs to, but digging deep is that tab’s job.",
+      "incident": "I'm on an incident",
+      "incidentTitle": "Turn this on and Coach answers straight away, no hints first",
+      "incidentNote": "Incident mode. No struggling — I'll lead with the answer. Turn it off once things settle and we can go back to thinking out loud.",
+      "generalOnly": "Our own records have nothing on this, so I'm going off general advice here.",
+      "topics": "Topic: ",
+      "example": {
+        "pool": {
+          "p01": "There's a rogue AP alert — where do I even start?",
+          "p02": "Someone says a switch went down. What do I check first?",
+          "p03": "What's actually bad about mixing WPA2 and WPA3?",
+          "p04": "A client won't roam to the closer AP and just sticks to the far one — what's going on?",
+          "p05": "I'm trying to steer clients to 5GHz but they keep sitting on 2.4GHz. Why?",
+          "p06": "One corner of the floor has weak signal — does that mean the RF design needs a redo?",
+          "p07": "I'm seeing an unknown AP broadcasting the same SSID — is that dangerous?",
+          "p08": "What actually changes if I drop the channel width from 80MHz to 40MHz?",
+          "p09": "Should I prioritize 6GHz or 5GHz in the design?",
+          "p10": "An AP that should be getting PoE won't power on — what should I suspect first?",
+          "p11": "The uplink keeps flapping up and down — is it okay to just leave it?",
+          "p12": "I suspect a loop between switches — how do I isolate it?",
+          "p13": "I changed a VLAN and now clients can't reach anything — where do I check?",
+          "p14": "It says a switch's config is out of sync with what Central expects — what does that actually mean?",
+          "p15": "What goes wrong if I don't enable Protected Management Frames (PMF)?",
+          "p16": "I can't decide between MPSK and PSK — is there a rule of thumb?",
+          "p17": "I want to audit our SSIDs — what should I check?",
+          "p18": "What should drive the cipher suite choice?",
+          "p19": "What's the actual difference between WIDS/WIPS Detection and Protection?",
+          "p20": "A site's health score suddenly dropped — where do I start looking?",
+          "p21": "The counts don't match between Central's summary and the alert list — is that a bug?",
+          "p22": "Several devices seem to have gone down at once — where do I even begin?",
+          "p23": "The same alert keeps firing — how do I tell if it's a false positive?",
+          "p24": "Someone says airtime utilization is high and things feel slow — what should I check?",
+          "p25": "The WAN link seems to flap occasionally — is it fine to just watch it?",
+          "p26": "An AP keeps rebooting on its own — what should I check first?"
+        }
+      }
+    },
+    "quiz": {
+      "title": "Quiz",
+      "start": "Give me a question",
+      "next": "Next question",
+      "empty": "Hit 'Give me a question' and I'll build one from a real case of ours.",
+      "making": "Writing a question…",
+      "placeholder": "Write whatever comes to mind. It doesn't have to be tidy.",
+      "answer": "Answer",
+      "reveal": "Just tell me",
+      "difficulty": "Difficulty",
+      "rounds": "Round {n} of {max}",
+      "format": {
+        "cause": "Symptom to cause",
+        "next": "What's your next move",
+        "rule": "Which practice does this break"
+      },
+      "verdict": {
+        "correct": "Got it! Nice",
+        "partial": "So close — right direction",
+        "wrong": "Hmm, not quite",
+        "revealed": "Here's the answer"
+      }
+    },
+    "evidence": {
+      "title": "What this came from ({n})",
+      "locked": "There are {n} records behind this. You'll be able to open them once we've checked the answer.",
+      "cited": "used",
+      "citedTitle": "Coach actually leaned on this one for this reply",
+      "openKnowledge": "Open this knowledge entry",
+      "openHistory": "Open this investigation",
+      "openRule": "Open {id}",
+      "liveTools": "how it was checked: {tools}"
+    },
+    "weakness": {
+      "title": "Where you've been getting stuck",
+      "rule": "Only topics you've hit {n}+ times count as a weak spot",
+      "empty": "Nothing recorded yet. Try talking something through, or take a quiz.",
+      "weakNote": "These look a little shaky.",
+      "watchingNote": "Still watching (not enough attempts to call it a weak spot)",
+      "quizStats": "{attempts} quiz questions ({correct} right / {partial} close / {wrong} off)",
+      "avgHint": "avg hint {v}",
+      "escalations": "asked for the answer {n}x",
+      "effect": "On your weak topics I start hints one step further in, and get to the answer sooner."
+    },
+    "error": {
+      "generic": "That didn't work.",
+      "emptyQuestion": "Write something first, then send.",
+      "emptyAnswer": "Write an answer first.",
+      "emptyPool": "Couldn't find anything to ask about. Approve some knowledge entries, or run a few investigations.",
+      "noActiveQuiz": "No question in progress. Hit 'Give me a question' again.",
+      "materialGone": "The record behind this question is gone. Let's move to the next one.",
+      "chatFailed": "The conversation failed.",
+      "quizFailed": "Couldn't build a question.",
+      "gradeFailed": "Grading failed.",
+      "statusFailed": "Couldn't load the status.",
+      "sessionsFailed": "Couldn't read the records.",
+      "materialsFailed": "Couldn't search the material.",
+      "saveFailed": "Couldn't save the settings.",
+      "emptyQuery": "Type something to search for.",
+      "sessionNotFound": "That record could not be found.",
+      "emptySessionId": "No record was specified."
+    },
+    "live": {
+      "badge": "live check",
+      "badgeTitle": "This reply is grounded in facts retrieved from Central / Mist just now (tools called: {tools})",
+      "on": "When our own records are thin, I go and ask Central / Mist for the current state",
+      "off": "Live check is off right now (answers come from past records only)",
+      "pool": "Live check: {state}"
+    },
+    "history": {
+      "title": "Past sessions",
+      "count": "{n} sessions",
+      "reload": "Reload",
+      "loading": "Loading the history…",
+      "loadingDetail": "Loading the exchange…",
+      "empty": "No sessions have been recorded yet.",
+      "emptyDetail": "No exchange was recorded for this session.",
+      "noQuestion": "(started from a button press)",
+      "turns": "{n} turns",
+      "duration": "{s}s",
+      "incident": "incident mode",
+      "hasError": "had a failed turn",
+      "intent": {
+        "ask": "question",
+        "hintMore": "one more hint",
+        "escalate": "just tell me"
+      }
     }
   }
 }
