@@ -32,8 +32,7 @@ Thumbs.db
 .idea/
 .vscode/
 
-# --- instructions配下で実データ(サイト名/SSID/機器ホスト名等)が伏字化されずに
-#     残っていることが63番の監査で判明したファイル。個別除外(63番) ---
-instructions/56_findings.md
-instructions/62_findings.md
-instructions/62_opus_vs_local_differentiator_search.md
+# --- Claude Codeへの番号付き指示ファイル・findingsファイル。実データ(サイト名/SSID/
+#     機器ホスト名等)の混入がこれまで繰り返し見つかっている(56・62・63番)ため、
+#     個別除外ではなくフォルダ全体を追跡対象から外す(77番)。ローカルディスクには残す ---
+instructions/
