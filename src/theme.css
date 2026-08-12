@@ -75,16 +75,29 @@ body {
 }
 .app-bar {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 12px;
   padding: 10px 16px;
   border-bottom: 1px solid var(--border);
   background: var(--panel);
   flex-shrink: 0;
 }
-.app-title {
-  font-size: 14px;
-  font-weight: 600;
+/* 左上のロゴ表記(76番)。"Multi Network Dashboard" を短縮した "MND" + アイコン。
+   タブ一覧・右端の固定要素と違って幅が伸び縮みしないよう flex-shrink: 0 にする。 */
+.app-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  cursor: default;
+}
+.app-logo-icon {
+  display: block;
+}
+.app-logo-text {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
   color: var(--text);
 }
 .app-sub {
@@ -92,9 +105,12 @@ body {
   font-size: 11px;
   color: var(--text-dim);
 }
-/* トップバー右端のモデル表示(Corstack シェルの topbarModel 相当をローカルに再現) */
+/* トップバー右端のモデル表示(Corstack シェルの topbarModel 相当をローカルに再現)。
+   76: .app-tabs が横スクロール領域になったので、右端の固定要素はタブの多寡に関わらず
+   常に見える位置を保つよう flex-shrink: 0 にする。 */
 .app-model {
   margin-left: auto;
+  flex-shrink: 0;
   font-family: var(--mono);
   font-size: 11px;
   color: var(--text-muted);
@@ -103,12 +119,14 @@ body {
    右端の並びは 言語プルダウン → テーマトグル の順なので、auto は先頭側に付ける。 */
 .app-theme-toggle {
   margin-left: auto;
+  flex-shrink: 0;
 }
 .app-model + .app-theme-toggle {
   margin-left: 0;
 }
 .app-lang {
   margin-left: auto;
+  flex-shrink: 0;
 }
 .app-model + .app-lang {
   margin-left: 0;
@@ -131,13 +149,36 @@ body {
   display: none;
 }
 
-/* ---- 画面切替タブ(06 Task 1) ---- */
+/* ---- 画面切替タブ(06 Task 1 / 76: 横スクロール対応) ----
+   タブ数が今後も増える前提で、折り返し(2段化)ではなく横スクロールで収める。
+   .app-tabs だけが縮んでスクロール領域になり、ロゴ・右端の固定要素(モデル表示/
+   言語切替/テーマ切替)は flex-shrink: 0 のまま影響を受けない。 */
 .app-tabs {
   display: flex;
   align-items: center;
+  flex-wrap: nowrap;
   gap: 2px;
   align-self: center;
   margin-left: 8px;
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+.app-tabs::-webkit-scrollbar {
+  height: 5px;
+}
+.app-tabs::-webkit-scrollbar-track {
+  background: transparent;
+}
+.app-tabs::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: var(--radius);
+}
+.app-tabs::-webkit-scrollbar-thumb:hover {
+  background: var(--text-dim);
 }
 .app-tab {
   background: transparent;
@@ -149,6 +190,8 @@ body {
   font-size: 12px;
   cursor: pointer;
   line-height: 1.4;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 .app-tab:hover {
   color: var(--text);

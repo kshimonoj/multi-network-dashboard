@@ -15,7 +15,7 @@
 // URL の ?focus=<historyId>(Corstack の共通検索から飛んでくる形)は、共通検索が無い本アプリでも
 // 「タイムラインの特定カードを開いた状態で共有する」用途に使えるので、そのまま解釈する。
 
-import { StrictMode, useCallback, useEffect, useState } from "react";
+import { StrictMode, useCallback, useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { NetworkInvestigation } from "../plugins/network-investigation/view/NetworkInvestigation";
 import { GlobalOverview } from "../plugins/global-overview/view/GlobalOverview";
@@ -100,6 +100,30 @@ function initialTab(focusId: string | null): TabId {
   return "global-overview";
 }
 
+// 左上のロゴ表記(76番)。「Multi Network Dashboard」は文字数が多くタブバーを圧迫するため、
+// public/favicon.svg と同じネットワーク図モチーフ + "MND" の短縮表記に置き換える。
+// 何のアプリかはツールチップ(title)とaria-labelで正式名称を添えて分かるようにする。
+function Logo({ title }: { title: string }) {
+  return (
+    <span className="app-logo" title={title} aria-label={title}>
+      <svg className="app-logo-icon" viewBox="0 0 32 32" width="20" height="20" aria-hidden="true">
+        <rect x="0" y="0" width="32" height="32" rx="7" fill="var(--badge-bg)" />
+        <g stroke="var(--accent)" strokeWidth="2.2" strokeLinecap="round" fill="none">
+          <path d="M16 16 L8 9 M16 16 L24 9 M16 16 L8 23 M16 16 L24 23" />
+        </g>
+        <g fill="var(--accent)">
+          <circle cx="16" cy="16" r="4.4" />
+          <circle cx="8" cy="9" r="3" />
+          <circle cx="24" cy="9" r="3" />
+          <circle cx="8" cy="23" r="3" />
+          <circle cx="24" cy="23" r="3" />
+        </g>
+      </svg>
+      <span className="app-logo-text">MND</span>
+    </span>
+  );
+}
+
 // ダーク/ライト切替トグル(03 Task 1)。
 // 属性の初期値は index.html のインラインスクリプトが既に入れているので、ここでは
 // 「今の選択を state に持ち、クリックで反転して localStorage へ保存する」だけを行う。
@@ -172,11 +196,18 @@ function App() {
   // 既存の pendingHistoryFocus と同じ形で、対象タブが消費したらクリアする。
   const [pendingKnowledgeFocus, setPendingKnowledgeFocus] = useState<PendingKnowledgeFocus | null>(null);
   const [pendingRuleFocus, setPendingRuleFocus] = useState<PendingRuleFocus | null>(null);
+  // タブバー横スクロール対応(76番)。選択中タブが横スクロール領域の外にあるとき、
+  // そのタブが見える位置まで自動でスクロールさせるための参照。
+  const tabButtonRefs = useRef<Map<TabId, HTMLButtonElement>>(new Map());
 
   // StrictMode の二重実行でも冪等(同じ属性を入れ直すだけ)。
   useEffect(() => {
     applyTheme(theme);
   }, [theme]);
+
+  useEffect(() => {
+    tabButtonRefs.current.get(tab)?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [tab]);
 
   // バッジ用の件数だけを定期取得する(ナレッジタブ自体はマウントしていなくてよい)。
   useEffect(() => {
@@ -266,11 +297,15 @@ function App() {
     <TopbarModelContext.Provider value={setModel}>
       <div className="app-shell">
         <div className="app-bar">
-          <span className="app-title">{t("app.title")}</span>
+          <Logo title={t("app.title")} />
           <nav className="app-tabs" role="tablist" aria-label={t("app.tabsAriaLabel")}>
             {TABS.map((tb) => (
               <button
                 key={tb.id}
+                ref={(el) => {
+                  if (el) tabButtonRefs.current.set(tb.id, el);
+                  else tabButtonRefs.current.delete(tb.id);
+                }}
                 role="tab"
                 aria-selected={tab === tb.id}
                 className={`app-tab${tab === tb.id ? " app-tab-on" : ""}`}
