@@ -1178,8 +1178,13 @@
     background: #ffffff !important;
     color: #000000 !important;
   }
-  /* 画面 UI(サイドの一覧・入力欄・ボタン・SSE のライブ表示・タイムライン)は印刷しない。 */
-  body > #root {
+  /* 画面 UI(サイドの一覧・入力欄・ボタン・SSE のライブ表示・タイムライン)は印刷しない。
+     以前は #root だけを隠していたが、紙面に出したいのは #ni-print-root だけなので、
+     body 直下のそれ以外を一律で隠す(83 Task 2)。
+     mermaid は描画に失敗すると「Syntax error in text」の図を body 直下の一時 div に
+     描いたまま残すことがあり、#root だけを隠す書き方だとそれが紙面に出ていた。
+     原因側は Topology.tsx で片付けるが、ここでも二重に塞いでおく。 */
+  body > *:not(#ni-print-root) {
     display: none !important;
   }
   #ni-print-root {

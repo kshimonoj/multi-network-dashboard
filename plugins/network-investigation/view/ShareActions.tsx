@@ -4,6 +4,7 @@ import { useT, type TFunc } from "../../../src/i18n";
 import { Markdown } from "./Markdown";
 import { fillPrintRichSlots, findAnswerPanel } from "./printClone";
 import { copyText, usePrintOnMount, useTransientMessage } from "./shareUi";
+import { waitForTopologyRenders } from "./topologyRenders";
 import {
   buildMailtoHref,
   buildPrintDocTitle,
@@ -20,7 +21,7 @@ import {
 // 3 つの手段を並べる。サイト指定あり/なし(横断調査)のどちらの結果でも同じ部品を使う。
 //   印刷 / PDF … 印刷用のレポートを body 直下へポータルで生やし、window.print() を呼ぶ。
 //                 印刷ダイアログの「PDF として保存」でそのまま PDF 化にもなる。
-//                 @media print では #root を隠し、このレポートだけを紙面に出す(styles.css)。
+//                 @media print では body 直下のそれ以外を隠し、このレポートだけを紙面に出す(styles.css)。
 //   メール     … mailto: を生成。URL 長の実装上限(概ね 2000 文字)に収まるよう、
 //                 長い回答は冒頭だけ引用して「詳細はダッシュボードで」の注記を添える。
 //   コピー     … 回答本文(+ メタ情報)をプレーンテキストでクリップボードへ。
@@ -109,6 +110,8 @@ function PrintReport({
 export function ShareActions({ report, compact = false }: { report: ShareReport; compact?: boolean }) {
   const t = useT();
   const [printing, setPrinting] = useState(false);
+  // トポロジ図の描画待ち(83 Task 2)。押してから印刷ツリーを生やすまでの短い間だけ立つ。
+  const [preparing, setPreparing] = useState(false);
   const [message, showMessage] = useTransientMessage();
   // 複製元(画面に描画済みのグラフ / トポロジ図)を探す起点。
   const rootRef = useRef<HTMLDivElement>(null);
@@ -117,7 +120,17 @@ export function ShareActions({ report, compact = false }: { report: ShareReport;
   // 印刷中だけ document.title を差し替え、PDF 保存の既定ファイル名を調査ごとに変える(81 Task 1)。
   usePrintOnMount(printing, useCallback(() => setPrinting(false), []), buildPrintDocTitle(report));
 
-  const onPrint = useCallback(() => setPrinting(true), []);
+  // 印刷ツリーは画面の SVG を複製するだけなので、mermaid が描き終わる前に押されると
+  // 図が注記に置き換わる。進行中の描画が片付くまで待ってから印刷ツリーを生やす。
+  const onPrint = useCallback(async () => {
+    setPreparing(true);
+    try {
+      await waitForTopologyRenders();
+    } finally {
+      setPreparing(false);
+      setPrinting(true);
+    }
+  }, []);
 
   const onMail = useCallback(() => {
     const { href, truncated } = buildMailtoHref(report, { sourceUrl: window.location.href });
@@ -139,8 +152,13 @@ export function ShareActions({ report, compact = false }: { report: ShareReport;
   return (
     <div className={`ni-share${compact ? " compact" : ""}`} ref={rootRef}>
       <span className="ni-share-label ni-mono">{t("networkInvestigation.share.label")}</span>
-      <button className="ni-btn sm" onClick={onPrint} title={t("networkInvestigation.share.printTitle")}>
-        {t("networkInvestigation.share.print")}
+      <button
+        className="ni-btn sm"
+        onClick={onPrint}
+        disabled={preparing}
+        title={t("networkInvestigation.share.printTitle")}
+      >
+        {t(`networkInvestigation.share.print${preparing ? "Busy" : ""}`)}
       </button>
       <button className="ni-btn sm" onClick={onMail} title={t("networkInvestigation.share.mailTitle")}>
         {t("networkInvestigation.share.mail")}

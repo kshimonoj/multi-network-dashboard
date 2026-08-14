@@ -23,6 +23,7 @@ import {
   fetchScheduledQueries,
   fetchSiteMap,
   fetchSiteStatus,
+  refreshSiteMap,
   refreshSiteStatus,
   runQuery,
   subscribeEvents,
@@ -371,9 +372,25 @@ export function NetworkInvestigation({
     [onRunAction],
   );
 
+  // サイト一覧の更新(83 Task 1)。
+  //
+  // 対応表(site-platform-map.json)と状態キャッシュ(site-status.json)は別のファイルで、
+  // 以前このボタンは後者しか更新していなかった。前者を作る経路は POST /site-map/refresh だけで、
+  // 定期実行にも初回起動にも乗っていない = 一度も手で叩いていない環境では
+  // サイト一覧が 0 件のまま、ボタンを押しても変わらなかった。
+  // ここで両方を更新し、UI だけで完結するようにする。
+  //
+  // 対応表 → 状態の順に直列で実行する(どちらも Central / Mist へ claude を 2 本起動するので、
+  // 並列にすると 4 本同時になる)。対応表の生成に失敗しても状態取得までは進める。
   const onRefreshStatus = useCallback(async () => {
     setStatusRefreshing(true);
     setError(null);
+    try {
+      await refreshSiteMap();
+      setEntries(await fetchSiteMap());
+    } catch (e) {
+      setError(String(e));
+    }
     try {
       const s = await refreshSiteStatus();
       setSiteStatus(s);

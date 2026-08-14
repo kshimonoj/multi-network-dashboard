@@ -136,7 +136,8 @@ body {
 }
 /* 古いビルドのまま開きっぱなしのタブに出す帯(82)。トップバーの直下・本文の上に置き、
    本文の高さを奪う形にする(オーバーレイにすると下の操作を隠してしまうため)。
-   印刷には出さない(紙面は #ni-print-root だけ。styles.css の @media print で #root ごと隠れる)。 */
+   印刷には出さない(紙面は #ni-print-root だけ。styles.css の @media print が
+   body 直下のそれ以外を隠すので、#root の中にあるこの帯も一緒に隠れる)。 */
 .app-stale {
   display: flex;
   align-items: center;

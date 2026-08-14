@@ -137,12 +137,12 @@ Central / Mist 双方のサイトを 1 対 1 で振り分けた対応表。`plat
 | メソッド | パス | 説明 |
 | --- | --- | --- |
 | GET | `/site-map` | 現在の対応表(`site-platform-map.json`)を返す。未生成なら `entries: []` |
-| POST | `/site-map/refresh` | 対応表を再生成して上書き。Central/Mist をそれぞれ専用 narrowing で取得しマージ。片方失敗でも他方は残す(両方失敗時のみ既存ファイルを保持) |
+| POST | `/site-map/refresh` | 対応表を再生成して上書き。Central/Mist をそれぞれ専用 narrowing で取得しマージ。片方失敗でも他方は残す(両方失敗時のみ既存ファイルを保持)。**サイト一覧パネルの「状態を更新」から `/site-status/refresh` と併せて呼ばれる**(83) |
 | GET | `/events` | **SSE**。MCP 呼び出しの見える化(`run_start` / `routing_decision` / `mcp_call` / `answer` / `history`)をリアルタイム配信する。pub/sub(Discussion Panel と同じ枠組み) |
 | POST | `/query` | Insight Agent をバックグラウンド起動し、即 `{ runId }` を返す。進捗・結果は `/events` の SSE で流れる。`site` 指定時は対応表から platform を引き MCP を narrowing する |
 | GET | `/history` | クエリ実行履歴(`query-history.jsonl`)を新しい順で返す |
 | GET | `/site-status` | サイト状態キャッシュ(`site-status.json`)を返す |
-| POST | `/site-status/refresh` | Central/Mist からサイト状態(health 等)を再取得して上書き |
+| POST | `/site-status/refresh` | Central/Mist からサイト状態(health 等)を再取得して上書き。「状態を更新」は `/site-map/refresh` → これ の順に直列で呼ぶ |
 | GET | `/scheduled-queries` | 定期実行の対象クエリ一覧(`scheduled-queries.json`)を返す |
 | POST | `/scheduled-queries` | 定期実行クエリを追加(Task 5) |
 | PUT | `/scheduled-queries/:id` | 定期実行クエリを編集(query / site / enabled) |

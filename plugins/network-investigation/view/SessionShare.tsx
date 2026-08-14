@@ -4,6 +4,7 @@ import { useT, type TFunc } from "../../../src/i18n";
 import { Markdown } from "./Markdown";
 import { fillPrintSessionRichSlots } from "./printClone";
 import { copyText, usePrintOnMount, useTransientMessage } from "./shareUi";
+import { waitForTopologyRenders } from "./topologyRenders";
 import type { SessionTurn } from "./session";
 import {
   buildSessionMailtoHref,
@@ -168,6 +169,8 @@ export function SessionShareActions({
 }) {
   const t = useT();
   const [printing, setPrinting] = useState(false);
+  // トポロジ図の描画待ち(83 Task 2)。スレッド全体はターン数だけ図があるので特に効く。
+  const [preparing, setPreparing] = useState(false);
   const [message, showMessage] = useTransientMessage();
 
   // 印刷ツリーはターンと画面側 DOM を data-ni-turn で対応付けるので、runId を持ち回る。
@@ -183,7 +186,16 @@ export function SessionShareActions({
     buildSessionPrintDocTitle(report),
   );
 
-  const onPrint = useCallback(() => setPrinting(true), []);
+  // 全ターンの図が描き終わるまで待ってから印刷ツリーを生やす(ShareActions と同じ理由)。
+  const onPrint = useCallback(async () => {
+    setPreparing(true);
+    try {
+      await waitForTopologyRenders();
+    } finally {
+      setPreparing(false);
+      setPrinting(true);
+    }
+  }, []);
 
   const onMail = useCallback(() => {
     const { href, truncated } = buildSessionMailtoHref(report, { sourceUrl: window.location.href });
@@ -210,8 +222,13 @@ export function SessionShareActions({
   return (
     <div className="ni-share ni-share-session">
       <span className="ni-share-label ni-mono">{t("networkInvestigation.share.sessionLabel")}</span>
-      <button className="ni-btn sm" onClick={onPrint} title={t("networkInvestigation.share.printSessionTitle")}>
-        {t("networkInvestigation.share.print")}
+      <button
+        className="ni-btn sm"
+        onClick={onPrint}
+        disabled={preparing}
+        title={t("networkInvestigation.share.printSessionTitle")}
+      >
+        {t(`networkInvestigation.share.print${preparing ? "Busy" : ""}`)}
       </button>
       <button className="ni-btn sm" onClick={onMail} title={t("networkInvestigation.share.mailSessionTitle")}>
         {t("networkInvestigation.share.mailSummary")}
