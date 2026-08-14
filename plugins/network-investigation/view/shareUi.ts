@@ -47,9 +47,15 @@ export async function copyText(text: string): Promise<boolean> {
 // 印刷ツリーを描画したフレームの直後に window.print() を呼ぶ。
 // requestAnimationFrame はタブが可視でないと発火しないため、タイマー側の保険も置き、
 // 先に来たほうだけが print() を呼ぶ。afterprint で printing を落とす。
-export function usePrintOnMount(printing: boolean, done: () => void): void {
+//
+// docTitle(81 Task 1): 印刷ダイアログの「PDF として保存」の既定ファイル名は
+// document.title から作られる。印刷している間だけタイトルを差し替え、
+// 終わったら(= printing が false に戻る片付けで)元のタイトルへ必ず戻す。
+export function usePrintOnMount(printing: boolean, done: () => void, docTitle?: string): void {
   useEffect(() => {
     if (!printing) return;
+    const prevTitle = document.title;
+    if (docTitle) document.title = docTitle;
     window.addEventListener("afterprint", done);
     let fired = false;
     const fire = () => {
@@ -63,6 +69,7 @@ export function usePrintOnMount(printing: boolean, done: () => void): void {
       window.cancelAnimationFrame(raf);
       window.clearTimeout(timer);
       window.removeEventListener("afterprint", done);
+      document.title = prevTitle;
     };
-  }, [printing, done]);
+  }, [printing, done, docTitle]);
 }

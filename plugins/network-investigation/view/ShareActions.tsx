@@ -6,6 +6,7 @@ import { fillPrintRichSlots, findAnswerPanel } from "./printClone";
 import { copyText, usePrintOnMount, useTransientMessage } from "./shareUi";
 import {
   buildMailtoHref,
+  buildPrintDocTitle,
   buildShareText,
   formatTimestamp,
   platformLabel,
@@ -91,7 +92,7 @@ function PrintReport({
 
         <h2 className="ni-print-h2">{t("networkInvestigation.report.resultHeading")}</h2>
         <div className="ni-print-body">
-          <Markdown text={report.answer} print />
+          <Markdown text={report.answer} print site={report.site} />
         </div>
 
         <div className="ni-print-foot">
@@ -113,7 +114,8 @@ export function ShareActions({ report, compact = false }: { report: ShareReport;
   const rootRef = useRef<HTMLDivElement>(null);
 
   // 印刷用ツリーを描画したフレームの直後に印刷ダイアログを開き、afterprint で畳む。
-  usePrintOnMount(printing, useCallback(() => setPrinting(false), []));
+  // 印刷中だけ document.title を差し替え、PDF 保存の既定ファイル名を調査ごとに変える(81 Task 1)。
+  usePrintOnMount(printing, useCallback(() => setPrinting(false), []), buildPrintDocTitle(report));
 
   const onPrint = useCallback(() => setPrinting(true), []);
 

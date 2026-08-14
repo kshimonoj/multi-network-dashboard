@@ -191,7 +191,7 @@ export function Turn({
       ) : answer ? (
         <div className="ni-answer">
           <div className="ni-answer-body">
-            <Markdown text={answer} />
+            <Markdown text={answer} site={turn.site} />
           </div>
           <SuggestedActions actions={turn.suggestedActions} onRun={onRunAction} />
         </div>

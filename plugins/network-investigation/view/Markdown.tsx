@@ -17,6 +17,7 @@ import { Topology } from "./Topology";
 //   **太字** / *斜体* / `コード`
 //   [ラベル](url)
 //   ```コードブロック```
+//   | 表 | 記法 |(GFM テーブル。81 Task 3 で追加)
 //   段落・空行区切り
 
 // ---- インライン(太字/斜体/コード/リンク)を React ノード配列へ ----
@@ -70,12 +71,78 @@ function renderInline(text: string, keyPrefix: string): ReactNode[] {
 
 // ---- ブロック(見出し/リスト/コードブロック/段落)----
 
+type CellAlign = "left" | "center" | "right" | null;
+
 type Block =
   | { kind: "heading"; level: number; text: string }
   | { kind: "ul"; items: string[] }
   | { kind: "ol"; items: string[] }
   | { kind: "code"; text: string; lang: string }
+  | { kind: "table"; header: string[]; align: CellAlign[]; rows: string[][] }
+  | { kind: "hr" }
   | { kind: "p"; text: string };
+
+// 水平線(82)。回答の章の区切りに `---` が普通に出てくるが、ブロックとして解釈していなかったため
+// 「---」という文字がそのまま本文に残っていた。テーブルの区切り行はパイプを必須にしてあるので
+// (isTableSeparator)、そちらと取り違えることはない。
+const HR_RE = /^\s*(?:-{3,}|\*{3,}|_{3,})\s*$/;
+
+// ---- GFM テーブル(81 Task 3)----
+//
+// エージェントの回答には `| 列 | 列 |` 形式の表が普通に出てくるが、以前はブロックとして
+// 解釈していなかったため、パイプ記号のままの段落として画面にも紙面にも出ていた。
+//
+// 区切り行(`|---|---:|`)の判定。ヘッダ行の直後にこれが来たときだけ表とみなすので、
+// 水平線の `---` を誤って表と解釈することはない(パイプを 1 個以上必須にしている)。
+const TABLE_SEP_RE = /^\s*\|?(?:\s*:?-+:?\s*\|)+\s*:?-*:?\s*\|?\s*$/;
+
+function isTableSeparator(line: string): boolean {
+  return line.includes("|") && TABLE_SEP_RE.test(line);
+}
+
+// 1 行をセルへ分割する。行頭・行末のパイプは区切りではなく枠なので落とす。
+// セル内のパイプは GFM と同じく `\|` でエスケープできる。
+function splitTableRow(line: string): string[] {
+  let s = line.trim();
+  if (s.startsWith("|")) s = s.slice(1);
+  if (s.endsWith("|") && !s.endsWith("\\|")) s = s.slice(0, -1);
+  const cells: string[] = [];
+  let buf = "";
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (ch === "\\" && s[i + 1] === "|") {
+      buf += "|";
+      i++;
+      continue;
+    }
+    if (ch === "|") {
+      cells.push(buf.trim());
+      buf = "";
+      continue;
+    }
+    buf += ch;
+  }
+  cells.push(buf.trim());
+  return cells;
+}
+
+function parseAlign(cell: string): CellAlign {
+  const s = cell.trim();
+  const left = s.startsWith(":");
+  const right = s.endsWith(":");
+  if (left && right) return "center";
+  if (right) return "right";
+  if (left) return "left";
+  return null;
+}
+
+// 行のセル数はヘッダに合わせる(足りなければ空セル、多ければ切り捨て)。
+// LLM の出力は列数がずれることがあり、揃えないと表が崩れて見える。
+function fitRow(cells: string[], width: number): string[] {
+  const out = cells.slice(0, width);
+  while (out.length < width) out.push("");
+  return out;
+}
 
 function parseBlocks(src: string): Block[] {
   const lines = (src || "").replace(/\r\n/g, "\n").split("\n");
@@ -111,6 +178,29 @@ function parseBlocks(src: string): Block[] {
     if (h) {
       flushPara();
       blocks.push({ kind: "heading", level: h[1].length, text: h[2].trim() });
+      i++;
+      continue;
+    }
+
+    // GFM テーブル(ヘッダ行 + 区切り行 + 本体行)
+    if (line.includes("|") && i + 1 < lines.length && isTableSeparator(lines[i + 1])) {
+      flushPara();
+      const header = splitTableRow(line);
+      const align = fitRow(splitTableRow(lines[i + 1]), header.length).map(parseAlign);
+      i += 2;
+      const rows: string[][] = [];
+      while (i < lines.length && lines[i].trim() && lines[i].includes("|")) {
+        rows.push(fitRow(splitTableRow(lines[i]), header.length));
+        i++;
+      }
+      blocks.push({ kind: "table", header, align, rows });
+      continue;
+    }
+
+    // 水平線 ---(テーブルの区切り行より後に判定する。あちらはパイプを含むので排他)
+    if (HR_RE.test(line)) {
+      flushPara();
+      blocks.push({ kind: "hr" });
       i++;
       continue;
     }
@@ -175,7 +265,16 @@ function PrintRichSlot({
 
 // print: 印刷用ツリー(#ni-print-root)として描画するかどうか。
 // true のとき chart / topology は PrintRichSlot になり、画面側の SVG の複製先になる。
-export function Markdown({ text, print = false }: { text: string; print?: boolean }) {
+// site: 調査対象のサイト名(81 Task 2)。トポロジ図の正規化に使う。
+export function Markdown({
+  text,
+  print = false,
+  site,
+}: {
+  text: string;
+  print?: boolean;
+  site?: string | null;
+}) {
   const blocks = parseBlocks(text);
 
   // chart / topology に種類ごとの通し番号を振る。同じ回答テキストから画面側(Chart /
@@ -223,6 +322,36 @@ export function Markdown({ text, print = false }: { text: string; print?: boolea
                 ))}
               </ol>
             );
+          case "hr":
+            return <hr key={key} className="ni-md-hr" />;
+          case "table":
+            return (
+              // 列が多い表でも本文の幅を押し広げないよう、枠の中で横スクロールさせる。
+              <div key={key} className="ni-md-table-wrap">
+                <table className="ni-md-table">
+                  <thead>
+                    <tr>
+                      {b.header.map((h, ci) => (
+                        <th key={ci} style={b.align[ci] ? { textAlign: b.align[ci]! } : undefined}>
+                          {renderInline(h, `${key}-h-${ci}`)}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {b.rows.map((r, ri) => (
+                      <tr key={ri}>
+                        {r.map((c, ci) => (
+                          <td key={ci} style={b.align[ci] ? { textAlign: b.align[ci]! } : undefined}>
+                            {renderInline(c, `${key}-${ri}-${ci}`)}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            );
           case "code": {
             const rich = richIndexes.get(bi) ?? 0;
             // グラフ(Task 2)。スペックが不正なら生テキストにフォールバック。
@@ -239,7 +368,7 @@ export function Markdown({ text, print = false }: { text: string; print?: boolea
               return print ? (
                 <PrintRichSlot key={key} kind="topology" index={rich} />
               ) : (
-                <Topology key={key} code={b.text} richIndex={rich} />
+                <Topology key={key} code={b.text} richIndex={rich} site={site} />
               );
             }
             return (

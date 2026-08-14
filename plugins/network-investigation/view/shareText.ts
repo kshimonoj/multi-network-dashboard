@@ -87,6 +87,82 @@ export function formatTimestamp(iso: string): string {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 
+// ---- 印刷 / PDF 保存のファイル名(81 Task 1) ----
+//
+// ブラウザは「PDF として保存」の既定のファイル名を document.title から作る。
+// 以前は index.html の固定タイトル("Multi Network Dashboard")のままだったので、
+// 何度 PDF を出しても同じ名前になり、区別できなかった。
+// 印刷の直前だけ title を差し替える(shareUi.ts の usePrintOnMount)。
+//
+// 命名: <stem>_<サイト>_<YYYY-MM-DD>_<HHmm>
+//   例) network-investigation_HOME-LAB_2026-08-14_1129
+//       network-investigation-session_all-sites_2026-08-14_1131
+// 日時はロケール非依存の固定書式にする(formatTimestamp と同じ方針。
+// 表示言語でファイル名が変わると、同じ調査の PDF が言語ごとに別名になってしまうため、
+// ここは辞書を引かず英数字の固定語("all-sites" 等)を使う)。
+
+const PRINT_FILE_STEM = "network-investigation";
+const PRINT_FILE_STEM_SESSION = "network-investigation-session";
+/** サイト指定なし(横断調査)を表す語。表示ではなくファイル名なので翻訳しない。 */
+const PRINT_FILE_NO_SITE = "all-sites";
+/** セッション内でサイトが混在しているときの語。 */
+const PRINT_FILE_MULTI_SITE = "multi-site";
+/** サイト名部分の長さ上限(文字数)。長い名前でパスが破綻しないように切る。 */
+const PRINT_FILE_SITE_MAX = 40;
+
+/**
+ * ファイル名に使えない文字を落とす。
+ * - Windows / macOS で禁止・特別扱いされる文字(\ / : * ? " < > |)と制御文字を除去
+ * - 空白は "-" に畳む(シェルやメール添付で扱いやすくするため)
+ * - 末尾のドット・ハイフンを落とす(Windows は末尾ドットのファイルを作れない)
+ * 日本語のサイト名はそのまま残す。ブラウザは UTF-8 でファイル名を書き、
+ * macOS / Windows / Linux のいずれもそのまま扱えるため(NFKC で全角英数だけ半角へ寄せる)。
+ */
+export function sanitizeFileNamePart(s: string): string {
+  const cleaned = (s || "")
+    .normalize("NFKC")
+    // eslint-disable-next-line no-control-regex
+    .replace(/[\u0000-\u001f\u007f]/g, "")
+    .replace(/[\\/:*?"<>|]/g, "")
+    .replace(/[\s　]+/g, "-")
+    .replace(/-{2,}/g, "-")
+    .replace(/^[-.]+|[-.]+$/g, "");
+  return Array.from(cleaned).slice(0, PRINT_FILE_SITE_MAX).join("");
+}
+
+/** ファイル名用の日時。"YYYY-MM-DD_HHmm"(ロケール非依存)。 */
+function fileTimestamp(iso: string): string {
+  const d = new Date(iso);
+  const t = Number.isNaN(d.getTime()) ? new Date() : d;
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${t.getFullYear()}-${p(t.getMonth() + 1)}-${p(t.getDate())}_${p(t.getHours())}${p(t.getMinutes())}`;
+}
+
+function printFileName(stem: string, site: string | null, iso: string): string {
+  const sitePart = sanitizeFileNamePart(site || "") || PRINT_FILE_NO_SITE;
+  return `${stem}_${sitePart}_${fileTimestamp(iso)}`;
+}
+
+/** 単発の調査結果を印刷 / PDF 保存するときの document.title。 */
+export function buildPrintDocTitle(report: ShareReport): string {
+  return printFileName(PRINT_FILE_STEM, report.site, report.ts);
+}
+
+/**
+ * セッション全体を印刷 / PDF 保存するときの document.title。
+ * サイトはターンを跨ぐことがあるので、
+ *   全ターンが同じサイト → サイト名 / 全ターンがサイト指定なし → all-sites /
+ *   混在 → multi-site
+ * とする。日時は「最後に実行したターン」= 紙面の末尾に合わせる。
+ */
+export function buildSessionPrintDocTitle(s: SessionShareReport): string {
+  const sites = new Set(s.turns.map((t) => (t.site || "").trim()));
+  const named = [...sites].filter(Boolean);
+  const site = sites.size === 1 ? (named[0] ?? "") : named.length > 0 ? PRINT_FILE_MULTI_SITE : "";
+  const last = s.turns[s.turns.length - 1];
+  return printFileName(PRINT_FILE_STEM_SESSION, site, last?.ts ?? new Date().toISOString());
+}
+
 export function platformLabel(p: string): string {
   return p === "central" ? "Central" : p === "mist" ? "Mist" : p;
 }
@@ -138,7 +214,21 @@ export function stripMarkdown(md: string): string {
       continue;
     }
 
+    // GFM テーブル(81 Task 3)。プレーンテキストに罫線は引けないので、区切り行
+    // (|---|---|)は捨て、枠のパイプだけ落として「列 | 列」の形で読めるようにする。
+    // セル内の強調・リンクはこの下の共通処理でそのまま剥がれる。
+    if (/^\s*\|/.test(raw) && /^[\s|:-]+$/.test(raw)) continue;
+
     let line = raw;
+    if (/^\s*\|.*\|\s*$/.test(line)) {
+      line = line
+        .trim()
+        .replace(/^\|/, "")
+        .replace(/\|$/, "")
+        .split(/(?<!\\)\|/)
+        .map((c) => c.replace(/\\\|/g, "|").trim())
+        .join(" | ");
+    }
     line = line.replace(/^\s*(#{1,6})\s+/, ""); // 見出しマーカー
     // 箇条書き(ja「・」/ en「- 」)。辞書の値をそのまま置換文字列に混ぜると "$&" 等が
     // 展開されてしまうので、コールバックで組み立てる。

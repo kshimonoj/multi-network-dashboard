@@ -2,7 +2,11 @@
   "app": {
     "title": "Multi Network Dashboard",
     "tabsAriaLabel": "画面切替",
-    "modelPrefix": "model:"
+    "modelPrefix": "model:",
+    "staleBuild": {
+      "message": "新しいバージョンが配信されています。このタブは古い画面のまま動いているため、修正が反映されていない可能性があります。",
+      "reload": "再読み込み"
+    }
   },
   "plugin": {
     "networkInvestigation": {

@@ -12,6 +12,7 @@
 
 import express from "express";
 import { fileURLToPath } from "node:url";
+import fs from "node:fs";
 import path from "node:path";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -54,6 +55,36 @@ const { router: taggedTargetsRouter, initTaggedTargets } = await import(
 );
 const { router: coachRouter, initCoach } = await import("../plugins/coach/api.js");
 
+// ---- 配信中のビルドの識別(82)----
+//
+// 81 の修正が実機で効かなかった原因はここにある。`docker compose up -d --build` で
+// サーバ側(prompt など *.ts)は新しくなるが、**開いたままのタブは古い JS を持ち続ける**。
+// SPA なので画面を触っているだけでは再読み込みが起きず、
+// 「サーバ側の修正だけ効いて、画面側の修正は効いていない」という紛らわしい状態になる。
+//
+// dist/index.html が指すエントリ JS のファイル名には Vite が内容ハッシュを入れているので、
+// これをそのまま「今配信しているビルドの識別子」として返す。画面側(src/buildCheck.ts)は
+// 自分が読み込んだ <script src> と突き合わせ、食い違ったら再読み込みを促す。
+// dev(Vite middleware)ではハッシュ付きの成果物が無いので null を返し、画面は何もしない。
+let buildEntryCache: { mtimeMs: number; entry: string | null } | null = null;
+
+function currentBuildEntry(): string | null {
+  if (!isProd) return null;
+  const file = path.resolve(ROOT, "dist", "index.html");
+  try {
+    const { mtimeMs } = fs.statSync(file);
+    if (buildEntryCache && buildEntryCache.mtimeMs === mtimeMs) return buildEntryCache.entry;
+    const html = fs.readFileSync(file, "utf8");
+    const m = html.match(/<script[^>]*\ssrc="([^"]*\/assets\/[^"]+\.js)"/);
+    const entry = m ? m[1] : null;
+    buildEntryCache = { mtimeMs, entry };
+    return entry;
+  } catch {
+    // dist が無い/読めない場合は「判定しない」に倒す(画面に誤った警告を出さない)。
+    return null;
+  }
+}
+
 async function createServer(): Promise<void> {
   const app = express();
   app.use(express.json({ limit: "2mb" }));
@@ -69,6 +100,12 @@ async function createServer(): Promise<void> {
       mcpConfig: mcpServerSourceStatus(),
       ts: new Date().toISOString(),
     });
+  });
+
+  // 配信中のビルド(82)。SPA 側の「古い JS のまま開きっぱなし」検知に使う。
+  // SPA のフォールバック(app.get("*"))より前に置く必要がある。
+  app.get("/api/build", (_req, res) => {
+    res.json({ entry: currentBuildEntry() });
   });
 
   // ---- プラグイン API ----

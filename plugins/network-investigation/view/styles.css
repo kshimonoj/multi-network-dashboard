@@ -682,6 +682,38 @@
   color: var(--accent);
   text-decoration: underline;
 }
+/* 水平線(82)。章の区切りに使われるだけなので、本文より一段薄くして目立たせない。 */
+.ni-md-hr {
+  margin: 12px 0;
+  border: 0;
+  border-top: 1px solid var(--border);
+}
+/* GFM テーブル(81 Task 3)。列が多い表でも本文の幅を広げず、枠の中で横スクロールさせる。 */
+.ni-md-table-wrap {
+  margin: 8px 0;
+  overflow-x: auto;
+}
+.ni-md-table {
+  border-collapse: collapse;
+  font-size: 12px;
+  min-width: 100%;
+}
+.ni-md-table th,
+.ni-md-table td {
+  border: 1px solid var(--border);
+  padding: 4px 8px;
+  text-align: left;
+  vertical-align: top;
+  white-space: normal;
+}
+.ni-md-table th {
+  background: var(--panel-2);
+  font-weight: 700;
+  color: var(--text);
+}
+.ni-md-table tbody tr:nth-child(even) td {
+  background: color-mix(in srgb, var(--panel-2) 45%, transparent);
+}
 
 /* ---- Task 4: 履歴の詳細ビュー ---- */
 .ni-detail {
@@ -1257,6 +1289,52 @@
     /* 段落・箇条書きは途中でページを跨がせない。 */
     page-break-inside: avoid;
   }
+  /* 水平線(82)。紙面では画面より更に薄くする(黒で出すと表の罫線と紛らわしい)。 */
+  .ni-print-body .ni-md-hr {
+    margin: 8pt 0;
+    border: 0;
+    border-top: 0.5pt solid #bbb;
+  }
+  /* GFM テーブル(81 Task 3)。紙面では横スクロールできないので、枠内に収めて折り返す。 */
+  .ni-print-body .ni-md-table-wrap {
+    overflow-x: visible;
+    margin: 6pt 0;
+  }
+  .ni-print-body .ni-md-table {
+    width: 100%;
+    min-width: 0;
+    table-layout: fixed;
+    border-collapse: collapse;
+    font-size: 9pt;
+    color: #000000;
+  }
+  .ni-print-body .ni-md-table th,
+  .ni-print-body .ni-md-table td {
+    border: 1px solid #999999;
+    padding: 3pt 5pt;
+    color: #000000;
+    /* 長い MAC アドレス・シリアル番号でも列からはみ出させない。 */
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+  .ni-print-body .ni-md-table th {
+    background: #eeeeee;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .ni-print-body .ni-md-table tbody tr:nth-child(even) td {
+    /* 画面の縞模様は紙では潰れやすいので白のままにする。 */
+    background: transparent;
+  }
+  .ni-print-body .ni-md-table tr {
+    /* 行の途中でページが分かれないようにする(表そのものはページを跨いでよい)。 */
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  .ni-print-body .ni-md-table thead {
+    /* ページを跨ぐ表ではヘッダを各ページに繰り返す。 */
+    display: table-header-group;
+  }
   /* グラフ / トポロジ図(03b)。画面で描画済みの SVG をそのまま複製して差し込む枠。
      図の途中でページが分かれると読めないので、ブロックごと次ページへ送る。 */
   .ni-print-rich {
@@ -1280,6 +1358,13 @@
   .ni-print-rich-slot > svg {
     max-width: 100%;
     height: auto;
+  }
+  /* トポロジ図のタイトル(81 Task 2 でサイト名をここに出すようにした)。
+     ダークテーマで描いた SVG をそのまま複製するため、文字色が淡いグレーのまま紙に乗る。
+     ノードは背景ごと複製されて読めるが、タイトルは背景が無いので黒に上書きする。
+     mermaid は SVG 内の <style> に #id 付きのセレクタで色を書くので !important で勝つ。 */
+  .ni-print-rich-slot > svg .flowchartTitleText {
+    fill: #000000 !important;
   }
   .ni-print-rich-note {
     font-size: 9pt;

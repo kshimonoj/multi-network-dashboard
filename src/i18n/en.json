@@ -2,7 +2,11 @@
   "app": {
     "title": "Multi Network Dashboard",
     "tabsAriaLabel": "Switch view",
-    "modelPrefix": "model:"
+    "modelPrefix": "model:",
+    "staleBuild": {
+      "message": "A newer version is being served. This tab is still running the old UI, so recent fixes may not be applied.",
+      "reload": "Reload"
+    }
   },
   "plugin": {
     "networkInvestigation": {

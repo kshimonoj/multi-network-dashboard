@@ -38,6 +38,7 @@ import {
   type SiteFocusRequest,
   type TopbarModel,
 } from "./shell";
+import { useStaleBuild } from "./buildCheck";
 import { applyTheme, resolveInitialTheme, storeTheme, type Theme } from "./theme";
 import { LanguageProvider, useLanguage, useT, type Lang, type TFunc } from "./i18n";
 import "./theme.css";
@@ -199,6 +200,9 @@ function App() {
   // タブバー横スクロール対応(76番)。選択中タブが横スクロール領域の外にあるとき、
   // そのタブが見える位置まで自動でスクロールさせるための参照。
   const tabButtonRefs = useRef<Map<TabId, HTMLButtonElement>>(new Map());
+  // サーバが配っているビルドと食い違っていないか(82)。開きっぱなしのタブが古い JS のまま
+  // 動いていると、サーバ側の修正だけが効いた紛らわしい状態になるので、再読み込みを促す。
+  const staleBuild = useStaleBuild();
 
   // StrictMode の二重実行でも冪等(同じ属性を入れ直すだけ)。
   useEffect(() => {
@@ -333,6 +337,14 @@ function App() {
           <LanguageSelect />
           <ThemeToggle theme={theme} onChange={onTheme} />
         </div>
+        {staleBuild && (
+          <div className="app-stale" role="status">
+            <span className="app-stale-text">{t("app.staleBuild.message")}</span>
+            <button className="app-stale-btn" onClick={() => window.location.reload()}>
+              {t("app.staleBuild.reload")}
+            </button>
+          </div>
+        )}
         <div className="app-body">
           {visited.has("global-overview") && (
             <div className="app-pane" hidden={tab !== "global-overview"}>

@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import mermaid from "mermaid";
+import { normalizeTopologyCode } from "./topologyCode";
 
 // 回答本文の ```topology ブロックを mermaid.js で描画する(Task 3)。
 // 中身は mermaid のグラフ定義(例: graph TD / A[サイト] --- B[デバイス])。
@@ -37,17 +38,32 @@ let seq = 0;
 
 // richIndex: 同じ回答内での topology ブロックの通し番号(Markdown.tsx が振る)。
 // 印刷時に「N 番目のトポロジ図の SVG」を突き合わせて複製するための目印(printClone.ts)。
-export function Topology({ code, richIndex }: { code: string; richIndex?: number }) {
+//
+// site(81 Task 2): 調査対象のサイト名。サイト名をノードとして描いてしまっている図を
+// normalizeTopologyCode が直し、サイト名を図のタイトルへ移す。
+export function Topology({
+  code,
+  richIndex,
+  site,
+}: {
+  code: string;
+  richIndex?: number;
+  site?: string | null;
+}) {
   const [svg, setSvg] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
   const docTheme = useDocTheme();
+  const normalized = useMemo(() => normalizeTopologyCode(code, site), [code, site]);
 
   useEffect(() => {
     let cancelled = false;
     applyInit(docTheme);
-    const id = `ni-topo-${seq++}`;
-    mermaid
-      .render(id, (code || "").trim())
+    const raw = (code || "").trim();
+    const first = (normalized || "").trim() || raw;
+    const render = (src: string) => mermaid.render(`ni-topo-${seq++}`, src);
+    render(first)
+      // 正規化した結果が描けなかったときは元のコードで描き直す(直そうとして壊さない)。
+      .catch(() => (first === raw ? Promise.reject() : render(raw)))
       .then(({ svg }) => {
         if (!cancelled) {
           setSvg(svg);
@@ -60,7 +76,7 @@ export function Topology({ code, richIndex }: { code: string; richIndex?: number
     return () => {
       cancelled = true;
     };
-  }, [code, docTheme]);
+  }, [code, normalized, docTheme]);
 
   // 描画できなければ生テキストにフォールバック(過去履歴の壊れた図でもクラッシュさせない)。
   if (failed) {

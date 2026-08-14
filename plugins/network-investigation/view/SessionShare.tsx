@@ -7,6 +7,7 @@ import { copyText, usePrintOnMount, useTransientMessage } from "./shareUi";
 import type { SessionTurn } from "./session";
 import {
   buildSessionMailtoHref,
+  buildSessionPrintDocTitle,
   buildSessionShareText,
   formatTimestamp,
   platformLabel,
@@ -138,7 +139,7 @@ function PrintSessionReport({
               {turn.errorNote ? (
                 <p>{t("networkInvestigation.report.turnFailed", { note: turn.errorNote })}</p>
               ) : (
-                <Markdown text={turn.answer} print />
+                <Markdown text={turn.answer} print site={turn.site} />
               )}
             </div>
           </section>
@@ -169,13 +170,18 @@ export function SessionShareActions({
   const [printing, setPrinting] = useState(false);
   const [message, showMessage] = useTransientMessage();
 
-  usePrintOnMount(printing, useCallback(() => setPrinting(false), []));
-
   // 印刷ツリーはターンと画面側 DOM を data-ni-turn で対応付けるので、runId を持ち回る。
   const report: SessionShareReport = {
     sessionId,
     turns: turns.map((turn) => ({ ...turnToShareReport(t, turn), turnId: turn.id })),
   };
+
+  // 印刷中だけ document.title を差し替え、PDF 保存の既定ファイル名を変える(81 Task 1)。
+  usePrintOnMount(
+    printing,
+    useCallback(() => setPrinting(false), []),
+    buildSessionPrintDocTitle(report),
+  );
 
   const onPrint = useCallback(() => setPrinting(true), []);
 

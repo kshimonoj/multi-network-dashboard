@@ -134,6 +134,35 @@ body {
 .app-lang + .app-theme-toggle {
   margin-left: 0;
 }
+/* 古いビルドのまま開きっぱなしのタブに出す帯(82)。トップバーの直下・本文の上に置き、
+   本文の高さを奪う形にする(オーバーレイにすると下の操作を隠してしまうため)。
+   印刷には出さない(紙面は #ni-print-root だけ。styles.css の @media print で #root ごと隠れる)。 */
+.app-stale {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--accent-amber) 16%, var(--panel));
+  font-size: 12px;
+}
+.app-stale-text {
+  color: var(--text);
+}
+.app-stale-btn {
+  flex-shrink: 0;
+  padding: 4px 12px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 12px;
+  cursor: pointer;
+}
+.app-stale-btn:hover {
+  border-color: var(--text-muted);
+}
 .app-body {
   flex: 1;
   min-height: 0;

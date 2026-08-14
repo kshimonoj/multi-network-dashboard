@@ -153,11 +153,18 @@ const RICH_OUTPUT_RULE: Record<AgentLang, string> = {
     "```chart\n" +
     '{ "type": "bar"|"line"|"pie", "title": "…", "data": [{ "label": "…", "value": 数値 }] }\n' +
     "```\n" +
-    "3) トポロジ図: サイト・デバイス間の構成関係を図示した方が分かりやすいと判断した場合のみ、本文に次を埋め込んでよい(mermaid 記法)。\n" +
+    "3) トポロジ図: 機器同士の接続関係を図示した方が分かりやすいと判断した場合のみ、本文に次を埋め込んでよい(mermaid 記法)。\n" +
     "```topology\n" +
+    "---\n" +
+    "title: サイト名\n" +
+    "---\n" +
     "graph TD\n" +
-    "  A[サイト名] --- B[デバイス名]\n" +
+    "  GW[Gateway: 機器名] --- SW[Switch: 機器名]\n" +
+    "  SW --- AP1[AP: 機器名]\n" +
     "```\n" +
+    "  【厳守】サイトはノードにしない。サイト名は必ず上の title に書く。サイト名のノードを作って機器と接続線で結ぶことは禁止(サイトは機器ではなく、機器と接続されているわけではないため)。\n" +
+    "  ノードにしてよいのは実在する機器(Gateway / Switch / AP / クライアント等)だけで、エッジは実際の接続関係(アップリンク等)だけにする。\n" +
+    "  機器をまとまりで見せたい場合は接続線ではなく subgraph を使う。\n" +
     "  数値の羅列で足りるものにグラフを、単純な構成にトポロジ図を無理に付けない。",
   en:
     "\n\n[Optional — rich output] Use the following only when it genuinely helps. Do not force it. If none applies, return plain Markdown.\n" +
@@ -170,11 +177,18 @@ const RICH_OUTPUT_RULE: Record<AgentLang, string> = {
     "```chart\n" +
     '{ "type": "bar"|"line"|"pie", "title": "…", "data": [{ "label": "…", "value": number }] }\n' +
     "```\n" +
-    "3) Topology: only if drawing the site/device relationships makes things clearer, embed this (mermaid syntax).\n" +
+    "3) Topology: only if drawing how the devices connect to each other makes things clearer, embed this (mermaid syntax).\n" +
     "```topology\n" +
+    "---\n" +
+    "title: Site name\n" +
+    "---\n" +
     "graph TD\n" +
-    "  A[Site name] --- B[Device name]\n" +
+    "  GW[Gateway: device name] --- SW[Switch: device name]\n" +
+    "  SW --- AP1[AP: device name]\n" +
     "```\n" +
+    "  MUST: never make the site a node. Always put the site name in the `title` above. Creating a node for the site name and linking it to devices is forbidden (a site is not a device and is not physically connected to them).\n" +
+    "  Only real devices (gateway / switch / AP / client …) may be nodes, and edges must represent actual connections (uplinks etc.).\n" +
+    "  If you need to group devices visually, use a subgraph instead of edges.\n" +
     "  Do not attach a chart to a couple of numbers, or a topology diagram to a trivial structure.",
 };
 
