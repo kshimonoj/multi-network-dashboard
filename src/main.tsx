@@ -15,7 +15,7 @@
 // URL の ?focus=<historyId>(Corstack の共通検索から飛んでくる形)は、共通検索が無い本アプリでも
 // 「タイムラインの特定カードを開いた状態で共有する」用途に使えるので、そのまま解釈する。
 
-import { StrictMode, useCallback, useEffect, useRef, useState } from "react";
+import { lazy, StrictMode, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { NetworkInvestigation } from "../plugins/network-investigation/view/NetworkInvestigation";
 import { GlobalOverview } from "../plugins/global-overview/view/GlobalOverview";
@@ -442,10 +442,19 @@ function App() {
   );
 }
 
+// 開発時だけの注釈ツールバー(85)。vite build では import.meta.env.DEV が false に置き換わり、
+// 動的 import ごと消える(静的 import にしないこと。src/devtools/AgentationDev.tsx 冒頭参照)。
+const AgentationDev = import.meta.env.DEV ? lazy(() => import("./devtools/AgentationDev")) : null;
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <LanguageProvider>
       <App />
     </LanguageProvider>
+    {AgentationDev && (
+      <Suspense fallback={null}>
+        <AgentationDev />
+      </Suspense>
+    )}
   </StrictMode>,
 );
