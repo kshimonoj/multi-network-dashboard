@@ -329,6 +329,7 @@
       "failedTag": "Failed",
       "readCount": "{n} rows read",
       "readCountDelta": " (+{n} last time)",
+      "readCountNone": " (no new rows last time)",
       "nextRowNote": "Incremental fetch: next read starts at row {n}"
     },
     "filter": {

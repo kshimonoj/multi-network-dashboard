@@ -321,7 +321,11 @@ export function WebhookFeed({
                     )}
                     <span className="go-src-req go-mono">
                       {t("webhookFeed.sheets.readCount", { n: Math.max(0, s.lastRow - 1) })}
-                      {s.newRows > 0 ? t("webhookFeed.sheets.readCountDelta", { n: s.newRows }) : ""}
+                      {s.newRows > 0
+                        ? t("webhookFeed.sheets.readCountDelta", { n: s.newRows })
+                        : s.status === "ok"
+                          ? t("webhookFeed.sheets.readCountNone")
+                          : ""}
                     </span>
                   </div>
                   <div className="go-src-note">

@@ -9,7 +9,18 @@
 //       追記専用のログシートなので、行番号がそのまま安定した進捗マーカーになる。
 //       シートがクリア/縮小された場合に備え、同じ batchGet で「前回の最終行がまだ存在するか」を
 //       確認するアンカー範囲も一緒に取り、消えていたら全件読み直しへフォールバックする。
-//       3 シートぶんの読み取りは batchGet 1 本(= HTTP 1 本)に収まる。
+//
+// グリッド上限(84):
+//       Sheets API は開始行がシートのグリッド行数(gridProperties.rowCount)を超える範囲を
+//       空配列ではなく 400 "exceeds grid limits" で返す。Apps Script の appendRow は
+//       グリッドをちょうど 1 行ずつ伸ばすので、既定の 1000 行を使い切ったシートでは
+//       「全行を読み終わった = 次に読む行がグリッドの外」になり、新規行が来るまで失敗し続ける。
+//       そこで readMeta でグリッド行数も取り、開始行がその外なら範囲を投げずに「新規なし」にする。
+//
+// シート間の独立(84):
+//       batchGet は 1 範囲でも不正だとリクエスト全体が失敗する。以前は 3 シートを 1 本に
+//       まとめていたため、1 シートの失敗で残りも読めず、全シートに同じエラーが表示されていた。
+//       いまはシートごとに batchGet を分け(= 1 巡 HTTP 3 本)、失敗はそのシートの error に閉じ込める。
 //
 // 値の読み方(実測で決めた。instructions/17_findings.md 参照):
 //       valueRenderOption は UNFORMATTED_VALUE を使う。FORMATTED_VALUE だと 17 桁の
@@ -210,99 +221,124 @@ export interface SpreadsheetRead {
   requests: number;
 }
 
-/** シートのメタ(タイトル・タイムゾーン・存在するシート名)を取得する。 */
-export async function readMeta(): Promise<{ title: string; timeZone: string; sheetNames: string[] }> {
+/** シートのメタ(タイトル・タイムゾーン・存在するシート名・グリッド行数)を取得する。 */
+export async function readMeta(): Promise<{
+  title: string;
+  timeZone: string;
+  sheetNames: string[];
+  /** シート名 → グリッド行数(空行を含むシートの物理的な行数) */
+  rowCounts: Record<string, number>;
+}> {
   const sheets = await getSheetsClient();
   const res = await sheets.spreadsheets.get({
     spreadsheetId: spreadsheetId(),
-    fields: "properties(title,timeZone),sheets.properties.title",
+    fields: "properties(title,timeZone),sheets.properties(title,gridProperties.rowCount)",
   });
   const props = res.data.properties ?? {};
+  const rowCounts: Record<string, number> = {};
+  for (const s of res.data.sheets ?? []) {
+    const title = s.properties?.title;
+    const n = s.properties?.gridProperties?.rowCount;
+    if (title && typeof n === "number") rowCounts[title] = n;
+  }
   return {
     title: props.title ?? "(無題)",
     timeZone: props.timeZone || "Asia/Tokyo",
     sheetNames: (res.data.sheets ?? []).map((s) => s.properties?.title ?? "").filter(Boolean),
+    rowCounts,
   };
 }
 
 /**
- * 3 シートの新規行を batchGet 1 本で読む。
+ * 1 シートの新規行を読む。失敗は throw せず error に入れて返す(他シートを巻き込まない)。
+ * @param rowCount グリッド行数。分からなければ undefined(ガードせずに読む)
+ */
+async function readSheetNewRows(
+  client: sheets_v4.Sheets,
+  id: string,
+  name: string,
+  lastRow: number | undefined,
+  rowCount: number | undefined,
+): Promise<{ result: SheetReadResult; requests: number }> {
+  const last = Math.max(1, Math.floor(lastRow ?? 1));
+  let requests = 0;
+  try {
+    // 前回の最終行がグリッドの外 = シートが縮小された(アンカーを投げると 400 になるので先に判定)。
+    const shrunk = rowCount !== undefined && last > rowCount;
+    // 次に読む行がグリッドの外 = 読み終わっていて新規行はない。
+    const caughtUp = rowCount !== undefined && last + 1 > rowCount;
+
+    // 1 シートにつき: ヘッダ / アンカー(前回最終行が生きているか) / 新規行。
+    const ranges: string[] = [`${name}!A1:Z1`];
+    const anchor = !shrunk && last > 1 ? ranges.push(`${name}!A${last}:A${last}`) - 1 : null;
+    const data = !shrunk && !caughtUp ? ranges.push(`${name}!A${last + 1}:Z`) - 1 : null;
+
+    const res = await client.spreadsheets.values.batchGet({
+      spreadsheetId: id,
+      ranges,
+      valueRenderOption: "UNFORMATTED_VALUE",
+      majorDimension: "ROWS",
+    });
+    requests += 1;
+    const got = res.data.valueRanges ?? [];
+    const headers = (got[0]?.values?.[0] ?? []).map((v) => cellToString(v).trim());
+    const anchorAlive = shrunk ? false : anchor === null ? true : (got[anchor]?.values?.length ?? 0) > 0;
+
+    if (anchorAlive) {
+      const values = data === null ? [] : (got[data]?.values ?? []);
+      const rows = values.map((v, i) => ({ rowIndex: last + 1 + i, values: v }));
+      return {
+        result: { sheet: name, headers, rows, lastRow: last + rows.length, resynced: false, error: null },
+        requests,
+      };
+    }
+
+    // シートがクリア/縮小された。ヘッダの次の行から全部読み直す。
+    // rowCount が 1(ヘッダのみ)なら A2 はグリッドの外なので、読まずに空とする。
+    let values: unknown[][] = [];
+    if (rowCount === undefined || rowCount >= 2) {
+      const re = await client.spreadsheets.values.get({
+        spreadsheetId: id,
+        range: `${name}!A2:Z`,
+        valueRenderOption: "UNFORMATTED_VALUE",
+        majorDimension: "ROWS",
+      });
+      requests += 1;
+      values = re.data.values ?? [];
+    }
+    const rows = values.map((v, j) => ({ rowIndex: 2 + j, values: v }));
+    console.warn(`[webhook-feed] ${name} が縮小(またはクリア)されたため全件読み直しました(${rows.length} 行)`);
+    return {
+      result: { sheet: name, headers, rows, lastRow: 1 + rows.length, resynced: true, error: null },
+      requests,
+    };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return {
+      result: { sheet: name, headers: [], rows: [], lastRow: last, resynced: false, error: msg },
+      requests: requests + 1,
+    };
+  }
+}
+
+/**
+ * 各シートの新規行を読む。シートごとに独立したリクエストにし、並行して投げる。
+ * 1 シートの失敗はそのシートの error に入り、他のシートの結果には影響しない。
  * @param lastRows シート名 → 前回読んだ最終行番号(未読は 1 = ヘッダのみ)
+ * @param rowCounts シート名 → グリッド行数(readMeta の値)。無いシートはガードせずに読む
  */
 export async function readNewRows(
   sheetNames: string[],
   lastRows: Record<string, number>,
+  rowCounts: Record<string, number> = {},
 ): Promise<{ sheets: SheetReadResult[]; requests: number }> {
   const client = await getSheetsClient();
   const id = spreadsheetId();
-
-  // 範囲の並び順を自分で管理する(batchGet は渡した順で返る)。
-  // 1 シートにつき: ヘッダ / アンカー(前回最終行が生きているか) / 新規行。
-  const ranges: string[] = [];
-  const slots: Array<{ sheet: string; header: number; anchor: number | null; data: number }> = [];
-  for (const name of sheetNames) {
-    const last = Math.max(1, Math.floor(lastRows[name] ?? 1));
-    const header = ranges.push(`${name}!A1:Z1`) - 1;
-    let anchor: number | null = null;
-    if (last > 1) anchor = ranges.push(`${name}!A${last}:A${last}`) - 1;
-    const data = ranges.push(`${name}!A${last + 1}:Z`) - 1;
-    slots.push({ sheet: name, header, anchor, data });
-  }
-
-  const res = await client.spreadsheets.values.batchGet({
-    spreadsheetId: id,
-    ranges,
-    valueRenderOption: "UNFORMATTED_VALUE",
-    majorDimension: "ROWS",
-  });
-  const got = res.data.valueRanges ?? [];
-  const requests = 1;
-
-  const out: SheetReadResult[] = [];
-  const resyncTargets: Array<{ sheet: string; slot: (typeof slots)[number] }> = [];
-
-  for (const slot of slots) {
-    const headers = (got[slot.header]?.values?.[0] ?? []).map((v) => cellToString(v).trim());
-    const last = Math.max(1, Math.floor(lastRows[slot.sheet] ?? 1));
-    const anchorAlive = slot.anchor === null ? true : (got[slot.anchor]?.values?.length ?? 0) > 0;
-    if (!anchorAlive) {
-      // シートがクリア/縮小された。全件読み直す(次の batchGet でまとめて)。
-      resyncTargets.push({ sheet: slot.sheet, slot });
-      out.push({ sheet: slot.sheet, headers, rows: [], lastRow: 1, resynced: true, error: null });
-      continue;
-    }
-    const values = got[slot.data]?.values ?? [];
-    const rows = values.map((values2, i) => ({ rowIndex: last + 1 + i, values: values2 }));
-    out.push({
-      sheet: slot.sheet,
-      headers,
-      rows,
-      lastRow: last + rows.length,
-      resynced: false,
-      error: null,
-    });
-  }
-
-  if (resyncTargets.length === 0) return { sheets: out, requests };
-
-  // 縮小が起きたシートだけ、ヘッダの次の行から全部読み直す。
-  const reRanges = resyncTargets.map((t) => `${t.sheet}!A2:Z`);
-  const re = await client.spreadsheets.values.batchGet({
-    spreadsheetId: id,
-    ranges: reRanges,
-    valueRenderOption: "UNFORMATTED_VALUE",
-    majorDimension: "ROWS",
-  });
-  const reGot = re.data.valueRanges ?? [];
-  resyncTargets.forEach((t, i) => {
-    const values = reGot[i]?.values ?? [];
-    const target = out.find((o) => o.sheet === t.sheet)!;
-    target.rows = values.map((v, j) => ({ rowIndex: 2 + j, values: v }));
-    target.lastRow = 1 + target.rows.length;
-    console.warn(
-      `[webhook-feed] ${t.sheet} が縮小(またはクリア)されたため全件読み直しました(${target.rows.length} 行)`,
-    );
-  });
-
-  return { sheets: out, requests: requests + 1 };
+  const results = await Promise.all(
+    sheetNames.map((name) => readSheetNewRows(client, id, name, lastRows[name], rowCounts[name])),
+  );
+  return {
+    sheets: results.map((r) => r.result),
+    requests: results.reduce((n, r) => n + r.requests, 0),
+  };
 }

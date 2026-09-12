@@ -8,10 +8,12 @@
 // 差分検知(Task 1-4):
 //   data/webhook-feed/state.json に「シートごとの最終読み取り行番号」を持つ。
 //   次回は A{lastRow+1}:Z だけを読むので、行が増えていなければ Sheets からは空配列が返り、
-//   キャッシュをそのまま使い回す(Task 2-4)。3 シートぶんで HTTP は 1 本(batchGet)。
+//   キャッシュをそのまま使い回す(Task 2-4)。読み終わっていて次の行がグリッドの外なら
+//   範囲自体を投げない(84)。HTTP はメタ 1 本 + シートごとに 1 本(84 で分割。1 シートの
+//   失敗が他シートを巻き込まないようにするため。詳細は sheets-client.ts)。
 //
 // Google Sheets API の読み取り枠は「1 分あたり 300 リクエスト/プロジェクト」。
-// 既定 5 分間隔 × HTTP 1 本 = 0.2 req/min なので、枠のほぼ全域が空いたままになる。
+// 既定 5 分間隔 × HTTP 4 本 = 0.8 req/min なので、枠のほぼ全域が空いたままになる。
 
 import { fileURLToPath } from "node:url";
 import path from "node:path";
@@ -456,8 +458,11 @@ async function doRefresh(): Promise<void> {
     read = await readNewRows(
       present.map((s) => s.sheet),
       state.lastRows,
+      meta.rowCounts,
     );
   } catch (err) {
+    // シートごとの失敗は readNewRows 内で各シートの error に閉じ込めている。
+    // ここに来るのは認証など、全シートに共通する失敗だけ。
     const msg = err instanceof Error ? err.message : String(err);
     console.warn(`[webhook-feed] シートの読み取りに失敗: ${msg}`);
     sheetStates = sheetStates.map((s) => ({ ...s, status: "error", error: msg, newRows: 0 }));
@@ -483,6 +488,22 @@ async function doRefresh(): Promise<void> {
     }
     const r = read.sheets.find((x) => x.sheet === spec.sheet);
     if (!r) continue;
+
+    if (r.error) {
+      // このシートだけ失敗。読み取り位置は進めず、次回同じ行から読み直す。
+      console.warn(`[webhook-feed] ${spec.sheet} の読み取りに失敗: ${r.error}`);
+      nextSheetStates.push({
+        sheet: spec.sheet,
+        label: spec.label,
+        source: spec.source,
+        lastRow: state.lastRows[spec.sheet] ?? 1,
+        newRows: 0,
+        items: 0, // 下でまとめて数える
+        status: "error",
+        error: r.error,
+      });
+      continue;
+    }
 
     if (r.resynced) {
       // シートがクリアされた。そのソースの既存行を捨てて読み直したぶんで置き換える。
@@ -638,7 +659,7 @@ export function startPolling(): void {
   timer = setInterval(tick, pollIntervalMs);
   timer.unref?.();
   console.log(
-    `[webhook-feed] ポーリング開始: ${pollIntervalMs / 1000}s 間隔 / 1 巡につき Sheets API 1〜2 本` +
+    `[webhook-feed] ポーリング開始: ${pollIntervalMs / 1000}s 間隔 / 1 巡につき Sheets API メタ 1 本 + シートごとに 1 本` +
       `(自動事前調査 ${AUTO_ENABLED ? `有効・最大 ${AUTO_MAX_PER_CYCLE} 件/巡` : "無効"})`,
   );
 }

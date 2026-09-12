@@ -329,6 +329,7 @@
       "failedTag": "失敗",
       "readCount": "読取済み {n} 行",
       "readCountDelta": " (前回 +{n})",
+      "readCountNone": " (前回 新規データなし)",
       "nextRowNote": "差分取得: 次回は {n} 行目から読みます"
     },
     "filter": {
