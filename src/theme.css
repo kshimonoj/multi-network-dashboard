@@ -16,22 +16,50 @@
  *   - 上の 12 変数に加えて、テーマで反転が必要なものだけ追加した:
  *       --on-accent … アクセント色の上に載せる文字色(ライトでは白、ダークでは黒)
  *       --badge-bg  … ロゴバッジ等の「わずかに浮かせる」下地
+ *
+ * 86: 色の値を Material Theme Builder の生成パレット(src/theme/*.css)に差し替えた。
+ *   - 生成ファイルは編集しない。値を変えるときは Theme Builder で再生成して丸ごと差し替える。
+ *   - 生成ファイルの .light / .dark は postcss.config.cjs が取り込み時に
+ *     html[data-theme="light"] / :root, html[data-theme="dark"] へ読み替える。
+ *   - medium-contrast / high-contrast(*-mc.css / *-hc.css)は読み込むが、どのセレクタにも繋いでいない。
+ *     将来コントラスト切替 UI を作るときに繋ぐ。未使用に見えても削除しないこと。
+ *   - 以下は既存の変数名を M3 ロールに向けるエイリアス層。コンポーネント側は従来の名前のまま参照する。
+ *   - --radius / --sans / --mono は変更なし(印刷 CSS も --sans / --mono を参照している)。
  */
 
-:root,
-html[data-theme="dark"] {
-  --bg: #12151a;
-  --panel: #1a1f27;
-  --panel-2: #1f2530;
-  --border: #262d38;
-  --border-soft: #1e242e;
-  --text: #e7eaee;
-  --text-muted: #8892a0;
-  --text-dim: #5b6472;
-  --accent: #4fd1c5;
-  --accent-amber: #f2a65a;
-  --on-accent: #0d0f12;
+@import "./theme/light.css";
+@import "./theme/dark.css";
+@import "./theme/light-mc.css";
+@import "./theme/dark-mc.css";
+@import "./theme/light-hc.css";
+@import "./theme/dark-hc.css";
+
+/* var(--md-*) は <html> 上で解決されるので、テーマ共通の対応付けは :root に 1 回書けば両テーマに効く。 */
+:root {
+  --bg: var(--md-sys-color-surface);
+  /* --panel はテーマで段を変える(下の html[data-theme="light"] を参照)。ダークは surface-container-low。 */
+  --panel: var(--md-sys-color-surface-container-low);
+  --panel-2: var(--md-sys-color-surface-container-high);
+  /* outline は高密度テーブルの罫線には明るすぎるので outline-variant。 */
+  --border: var(--md-sys-color-outline-variant);
+  /* M3 に 3 段目の outline は無いので、outline-variant を surface に寄せて弱い罫線を作る。 */
+  --border-soft: color-mix(in srgb, var(--md-sys-color-outline-variant) 55%, var(--md-sys-color-surface));
+  --text: var(--md-sys-color-on-surface);
+  --text-muted: var(--md-sys-color-on-surface-variant);
+  --text-dim: var(--md-sys-color-outline);
+  --accent: var(--md-sys-color-primary);
+  /* Coach の主色(--coach: var(--accent-amber))。名前は変えない。 */
+  --accent-amber: var(--md-extended-color-coach-color);
+  --on-accent: var(--md-sys-color-on-primary);
+  /* Down / critical。ダークは生成値(error)のまま。 */
+  --danger: var(--md-sys-color-error);
+  /* 半透明の重ね塗り。panel / panel-2 / hover 行など下地を選ばず「一段浮かせる」用途なので、
+     不透明な surface-container-* には置き換えない。 */
   --badge-bg: rgba(255, 255, 255, 0.06);
+
+  /* 87 以降の共通部品が参照するタブ単位のアクセント。Coach だけ amber に差し替わる。 */
+  --tab-accent: var(--accent);
+
   --radius: 3px;
   --mono: "IBM Plex Mono", monospace;
   --sans: "IBM Plex Sans", "IBM Plex Sans JP", sans-serif;
@@ -39,18 +67,91 @@ html[data-theme="dark"] {
 
 /* Corstack と同じ切替キー。 */
 html[data-theme="light"] {
-  --bg: #f6f6f4;
-  --panel: #ffffff;
-  --panel-2: #eef0ee;
-  --border: #dfe2e1;
-  --border-soft: #e9ebe9;
-  --text: #1c2024;
-  --text-muted: #5c6570;
-  --text-dim: #93999f;
-  --accent: #0f9488;
-  --accent-amber: #b5691e;
-  --on-accent: #ffffff;
+  /* M3 の surface 段はライトでは surface より暗い方向に進むため、-low だと
+     パネルが背景より暗くなり従来の明度関係(背景 < パネル)が逆転する。ライトだけ最も明るい段にする。 */
+  --panel: var(--md-sys-color-surface-container-lowest);
+  /* 生成値 #904A42 は NOC 用途には鈍いため、Down / critical のみ彩度を上げる */
+  --danger: #BA1A1A;
   --badge-bg: rgba(0, 0, 0, 0.05);
+}
+
+/* プラグインが .go-root / .ni-root に局所定義している状態色・プラットフォーム色を、
+   同じ名前のまま M3 の extended color に向ける。プラグイン側の定義(詳細度 0,1,0)より
+   確実に勝つよう html を前置する。--warn は従来どおり var(--accent-amber) のまま(プラグイン側)。 */
+:root,
+html .go-root,
+html .ni-root {
+  --central: var(--md-extended-color-central-color);
+  /* 青系。従来は --up と同じ緑で見分けが付かなかった。 */
+  --mist: var(--md-extended-color-mist-color);
+  --up: var(--md-extended-color-success-color);
+  --down: var(--danger);
+}
+
+.co-root {
+  --tab-accent: var(--coach);
+}
+
+/* 86b: ダークの罫線を現行の明るさ(rgb(38 45 56)相当)に戻す。
+   outline-variant(ダーク実測 rgb(64 73 68))を直接使うと高密度テーブルの格子が現行より明るくなるため、
+   surface(rgb(15 21 18))と混ぜて明度を落とす。ライトは変更しない(:root の plain な値のまま)。 */
+html[data-theme="dark"] {
+  --border: color-mix(in srgb, var(--md-sys-color-outline-variant) 55%, var(--md-sys-color-surface));
+  --border-soft: color-mix(in srgb, var(--md-sys-color-outline-variant) 35%, var(--md-sys-color-surface));
+}
+
+/* 87: 表(Tagged Targets 一覧 / Global Overview サイト一覧 / LLM Markdown テーブル)の中間トークン。
+   3 表の CSS は寸法・色をここからだけ参照する(共通クラスは作らず、既存クラスの値だけを置き換える)。
+   .go-table は Event/Alert・Webhook・Streaming・レポート・TT 詳細の表も共有しているので、ここを変えると一緒に変わる。 */
+:root {
+  /* 密度。行高は td の height(表のセルでは最小高さとして働く)で揃える設計。
+     87 §2 の実データ検証(本番 8092、GO 22 行 + TT 31 行中 9 行)で統一を見送った:
+       28px … 超過 9/31 行 = 29.0%(TT の全行。対象列の複数行表示と解除ボタンの高さ)
+       30px … 超過 7/31 行 = 22.6%(TT の対象列が 2〜4 行の行)
+     どちらも基準 2% を超えたので統一は見送り(TT 32px / Markdown 28.2px は現行維持)。
+     auto = 行高を強制しない。統一し直すときはこの値だけを変える。 */
+  --table-row-height: auto;
+  /* GO サイト一覧だけは 28px(87 Phase B。GO は 28px で超過 0/22 行だった)。
+     適用先は global-overview/view/styles.css の .go-table:has(.go-col-site)。 */
+  --table-row-height-go: 28px;
+  --table-cell-padding-y-go: 4px;
+  /* GO(従来値 7px 10px) */
+  --table-cell-padding-y: 7px;
+  --table-cell-padding-x: 10px;
+  /* TT 一覧・TT 詳細(従来値 5px 8px) */
+  --table-cell-padding-y-compact: 5px;
+  /* Markdown テーブル(従来値 4px 8px) */
+  --table-cell-padding-y-dense: 4px;
+  /* TT・Markdown テーブルの横 padding(従来値 8px) */
+  --table-cell-padding-x-compact: 8px;
+  --table-header-padding-y: 8px;
+  --table-font-size: 12px;
+  --table-header-font-size: 10px;
+  /* TT 一覧・TT 詳細(.tt-table)の文字サイズ(従来値) */
+  --table-font-size-compact: 11px;
+  --table-header-font-size-compact: 9px;
+
+  /* 罫線。行の区切りはゼブラを廃止したので罫線だけで担う(87 Phase B)。
+     強さはこの 1 行で切り替える: var(--border)(標準) / var(--border-soft)(87 以前の GO/TT と同じ弱い罫線) */
+  --table-border: var(--border);
+  --table-border-width: 1px;
+  --table-border-header: var(--border);
+
+  /* 面。ヘッダは sticky で行の上に重なるので不透明な surface-container を使う。
+     ゼブラ縞は 87 Phase B で廃止(トークンごと削除)。 */
+  --table-header-bg: var(--md-sys-color-surface-container);
+
+  /* state layer(M3)。背景色を差し替えず、on-surface を指定の不透明度で重ねる。
+     半透明の層として持つので、その行の元の背景(パネル・選択)の上にそのまま合成される。
+     hover は background-image に載せ、background-color 側(選択)と重ねられるようにしている。 */
+  --table-state-hover: 8%;
+  --table-state-selected: 12%;
+  --table-state-hover-color: color-mix(in srgb, var(--md-sys-color-on-surface) var(--table-state-hover), transparent);
+  --table-state-selected-color: color-mix(in srgb, var(--md-sys-color-on-surface) var(--table-state-selected), transparent);
+  --table-state-hover-layer: linear-gradient(var(--table-state-hover-color), var(--table-state-hover-color));
+  --table-state-selected-layer: linear-gradient(var(--table-state-selected-color), var(--table-state-selected-color));
+  /* 選択行の左端のアクセント線の太さ */
+  --table-selected-indicator-width: 2px;
 }
 
 * {

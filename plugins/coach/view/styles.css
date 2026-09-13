@@ -21,8 +21,9 @@
 
 .co-root {
   --coach: var(--accent-amber);
-  --coach-soft: rgba(242, 166, 90, 0.14);
-  --coach-line: rgba(242, 166, 90, 0.34);
+  /* 87: 旧 amber の rgba 直書きをやめ、--coach から導出する。比率は旧値の実効色に最も近くなるよう実測で決めた。 */
+  --coach-soft: color-mix(in srgb, var(--coach) 13%, transparent);
+  --coach-line: color-mix(in srgb, var(--coach) 31%, transparent);
   --co-radius: 14px;
   --co-avatar: 28px;
 
@@ -34,8 +35,8 @@
 /* ライトテーマでは amber が薄いと本文が読めないので、地の色を別に持つ
    (既存のテーマ切替の仕組みにそのまま乗る)。 */
 html[data-theme="light"] .co-root {
-  --coach-soft: rgba(181, 105, 30, 0.1);
-  --coach-line: rgba(181, 105, 30, 0.28);
+  --coach-soft: color-mix(in srgb, var(--coach) 9%, transparent);
+  --coach-line: color-mix(in srgb, var(--coach) 25%, transparent);
 }
 
 .co-mascot {

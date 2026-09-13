@@ -693,26 +693,31 @@
   margin: 8px 0;
   overflow-x: auto;
 }
+/* 寸法・罫線・面・state layer は src/theme.css の --table-* を参照する(87)。
+   クラス名・display・white-space は印刷ブロック(@media print)が依存しているので変えない。
+   行高の height は付けない(自然高さが既に 28.2px。付けると印刷の行にも最小高さが効いてしまう)。 */
 .ni-md-table {
   border-collapse: collapse;
-  font-size: 12px;
+  font-size: var(--table-font-size);
   min-width: 100%;
 }
 .ni-md-table th,
 .ni-md-table td {
-  border: 1px solid var(--border);
-  padding: 4px 8px;
+  border: var(--table-border-width) solid var(--table-border);
+  padding: var(--table-cell-padding-y-dense) var(--table-cell-padding-x-compact);
   text-align: left;
   vertical-align: top;
   white-space: normal;
 }
 .ni-md-table th {
-  background: var(--panel-2);
+  background: var(--table-header-bg);
   font-weight: 700;
   color: var(--text);
 }
-.ni-md-table tbody tr:nth-child(even) td {
-  background: color-mix(in srgb, var(--panel-2) 45%, transparent);
+/* ゼブラ縞は 87 Phase B で廃止。行の区切りは格子罫線(--table-border)だけで担う。
+   hover の層は td の background-image に重ねる(td に背景色を持たせる変更が入っても上に合成されるように)。 */
+.ni-md-table tbody tr:hover td {
+  background-image: var(--table-state-hover-layer);
 }
 
 /* ---- Task 4: 履歴の詳細ビュー ---- */
@@ -1326,10 +1331,6 @@
     background: #eeeeee;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
-  }
-  .ni-print-body .ni-md-table tbody tr:nth-child(even) td {
-    /* 画面の縞模様は紙では潰れやすいので白のままにする。 */
-    background: transparent;
   }
   .ni-print-body .ni-md-table tr {
     /* 行の途中でページが分かれないようにする(表そのものはページを跨いでよい)。 */
