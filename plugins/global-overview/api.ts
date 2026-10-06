@@ -5,6 +5,7 @@
 //   GET  /summary         … スナップショットのうち totals + platforms だけ(軽量)
 //   GET  /sites           … サイト別内訳。?platform=central|mist で絞り込み
 //   GET  /status          … 資格情報の設定状況・レート制御の実績・キャッシュ鮮度(疎通確認用)
+//   GET  /map-config      … サイトマップのタイル URL / 帰属表記(85。env で差し替え・CARTO キー付与)
 //   POST /refresh         … 最短間隔(既定 60 秒)を守ったうえで即時再取得
 //
 // View 側(06 で実装)の BASE は /api/global-overview に合わせる。
@@ -30,6 +31,7 @@ import {
   type DetailPlatform,
 } from "./site-detail.js";
 import { getEventFeed } from "./events-feed.js";
+import { getMapTileConfig } from "./map-tiles.js";
 
 export const router = Router();
 
@@ -153,6 +155,11 @@ router.get("/events", async (req, res) => {
   } catch (err) {
     res.status(502).json({ error: err instanceof Error ? err.message : String(err) });
   }
+});
+
+// サイトマップのタイル設定(85)。env から組み立てるだけで外部 API は叩かない。
+router.get("/map-config", (_req, res) => {
+  res.json(getMapTileConfig());
 });
 
 // ポーリング間隔設定(Task 4)。

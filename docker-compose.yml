@@ -69,6 +69,17 @@ services:
       # 起動時はそちらが env より優先される(env は settings.json が無い初回のみ効く)。
       GLOBAL_OVERVIEW_POLL_MS: ${GLOBAL_OVERVIEW_POLL_MS:-300000}
       GLOBAL_OVERVIEW_MIN_REFRESH_MS: ${GLOBAL_OVERVIEW_MIN_REFRESH_MS:-60000}
+      # ---- サイトマップの地図タイル(85)----
+      # CARTO はキーなしだと「API KEY REQUIRED」透かし入りタイルを返す(HTTP 200 なので壊れて見えない)。
+      # 無料キーは https://carto.com/basemaps/apikey/ で取得し .env に置く。未設定でも地図は動く。
+      # キーは CARTO の URL(*.cartocdn.com)にだけ付く。プロバイダの差し替えは MAP_TILE_* で行う
+      # (詳細は plugins/global-overview/map-tiles.ts)。
+      CARTO_API_KEY: ${CARTO_API_KEY:-}
+      MAP_TILE_URL_LIGHT: ${MAP_TILE_URL_LIGHT:-}
+      MAP_TILE_URL_DARK: ${MAP_TILE_URL_DARK:-}
+      MAP_TILE_ATTRIBUTION: ${MAP_TILE_ATTRIBUTION:-}
+      MAP_TILE_SUBDOMAINS: ${MAP_TILE_SUBDOMAINS:-}
+      MAP_TILE_MAX_ZOOM: ${MAP_TILE_MAX_ZOOM:-}
       # ---- Webhook ログ(17。Google スプレッドシートをサービスアカウントで読む)----
       # 鍵は下の secrets/ read-only マウントから読む。値そのものは .env(git 管理外)から。
       WEBHOOK_LOG_SPREADSHEET_ID: ${WEBHOOK_LOG_SPREADSHEET_ID:-}

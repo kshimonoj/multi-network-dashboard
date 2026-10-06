@@ -334,6 +334,13 @@
     "error": {
       "configPrefix": "Webhook ログを取得できません: "
     },
+    "health": {
+      "failing": "取得に {n} 回連続で失敗しています。",
+      "failingPartial": "一部のシートの取得に {n} 回連続で失敗しています(下の一覧で失敗したシートを確認できます)。",
+      "lastSuccess": "最後に取得できたのは {time}({age})です。",
+      "nextRetry": "{time} に自動で再試行します。",
+      "nextCycle": "次の定期巡回で再試行します。"
+    },
     "loading": "Webhook ログを読み込み中…",
     "sheets": {
       "title": "取得元シート",

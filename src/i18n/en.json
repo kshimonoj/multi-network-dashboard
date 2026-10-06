@@ -334,6 +334,13 @@
     "error": {
       "configPrefix": "Can't fetch the Webhook log: "
     },
+    "health": {
+      "failing": "Fetching has failed {n} times in a row.",
+      "failingPartial": "Some sheets have failed to fetch {n} times in a row (see the failed sheets below).",
+      "lastSuccess": "Last successful fetch: {time} ({age}).",
+      "nextRetry": "Retrying automatically at {time}.",
+      "nextCycle": "Will retry on the next scheduled cycle."
+    },
     "loading": "Loading the Webhook log…",
     "sheets": {
       "title": "Source sheets",

@@ -144,7 +144,65 @@ let sheetTimeZone = "Asia/Tokyo";
 let generatedAt: string | null = null;
 let cachedAt = 0;
 let configError: string | null = null;
-let inFlight: Promise<void> | null = null;
+let inFlight: Promise<RefreshOutcome> | null = null;
+
+// ---- 85: 取得失敗の再試行と、失敗が続いていることの可視化 ----
+//
+// 2026-10-05〜06 に 16 時間データが止まった件の再発防止。原因はコンテナの DNS 設定ではなく、
+// ホスト(Mac)がスリープ / DarkWake 中にポーリングが発火し、ネットワークが戻っていない状態で
+// oauth2.googleapis.com の名前解決に失敗(ENOTFOUND / EAI_AGAIN)したこと。
+// 従来は失敗しても次の巡回(画面設定で 1 時間)まで何もしなかったため、復帰後もしばらく止まって見えた。
+// そこで一時的な失敗のあとは短い間隔で取り直し(上限はポーリング間隔)、連続失敗回数を画面に出す。
+// 設定不備(鍵が無い等)は取り直しても直らないので再試行しない。
+type RefreshOutcome = "ok" | "partial" | "failed" | "config";
+
+const RETRY_DELAYS_MS = [60_000, 120_000, 300_000, 600_000];
+let consecutiveFailures = 0;
+let lastFailureAt: string | null = null;
+let lastFailureError: string | null = null;
+let retryTimer: NodeJS.Timeout | null = null;
+let nextRetryAt: number | null = null;
+/** 最後の失敗が全体失敗か、一部シートだけの失敗か(画面の文言を分ける) */
+let lastFailureKind: "failed" | "partial" = "failed";
+
+function clearRetry(): void {
+  if (retryTimer) clearTimeout(retryTimer);
+  retryTimer = null;
+  nextRetryAt = null;
+}
+
+function recordOutcome(outcome: RefreshOutcome): void {
+  if (outcome === "ok") {
+    if (consecutiveFailures > 0) {
+      console.log(`[webhook-feed] 取得が回復しました(連続失敗 ${consecutiveFailures} 回の後)`);
+    }
+    consecutiveFailures = 0;
+    lastFailureError = null;
+    clearRetry();
+    return;
+  }
+  clearRetry();
+  // 設定不備は障害ではない(既存の configError 表示に任せる)。回数も数えず再試行もしない。
+  if (outcome === "config") return;
+  consecutiveFailures += 1;
+  lastFailureKind = outcome;
+  lastFailureAt = new Date().toISOString();
+  lastFailureError =
+    configError ?? sheetStates.find((s) => s.status === "error")?.error ?? lastFailureError;
+  const delay = RETRY_DELAYS_MS[Math.min(consecutiveFailures, RETRY_DELAYS_MS.length) - 1];
+  // ポーリング間隔以上待つなら通常の巡回に任せる。
+  if (delay >= pollIntervalMs) return;
+  nextRetryAt = Date.now() + delay;
+  retryTimer = setTimeout(() => {
+    retryTimer = null;
+    nextRetryAt = null;
+    refresh({ retry: true }).catch((err) => console.error("[webhook-feed] 再試行に失敗:", err));
+  }, delay);
+  retryTimer.unref?.();
+  console.warn(
+    `[webhook-feed] 取得失敗 ${consecutiveFailures} 回連続 — ${Math.round(delay / 1000)} 秒後に再試行します`,
+  );
+}
 
 // 同じファイルへの書き込みが重なると、片方が先に rename して tmp を消した後で
 // もう片方が rename に失敗する(ENOENT)。自動調査の markDone は複数件が同時に走るため、
@@ -379,6 +437,13 @@ function envelope(): WebhookFeedEnvelope {
     minRefreshMs: MIN_REFRESH_MS,
     configured: configError === null,
     configError,
+    health: {
+      consecutiveFailures,
+      lastFailureAt,
+      lastError: consecutiveFailures > 0 ? lastFailureError : null,
+      partial: consecutiveFailures > 0 && lastFailureKind === "partial",
+      nextRetryAt: nextRetryAt ? new Date(nextRetryAt).toISOString() : null,
+    },
     spreadsheetTitle,
     sheets: sheetStates,
     items,
@@ -423,14 +488,14 @@ function sortItems(): void {
   itemById = new Map(items.map((i) => [i.id, i]));
 }
 
-async function doRefresh(): Promise<void> {
+async function doRefresh(): Promise<RefreshOutcome> {
   // 設定チェック(スプレッドシート ID / サービスアカウント鍵)。
   try {
     spreadsheetId();
   } catch (err) {
     configError = err instanceof Error ? err.message : String(err);
     console.warn(`[webhook-feed] ${configError}`);
-    return;
+    return "config";
   }
 
   const initialBackfill = !stateLoadedFromDisk;
@@ -444,7 +509,7 @@ async function doRefresh(): Promise<void> {
         ? err.message
         : `スプレッドシートのメタ取得に失敗しました: ${err instanceof Error ? err.message : String(err)}`;
     console.warn(`[webhook-feed] ${configError}`);
-    return;
+    return err instanceof SheetsConfigError ? "config" : "failed";
   }
   configError = null;
   spreadsheetTitle = meta.title;
@@ -466,7 +531,7 @@ async function doRefresh(): Promise<void> {
     const msg = err instanceof Error ? err.message : String(err);
     console.warn(`[webhook-feed] シートの読み取りに失敗: ${msg}`);
     sheetStates = sheetStates.map((s) => ({ ...s, status: "error", error: msg, newRows: 0 }));
-    return;
+    return "failed";
   }
 
   const newItems: WebhookFeedItem[] = [];
@@ -622,6 +687,7 @@ async function doRefresh(): Promise<void> {
       (fired.fired ? ` / 自動調査 ${fired.fired} 件を起動` : "") +
       (fired.suppressed ? ` / 初回バックフィルのため ${fired.suppressed} 件は抑止` : ""),
   );
+  return sheetStates.some((s) => s.status === "error") ? "partial" : "ok";
 }
 
 /**
@@ -630,23 +696,28 @@ async function doRefresh(): Promise<void> {
  * - force でなければポーリング間隔の 95% 以内は Sheets を叩かない
  * - force でも最短間隔 MIN_REFRESH_MS 以内は叩かない(連打対策)
  */
-export async function refresh(opts: { force?: boolean } = {}): Promise<WebhookFeedEnvelope> {
+export async function refresh(
+  opts: { force?: boolean; retry?: boolean } = {},
+): Promise<WebhookFeedEnvelope> {
   if (inFlight) {
     await inFlight.catch(() => undefined);
     return envelope();
   }
   const age = generatedAt ? Date.now() - cachedAt : Infinity;
-  const minAge = opts.force ? MIN_REFRESH_MS : pollIntervalMs * 0.95;
+  // 85: 失敗後の再試行は最短間隔に弾かれると連鎖が止まるので、鮮度判定をしない。
+  const minAge = opts.retry ? 0 : opts.force ? MIN_REFRESH_MS : pollIntervalMs * 0.95;
   if (age < minAge) return envelope();
 
   inFlight = doRefresh();
+  let outcome: RefreshOutcome = "failed";
   try {
-    await inFlight;
+    outcome = await inFlight;
   } catch (err) {
     console.error("[webhook-feed] refresh でエラー:", err);
   } finally {
     inFlight = null;
   }
+  recordOutcome(outcome);
   return envelope();
 }
 

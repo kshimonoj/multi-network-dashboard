@@ -292,6 +292,27 @@ export function WebhookFeed({
       </div>
 
       {error && <div className="go-error">{error}</div>}
+      {/* 85: 失敗が続いていることを目立たせる(16 時間止まっていても気づけなかった反省)。 */}
+      {feed?.health && feed.health.consecutiveFailures > 0 && (
+        <div className="go-error wf-health-alert" role="alert">
+          <strong>
+            {t(feed.health.partial ? "webhookFeed.health.failingPartial" : "webhookFeed.health.failing", {
+              n: feed.health.consecutiveFailures,
+            })}
+          </strong>{" "}
+          {!feed.health.partial &&
+            t("webhookFeed.health.lastSuccess", {
+              time: fmtTime(feed.generatedAt),
+              age: fmtAge(t, ageMs),
+            })}{" "}
+          {feed.health.nextRetryAt
+            ? t("webhookFeed.health.nextRetry", { time: fmtTime(feed.health.nextRetryAt) })
+            : t("webhookFeed.health.nextCycle")}
+          {feed.configured && feed.health.lastError && (
+            <div className="wf-health-reason">{feed.health.lastError}</div>
+          )}
+        </div>
+      )}
       {feed && !feed.configured && feed.configError && (
         <div className="go-error">
           {t("webhookFeed.error.configPrefix")}
