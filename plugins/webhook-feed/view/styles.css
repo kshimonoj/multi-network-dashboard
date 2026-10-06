@@ -287,3 +287,16 @@
     margin-bottom: 4px;
   }
 }
+
+/* 85: 取得失敗が続いているときの警告。通常のエラー表示より太く・左帯付きで目立たせる。 */
+.wf-health-alert {
+  border-left-width: 4px;
+  font-size: 13px;
+}
+.wf-health-reason {
+  margin-top: 4px;
+  font-family: var(--mono);
+  font-size: 11px;
+  opacity: 0.85;
+  word-break: break-word;
+}

@@ -144,6 +144,18 @@ export interface WebhookSheetState {
   error: string | null;
 }
 
+export interface WebhookFeedHealth {
+  /** 直近の成功以降に失敗した回数(0 = 正常) */
+  consecutiveFailures: number;
+  lastFailureAt: string | null;
+  /** 最後の失敗理由(サーバ側の実行記録なので翻訳しない) */
+  lastError: string | null;
+  /** 最後の失敗が一部シートだけか(true なら generatedAt は他シートの成功時刻) */
+  partial: boolean;
+  /** 一時的な失敗のあとの再試行予定(null = 通常の巡回待ち) */
+  nextRetryAt: string | null;
+}
+
 export interface WebhookFeedEnvelope {
   /** キャッシュを最後に作り直した時刻 */
   generatedAt: string | null;
@@ -156,6 +168,8 @@ export interface WebhookFeedEnvelope {
   configured: boolean;
   /** configured=false のときの理由(環境変数が無い等) */
   configError: string | null;
+  /** 85: 取得失敗が続いているか(連続回数・最後の失敗・次の再試行予定) */
+  health: WebhookFeedHealth;
   spreadsheetTitle: string | null;
   sheets: WebhookSheetState[];
   items: WebhookFeedItem[];

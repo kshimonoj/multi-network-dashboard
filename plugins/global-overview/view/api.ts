@@ -27,6 +27,31 @@ async function envelope(res: Response): Promise<SnapshotEnvelope> {
   return env;
 }
 
+/** サイトマップのタイル設定(85)。サーバの env 由来。 */
+export interface MapTileConfig {
+  urlLight: string;
+  urlDark: string;
+  attribution: string;
+  subdomains: string;
+  maxZoom: number;
+}
+
+let mapTileConfig: Promise<MapTileConfig> | null = null;
+
+/** 画面の寿命中は変わらないので 1 回だけ取りに行く(失敗したら次回また取りに行く)。 */
+export function fetchMapTileConfig(): Promise<MapTileConfig> {
+  if (!mapTileConfig) {
+    mapTileConfig = fetch(`${BASE}/map-config`).then(async (res) => {
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return (await res.json()) as MapTileConfig;
+    });
+    mapTileConfig.catch(() => {
+      mapTileConfig = null;
+    });
+  }
+  return mapTileConfig;
+}
+
 /** キャッシュ済みスナップショットの取得(外部 API は叩かれない)。 */
 export async function fetchSnapshot(): Promise<SnapshotEnvelope> {
   return envelope(await fetch(`${BASE}/snapshot`));

@@ -12,12 +12,13 @@
 // 依存は既存の leaflet(package.json)。既定マーカーの PNG は使わず divIcon で描くので、
 // Leaflet の画像アセット解決(bundler 依存でハマりやすい)を踏まない。
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { alertLabel, PLATFORM_SHORT, type SiteRow } from "./types";
 import { useT } from "../../../src/i18n/LanguageContext";
 import type { TFunc } from "../../../src/i18n/LanguageContext";
+import { fetchMapTileConfig, type MapTileConfig } from "./api";
 
 const PLATFORM_COLOR: Record<"central" | "mist", string> = {
   central: "#ff8a3d",
@@ -44,14 +45,18 @@ export function siteState(s: SiteRow): SiteState {
   return "ok";
 }
 
-// タイルは CARTO(OSM ベース)。ライト/ダークで別レイヤに差し替えて、
+// タイルの既定は CARTO(OSM ベース)。ライト/ダークで別レイヤに差し替えて、
 // テーマ切替時にも地図だけ浮かないようにする。
-const TILE_URL: Record<"light" | "dark", string> = {
-  light: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
-  dark: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+// 85: URL・帰属表記・CARTO のキーはサーバの env から GET /map-config で受け取る
+// (plugins/global-overview/map-tiles.ts)。取れなかったときはこの既定(キーなし)で描く。
+const DEFAULT_TILES: MapTileConfig = {
+  urlLight: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+  urlDark: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+  attribution:
+    '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+  subdomains: "abcd",
+  maxZoom: 19,
 };
-const TILE_ATTRIB =
-  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>';
 
 function escapeHtml(s: string): string {
   return s.replace(/[&<>"']/g, (c) =>
@@ -158,6 +163,18 @@ export function SiteMap({
 
   const points = useMemo(() => spread(sites), [sites]);
 
+  // タイル設定は 1 回だけ取りに行く。失敗しても既定で描けるので握りつぶす。
+  const [tiles, setTiles] = useState<MapTileConfig | null>(null);
+  useEffect(() => {
+    let alive = true;
+    fetchMapTileConfig()
+      .then((c) => alive && setTiles(c))
+      .catch(() => alive && setTiles(DEFAULT_TILES));
+    return () => {
+      alive = false;
+    };
+  }, []);
+
   // 地図本体は一度だけ作る。
   useEffect(() => {
     if (!elRef.current || mapRef.current) return;
@@ -179,17 +196,18 @@ export function SiteMap({
     };
   }, []);
 
-  // タイルはテーマに合わせて貼り替える。
+  // タイルはテーマに合わせて貼り替える。設定が届くまでは貼らない
+  // (キーなし URL で一度取りに行って透かし入りタイルがキャッシュされるのを避ける)。
   useEffect(() => {
     const map = mapRef.current;
-    if (!map) return;
+    if (!map || !tiles) return;
     if (tileRef.current) map.removeLayer(tileRef.current);
-    tileRef.current = L.tileLayer(TILE_URL[theme], {
-      attribution: TILE_ATTRIB,
-      maxZoom: 19,
-      subdomains: "abcd",
+    tileRef.current = L.tileLayer(theme === "dark" ? tiles.urlDark : tiles.urlLight, {
+      attribution: tiles.attribution,
+      maxZoom: tiles.maxZoom,
+      subdomains: tiles.subdomains,
     }).addTo(map);
-  }, [theme]);
+  }, [theme, tiles]);
 
   // マーカーの再構築(スナップショット更新のたび)。
   useEffect(() => {

@@ -70,6 +70,14 @@ export interface WebhookSheetState {
   error: string | null;
 }
 
+export interface WebhookFeedHealth {
+  consecutiveFailures: number;
+  lastFailureAt: string | null;
+  lastError: string | null;
+  partial?: boolean;
+  nextRetryAt: string | null;
+}
+
 export interface WebhookFeedEnvelope {
   generatedAt: string | null;
   ageMs: number | null;
@@ -78,6 +86,8 @@ export interface WebhookFeedEnvelope {
   minRefreshMs: number;
   configured: boolean;
   configError: string | null;
+  /** 85: 取得失敗の連続回数など。古いサーバ応答には無い */
+  health?: WebhookFeedHealth;
   spreadsheetTitle: string | null;
   sheets: WebhookSheetState[];
   items: WebhookFeedItem[];
