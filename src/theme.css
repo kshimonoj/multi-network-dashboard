@@ -154,6 +154,86 @@ html[data-theme="dark"] {
   --table-selected-indicator-width: 2px;
 }
 
+/* 89: 左縦ナビ(Navigation Rail)と 40px ヘッダーの中間トークン。
+   src/nav.css はここだけを参照し、寸法・色を直書きしない(87 の --table-* と同じ形)。 */
+:root {
+  /* ---- ヘッダー ---- */
+  --nav-header-height: 40px;
+  --nav-header-gap: 12px;
+  --nav-logo-size: 20px;
+  --nav-logo-gap: 6px;
+  --nav-logo-font-size: 13px;
+  /* ロゴのアイコンを収納時ナビのアイコン列の中心に揃える */
+  --nav-header-padding-left: calc((var(--nav-width-collapsed) - var(--nav-logo-size)) / 2);
+  --nav-header-padding-right: 16px;
+  /* 右端の言語切替・テーマ切替・model 表示 */
+  --nav-control-gap: 6px;
+  --nav-control-padding-y: 3px;
+  --nav-control-padding-x: 10px;
+  --nav-control-padding-right-select: 6px;
+  --nav-control-font-size: 11px;
+  --nav-control-icon-size: 14px;
+  --nav-select-padding-x: 2px;
+
+  /* ---- ナビ ---- */
+  --nav-width-collapsed: 56px;
+  --nav-width-expanded: 180px;
+  --nav-list-padding-y: 8px;
+  --nav-item-height: 40px;
+  --nav-item-gap-y: 2px;
+  /* 項目はナビの左右から少し内側に置く。アイコンが収納時の 56px の中央に来る値(左 8 + 8、アイコン 24)。 */
+  --nav-item-inset: 8px;
+  --nav-item-padding-x: 8px;
+  /* 右側は詰める(展開幅 180px で "Network Investigation" が収まる値。ラベル幅 = 180 - 16 - 8 - 4 - 24 - 8 = 120) */
+  --nav-item-padding-right: 4px;
+  --nav-item-gap: 8px;
+  --nav-item-radius: 6px;
+  --nav-item-font-size: 12px;
+  --nav-icon-size: 24px;
+  /* グループ見出し。収納時は区切り線、展開時は文字。高さは同じにして、展開でアイコンが上下に動かないようにする */
+  --nav-group-head-height: 20px;
+  --nav-group-gap: 6px;
+  --nav-group-font-size: 10px;
+  --nav-group-rule-width: 1px;
+  /* 件数バッジ(展開時)と、収納時にアイコン右上へ出すドット */
+  --nav-badge-height: 16px;
+  --nav-badge-padding-x: 5px;
+  --nav-badge-font-size: 10px;
+  --nav-dot-size: 8px;
+  --nav-dot-offset: -2px;
+  --nav-dot-ring: 2px;
+  --nav-border-width: 1px;
+  --nav-focus-ring-width: 2px;
+  --nav-focus-ring-offset: 1px;
+  --nav-transition: 150ms ease;
+  /* ホバー一時展開はコンテンツの上に重なるので、表の sticky ヘッダ等より上に置く */
+  --nav-z-index: 30;
+
+  /* 面・線・文字。地は --panel(ヘッダーとナビで共通)。 */
+  --nav-bg: var(--panel);
+  --nav-border: var(--border);
+  --nav-group-rule: var(--border-soft);
+  --nav-text: var(--text);
+  --nav-text-muted: var(--text-muted);
+  --nav-text-dim: var(--text-dim);
+  --nav-accent: var(--accent);
+  /* Coach。シェルからは .co-root の --coach が解決できないので --accent-amber(同じ値)を使う */
+  --nav-accent-coach: var(--accent-amber);
+  --nav-badge-bg: var(--accent);
+  --nav-badge-fg: var(--on-accent);
+  /* ヘッダーのボタン枠(従来の .app-theme-btn と同じ面) */
+  --nav-control-bg: var(--panel-2);
+
+  /* state layer(M3)。87 の表と同じく on-surface を 8% / 12% で重ねる。 */
+  --nav-state-hover: 8%;
+  --nav-state-selected: 12%;
+  --nav-state-hover-color: color-mix(in srgb, var(--md-sys-color-on-surface) var(--nav-state-hover), transparent);
+  --nav-state-selected-color: color-mix(in srgb, var(--md-sys-color-on-surface) var(--nav-state-selected), transparent);
+  --nav-state-hover-layer: linear-gradient(var(--nav-state-hover-color), var(--nav-state-hover-color));
+  /* ホバー一時展開でコンテンツに重なっている間だけ付ける影(M3 shadow ロール) */
+  --nav-overlay-shadow: 0 0 16px color-mix(in srgb, var(--md-sys-color-shadow) 24%, transparent);
+}
+
 * {
   box-sizing: border-box;
 }
@@ -167,74 +247,6 @@ body {
   overflow: hidden;
 }
 
-/* 単一プラグインアプリのシェル。Corstack のようなプラグイン切替トップバーは持たず、
-   タイトル行 + プラグイン View の 2 段だけにする。 */
-.app-shell {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-}
-.app-bar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 16px;
-  border-bottom: 1px solid var(--border);
-  background: var(--panel);
-  flex-shrink: 0;
-}
-/* 左上のロゴ表記(76番)。"Multi Network Dashboard" を短縮した "MND" + アイコン。
-   タブ一覧・右端の固定要素と違って幅が伸び縮みしないよう flex-shrink: 0 にする。 */
-.app-logo {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
-  cursor: default;
-}
-.app-logo-icon {
-  display: block;
-}
-.app-logo-text {
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.03em;
-  color: var(--text);
-}
-.app-sub {
-  font-family: var(--mono);
-  font-size: 11px;
-  color: var(--text-dim);
-}
-/* トップバー右端のモデル表示(Corstack シェルの topbarModel 相当をローカルに再現)。
-   76: .app-tabs が横スクロール領域になったので、右端の固定要素はタブの多寡に関わらず
-   常に見える位置を保つよう flex-shrink: 0 にする。 */
-.app-model {
-  margin-left: auto;
-  flex-shrink: 0;
-  font-family: var(--mono);
-  font-size: 11px;
-  color: var(--text-muted);
-}
-/* モデル表示が無いときもトグル類は右端に寄せる。
-   右端の並びは 言語プルダウン → テーマトグル の順なので、auto は先頭側に付ける。 */
-.app-theme-toggle {
-  margin-left: auto;
-  flex-shrink: 0;
-}
-.app-model + .app-theme-toggle {
-  margin-left: 0;
-}
-.app-lang {
-  margin-left: auto;
-  flex-shrink: 0;
-}
-.app-model + .app-lang {
-  margin-left: 0;
-}
-.app-lang + .app-theme-toggle {
-  margin-left: 0;
-}
 /* 古いビルドのまま開きっぱなしのタブに出す帯(82)。トップバーの直下・本文の上に置き、
    本文の高さを奪う形にする(オーバーレイにすると下の操作を隠してしまうため)。
    印刷には出さない(紙面は #ni-print-root だけ。styles.css の @media print が
@@ -264,144 +276,4 @@ body {
 }
 .app-stale-btn:hover {
   border-color: var(--text-muted);
-}
-.app-body {
-  flex: 1;
-  min-height: 0;
-  position: relative;
-}
-/* タブごとのペイン(06 Task 1)。非表示側はマウントしたまま display:none で隠す。
-   [hidden] の UA 既定は .app-pane の display に負けるため、明示的に打ち消す。 */
-.app-pane {
-  height: 100%;
-  min-height: 0;
-}
-.app-pane[hidden] {
-  display: none;
-}
-
-/* ---- 画面切替タブ(06 Task 1 / 76: 横スクロール対応) ----
-   タブ数が今後も増える前提で、折り返し(2段化)ではなく横スクロールで収める。
-   .app-tabs だけが縮んでスクロール領域になり、ロゴ・右端の固定要素(モデル表示/
-   言語切替/テーマ切替)は flex-shrink: 0 のまま影響を受けない。 */
-.app-tabs {
-  display: flex;
-  align-items: center;
-  flex-wrap: nowrap;
-  gap: 2px;
-  align-self: center;
-  margin-left: 8px;
-  min-width: 0;
-  flex: 1 1 auto;
-  overflow-x: auto;
-  overflow-y: hidden;
-  scrollbar-width: thin;
-  scrollbar-color: var(--border) transparent;
-}
-.app-tabs::-webkit-scrollbar {
-  height: 5px;
-}
-.app-tabs::-webkit-scrollbar-track {
-  background: transparent;
-}
-.app-tabs::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: var(--radius);
-}
-.app-tabs::-webkit-scrollbar-thumb:hover {
-  background: var(--text-dim);
-}
-.app-tab {
-  background: transparent;
-  color: var(--text-muted);
-  border: 1px solid transparent;
-  border-radius: var(--radius);
-  padding: 5px 14px;
-  font-family: var(--sans);
-  font-size: 12px;
-  cursor: pointer;
-  line-height: 1.4;
-  flex-shrink: 0;
-  white-space: nowrap;
-}
-.app-tab:hover {
-  color: var(--text);
-  background: var(--panel-2);
-}
-.app-tab-on {
-  color: var(--text);
-  background: var(--panel-2);
-  border-color: var(--border);
-  box-shadow: inset 0 -2px 0 var(--accent);
-  font-weight: 600;
-}
-
-/* ---- 未承認件数のバッジ(46 Task 4-5)----
-   ナレッジタブに未承認の候補があることを、タブを開かなくても気付けるようにする。 */
-.app-tab-badge {
-  display: inline-block;
-  margin-left: 6px;
-  min-width: 16px;
-  padding: 0 5px;
-  border-radius: 8px;
-  background: var(--accent);
-  color: var(--on-accent);
-  font-family: var(--mono);
-  font-size: 10px;
-  font-weight: 600;
-  line-height: 16px;
-  text-align: center;
-  vertical-align: 1px;
-}
-
-/* ---- テーマ切替トグル(Task 1) ---- */
-.app-theme-btn {
-  align-self: center;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: var(--panel-2);
-  color: var(--text-muted);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 4px 10px;
-  font-family: var(--mono);
-  font-size: 11px;
-  cursor: pointer;
-  line-height: 1.4;
-}
-.app-theme-btn:hover {
-  border-color: var(--accent);
-  color: var(--text);
-}
-.app-theme-icon {
-  font-size: 12px;
-  line-height: 1;
-}
-
-/* ---- 表示言語プルダウン(29 Task 2) ----
-   枠は .app-theme-btn を流用し、中の <select> だけを素の見た目に落とす。 */
-.app-lang {
-  cursor: pointer;
-  padding-right: 6px;
-}
-.app-lang:hover {
-  border-color: var(--accent);
-  color: var(--text);
-}
-.app-lang-select {
-  background: transparent;
-  color: inherit;
-  border: none;
-  outline: none;
-  font-family: var(--mono);
-  font-size: 11px;
-  line-height: 1.4;
-  cursor: pointer;
-  padding: 0 2px;
-}
-/* プルダウンの選択肢はネイティブ描画なので、ダークテーマでも読める色を明示する。 */
-.app-lang-select option {
-  background: var(--panel);
-  color: var(--text);
 }
