@@ -32,7 +32,8 @@ COPY package.json package-lock.json* ./
 RUN npm install
 
 # ---- アプリ本体 ----
-COPY tsconfig.json vite.config.ts index.html ./
+# postcss.config.cjs: src/theme/*.css(Material Theme Builder 生成)のセレクタ読み替え(86)
+COPY tsconfig.json vite.config.ts postcss.config.cjs index.html ./
 COPY src ./src
 COPY public ./public
 COPY server ./server

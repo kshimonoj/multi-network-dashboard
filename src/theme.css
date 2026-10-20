@@ -16,22 +16,50 @@
  *   - 上の 12 変数に加えて、テーマで反転が必要なものだけ追加した:
  *       --on-accent … アクセント色の上に載せる文字色(ライトでは白、ダークでは黒)
  *       --badge-bg  … ロゴバッジ等の「わずかに浮かせる」下地
+ *
+ * 86: 色の値を Material Theme Builder の生成パレット(src/theme/*.css)に差し替えた。
+ *   - 生成ファイルは編集しない。値を変えるときは Theme Builder で再生成して丸ごと差し替える。
+ *   - 生成ファイルの .light / .dark は postcss.config.cjs が取り込み時に
+ *     html[data-theme="light"] / :root, html[data-theme="dark"] へ読み替える。
+ *   - medium-contrast / high-contrast(*-mc.css / *-hc.css)は読み込むが、どのセレクタにも繋いでいない。
+ *     将来コントラスト切替 UI を作るときに繋ぐ。未使用に見えても削除しないこと。
+ *   - 以下は既存の変数名を M3 ロールに向けるエイリアス層。コンポーネント側は従来の名前のまま参照する。
+ *   - --radius / --sans / --mono は変更なし(印刷 CSS も --sans / --mono を参照している)。
  */
 
-:root,
-html[data-theme="dark"] {
-  --bg: #12151a;
-  --panel: #1a1f27;
-  --panel-2: #1f2530;
-  --border: #262d38;
-  --border-soft: #1e242e;
-  --text: #e7eaee;
-  --text-muted: #8892a0;
-  --text-dim: #5b6472;
-  --accent: #4fd1c5;
-  --accent-amber: #f2a65a;
-  --on-accent: #0d0f12;
+@import "./theme/light.css";
+@import "./theme/dark.css";
+@import "./theme/light-mc.css";
+@import "./theme/dark-mc.css";
+@import "./theme/light-hc.css";
+@import "./theme/dark-hc.css";
+
+/* var(--md-*) は <html> 上で解決されるので、テーマ共通の対応付けは :root に 1 回書けば両テーマに効く。 */
+:root {
+  --bg: var(--md-sys-color-surface);
+  /* --panel はテーマで段を変える(下の html[data-theme="light"] を参照)。ダークは surface-container-low。 */
+  --panel: var(--md-sys-color-surface-container-low);
+  --panel-2: var(--md-sys-color-surface-container-high);
+  /* outline は高密度テーブルの罫線には明るすぎるので outline-variant。 */
+  --border: var(--md-sys-color-outline-variant);
+  /* M3 に 3 段目の outline は無いので、outline-variant を surface に寄せて弱い罫線を作る。 */
+  --border-soft: color-mix(in srgb, var(--md-sys-color-outline-variant) 55%, var(--md-sys-color-surface));
+  --text: var(--md-sys-color-on-surface);
+  --text-muted: var(--md-sys-color-on-surface-variant);
+  --text-dim: var(--md-sys-color-outline);
+  --accent: var(--md-sys-color-primary);
+  /* Coach の主色(--coach: var(--accent-amber))。名前は変えない。 */
+  --accent-amber: var(--md-extended-color-coach-color);
+  --on-accent: var(--md-sys-color-on-primary);
+  /* Down / critical。ダークは生成値(error)のまま。 */
+  --danger: var(--md-sys-color-error);
+  /* 半透明の重ね塗り。panel / panel-2 / hover 行など下地を選ばず「一段浮かせる」用途なので、
+     不透明な surface-container-* には置き換えない。 */
   --badge-bg: rgba(255, 255, 255, 0.06);
+
+  /* 87 以降の共通部品が参照するタブ単位のアクセント。Coach だけ amber に差し替わる。 */
+  --tab-accent: var(--accent);
+
   --radius: 3px;
   --mono: "IBM Plex Mono", monospace;
   --sans: "IBM Plex Sans", "IBM Plex Sans JP", sans-serif;
@@ -39,18 +67,171 @@ html[data-theme="dark"] {
 
 /* Corstack と同じ切替キー。 */
 html[data-theme="light"] {
-  --bg: #f6f6f4;
-  --panel: #ffffff;
-  --panel-2: #eef0ee;
-  --border: #dfe2e1;
-  --border-soft: #e9ebe9;
-  --text: #1c2024;
-  --text-muted: #5c6570;
-  --text-dim: #93999f;
-  --accent: #0f9488;
-  --accent-amber: #b5691e;
-  --on-accent: #ffffff;
+  /* M3 の surface 段はライトでは surface より暗い方向に進むため、-low だと
+     パネルが背景より暗くなり従来の明度関係(背景 < パネル)が逆転する。ライトだけ最も明るい段にする。 */
+  --panel: var(--md-sys-color-surface-container-lowest);
+  /* 生成値 #904A42 は NOC 用途には鈍いため、Down / critical のみ彩度を上げる */
+  --danger: #BA1A1A;
   --badge-bg: rgba(0, 0, 0, 0.05);
+}
+
+/* プラグインが .go-root / .ni-root に局所定義している状態色・プラットフォーム色を、
+   同じ名前のまま M3 の extended color に向ける。プラグイン側の定義(詳細度 0,1,0)より
+   確実に勝つよう html を前置する。--warn は従来どおり var(--accent-amber) のまま(プラグイン側)。 */
+:root,
+html .go-root,
+html .ni-root {
+  --central: var(--md-extended-color-central-color);
+  /* 青系。従来は --up と同じ緑で見分けが付かなかった。 */
+  --mist: var(--md-extended-color-mist-color);
+  --up: var(--md-extended-color-success-color);
+  --down: var(--danger);
+}
+
+.co-root {
+  --tab-accent: var(--coach);
+}
+
+/* 86b: ダークの罫線を現行の明るさ(rgb(38 45 56)相当)に戻す。
+   outline-variant(ダーク実測 rgb(64 73 68))を直接使うと高密度テーブルの格子が現行より明るくなるため、
+   surface(rgb(15 21 18))と混ぜて明度を落とす。ライトは変更しない(:root の plain な値のまま)。 */
+html[data-theme="dark"] {
+  --border: color-mix(in srgb, var(--md-sys-color-outline-variant) 55%, var(--md-sys-color-surface));
+  --border-soft: color-mix(in srgb, var(--md-sys-color-outline-variant) 35%, var(--md-sys-color-surface));
+}
+
+/* 87: 表(Tagged Targets 一覧 / Global Overview サイト一覧 / LLM Markdown テーブル)の中間トークン。
+   3 表の CSS は寸法・色をここからだけ参照する(共通クラスは作らず、既存クラスの値だけを置き換える)。
+   .go-table は Event/Alert・Webhook・Streaming・レポート・TT 詳細の表も共有しているので、ここを変えると一緒に変わる。 */
+:root {
+  /* 密度。行高は td の height(表のセルでは最小高さとして働く)で揃える設計。
+     87 §2 の実データ検証(本番 8092、GO 22 行 + TT 31 行中 9 行)で統一を見送った:
+       28px … 超過 9/31 行 = 29.0%(TT の全行。対象列の複数行表示と解除ボタンの高さ)
+       30px … 超過 7/31 行 = 22.6%(TT の対象列が 2〜4 行の行)
+     どちらも基準 2% を超えたので統一は見送り(TT 32px / Markdown 28.2px は現行維持)。
+     auto = 行高を強制しない。統一し直すときはこの値だけを変える。 */
+  --table-row-height: auto;
+  /* GO サイト一覧だけは 28px(87 Phase B。GO は 28px で超過 0/22 行だった)。
+     適用先は global-overview/view/styles.css の .go-table:has(.go-col-site)。 */
+  --table-row-height-go: 28px;
+  --table-cell-padding-y-go: 4px;
+  /* GO(従来値 7px 10px) */
+  --table-cell-padding-y: 7px;
+  --table-cell-padding-x: 10px;
+  /* TT 一覧・TT 詳細(従来値 5px 8px) */
+  --table-cell-padding-y-compact: 5px;
+  /* Markdown テーブル(従来値 4px 8px) */
+  --table-cell-padding-y-dense: 4px;
+  /* TT・Markdown テーブルの横 padding(従来値 8px) */
+  --table-cell-padding-x-compact: 8px;
+  --table-header-padding-y: 8px;
+  --table-font-size: 12px;
+  --table-header-font-size: 10px;
+  /* TT 一覧・TT 詳細(.tt-table)の文字サイズ(従来値) */
+  --table-font-size-compact: 11px;
+  --table-header-font-size-compact: 9px;
+
+  /* 罫線。行の区切りはゼブラを廃止したので罫線だけで担う(87 Phase B)。
+     強さはこの 1 行で切り替える: var(--border)(標準) / var(--border-soft)(87 以前の GO/TT と同じ弱い罫線) */
+  --table-border: var(--border);
+  --table-border-width: 1px;
+  --table-border-header: var(--border);
+
+  /* 面。ヘッダは sticky で行の上に重なるので不透明な surface-container を使う。
+     ゼブラ縞は 87 Phase B で廃止(トークンごと削除)。 */
+  --table-header-bg: var(--md-sys-color-surface-container);
+
+  /* state layer(M3)。背景色を差し替えず、on-surface を指定の不透明度で重ねる。
+     半透明の層として持つので、その行の元の背景(パネル・選択)の上にそのまま合成される。
+     hover は background-image に載せ、background-color 側(選択)と重ねられるようにしている。 */
+  --table-state-hover: 8%;
+  --table-state-selected: 12%;
+  --table-state-hover-color: color-mix(in srgb, var(--md-sys-color-on-surface) var(--table-state-hover), transparent);
+  --table-state-selected-color: color-mix(in srgb, var(--md-sys-color-on-surface) var(--table-state-selected), transparent);
+  --table-state-hover-layer: linear-gradient(var(--table-state-hover-color), var(--table-state-hover-color));
+  --table-state-selected-layer: linear-gradient(var(--table-state-selected-color), var(--table-state-selected-color));
+  /* 選択行の左端のアクセント線の太さ */
+  --table-selected-indicator-width: 2px;
+}
+
+/* 89: 左縦ナビ(Navigation Rail)と 40px ヘッダーの中間トークン。
+   src/nav.css はここだけを参照し、寸法・色を直書きしない(87 の --table-* と同じ形)。 */
+:root {
+  /* ---- ヘッダー ---- */
+  --nav-header-height: 40px;
+  --nav-header-gap: 12px;
+  --nav-logo-size: 20px;
+  --nav-logo-gap: 6px;
+  --nav-logo-font-size: 13px;
+  /* ロゴのアイコンを収納時ナビのアイコン列の中心に揃える */
+  --nav-header-padding-left: calc((var(--nav-width-collapsed) - var(--nav-logo-size)) / 2);
+  --nav-header-padding-right: 16px;
+  /* 右端の言語切替・テーマ切替・model 表示 */
+  --nav-control-gap: 6px;
+  --nav-control-padding-y: 3px;
+  --nav-control-padding-x: 10px;
+  --nav-control-padding-right-select: 6px;
+  --nav-control-font-size: 11px;
+  --nav-control-icon-size: 14px;
+  --nav-select-padding-x: 2px;
+
+  /* ---- ナビ ---- */
+  --nav-width-collapsed: 56px;
+  --nav-width-expanded: 180px;
+  --nav-list-padding-y: 8px;
+  --nav-item-height: 40px;
+  --nav-item-gap-y: 2px;
+  /* 項目はナビの左右から少し内側に置く。アイコンが収納時の 56px の中央に来る値(左 8 + 8、アイコン 24)。 */
+  --nav-item-inset: 8px;
+  --nav-item-padding-x: 8px;
+  /* 右側は詰める(展開幅 180px で "Network Investigation" が収まる値。ラベル幅 = 180 - 16 - 8 - 4 - 24 - 8 = 120) */
+  --nav-item-padding-right: 4px;
+  --nav-item-gap: 8px;
+  --nav-item-radius: 6px;
+  --nav-item-font-size: 12px;
+  --nav-icon-size: 24px;
+  /* グループ見出し。収納時は区切り線、展開時は文字。高さは同じにして、展開でアイコンが上下に動かないようにする */
+  --nav-group-head-height: 20px;
+  --nav-group-gap: 6px;
+  --nav-group-font-size: 10px;
+  --nav-group-rule-width: 1px;
+  /* 件数バッジ(展開時)と、収納時にアイコン右上へ出すドット */
+  --nav-badge-height: 16px;
+  --nav-badge-padding-x: 5px;
+  --nav-badge-font-size: 10px;
+  --nav-dot-size: 8px;
+  --nav-dot-offset: -2px;
+  --nav-dot-ring: 2px;
+  --nav-border-width: 1px;
+  --nav-focus-ring-width: 2px;
+  --nav-focus-ring-offset: 1px;
+  --nav-transition: 150ms ease;
+  /* ホバー一時展開はコンテンツの上に重なるので、表の sticky ヘッダ等より上に置く */
+  --nav-z-index: 30;
+
+  /* 面・線・文字。地は --panel(ヘッダーとナビで共通)。 */
+  --nav-bg: var(--panel);
+  --nav-border: var(--border);
+  --nav-group-rule: var(--border-soft);
+  --nav-text: var(--text);
+  --nav-text-muted: var(--text-muted);
+  --nav-text-dim: var(--text-dim);
+  --nav-accent: var(--accent);
+  /* Coach。シェルからは .co-root の --coach が解決できないので --accent-amber(同じ値)を使う */
+  --nav-accent-coach: var(--accent-amber);
+  --nav-badge-bg: var(--accent);
+  --nav-badge-fg: var(--on-accent);
+  /* ヘッダーのボタン枠(従来の .app-theme-btn と同じ面) */
+  --nav-control-bg: var(--panel-2);
+
+  /* state layer(M3)。87 の表と同じく on-surface を 8% / 12% で重ねる。 */
+  --nav-state-hover: 8%;
+  --nav-state-selected: 12%;
+  --nav-state-hover-color: color-mix(in srgb, var(--md-sys-color-on-surface) var(--nav-state-hover), transparent);
+  --nav-state-selected-color: color-mix(in srgb, var(--md-sys-color-on-surface) var(--nav-state-selected), transparent);
+  --nav-state-hover-layer: linear-gradient(var(--nav-state-hover-color), var(--nav-state-hover-color));
+  /* ホバー一時展開でコンテンツに重なっている間だけ付ける影(M3 shadow ロール) */
+  --nav-overlay-shadow: 0 0 16px color-mix(in srgb, var(--md-sys-color-shadow) 24%, transparent);
 }
 
 * {
@@ -66,74 +247,6 @@ body {
   overflow: hidden;
 }
 
-/* 単一プラグインアプリのシェル。Corstack のようなプラグイン切替トップバーは持たず、
-   タイトル行 + プラグイン View の 2 段だけにする。 */
-.app-shell {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-}
-.app-bar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 16px;
-  border-bottom: 1px solid var(--border);
-  background: var(--panel);
-  flex-shrink: 0;
-}
-/* 左上のロゴ表記(76番)。"Multi Network Dashboard" を短縮した "MND" + アイコン。
-   タブ一覧・右端の固定要素と違って幅が伸び縮みしないよう flex-shrink: 0 にする。 */
-.app-logo {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
-  cursor: default;
-}
-.app-logo-icon {
-  display: block;
-}
-.app-logo-text {
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.03em;
-  color: var(--text);
-}
-.app-sub {
-  font-family: var(--mono);
-  font-size: 11px;
-  color: var(--text-dim);
-}
-/* トップバー右端のモデル表示(Corstack シェルの topbarModel 相当をローカルに再現)。
-   76: .app-tabs が横スクロール領域になったので、右端の固定要素はタブの多寡に関わらず
-   常に見える位置を保つよう flex-shrink: 0 にする。 */
-.app-model {
-  margin-left: auto;
-  flex-shrink: 0;
-  font-family: var(--mono);
-  font-size: 11px;
-  color: var(--text-muted);
-}
-/* モデル表示が無いときもトグル類は右端に寄せる。
-   右端の並びは 言語プルダウン → テーマトグル の順なので、auto は先頭側に付ける。 */
-.app-theme-toggle {
-  margin-left: auto;
-  flex-shrink: 0;
-}
-.app-model + .app-theme-toggle {
-  margin-left: 0;
-}
-.app-lang {
-  margin-left: auto;
-  flex-shrink: 0;
-}
-.app-model + .app-lang {
-  margin-left: 0;
-}
-.app-lang + .app-theme-toggle {
-  margin-left: 0;
-}
 /* 古いビルドのまま開きっぱなしのタブに出す帯(82)。トップバーの直下・本文の上に置き、
    本文の高さを奪う形にする(オーバーレイにすると下の操作を隠してしまうため)。
    印刷には出さない(紙面は #ni-print-root だけ。styles.css の @media print が
@@ -163,144 +276,4 @@ body {
 }
 .app-stale-btn:hover {
   border-color: var(--text-muted);
-}
-.app-body {
-  flex: 1;
-  min-height: 0;
-  position: relative;
-}
-/* タブごとのペイン(06 Task 1)。非表示側はマウントしたまま display:none で隠す。
-   [hidden] の UA 既定は .app-pane の display に負けるため、明示的に打ち消す。 */
-.app-pane {
-  height: 100%;
-  min-height: 0;
-}
-.app-pane[hidden] {
-  display: none;
-}
-
-/* ---- 画面切替タブ(06 Task 1 / 76: 横スクロール対応) ----
-   タブ数が今後も増える前提で、折り返し(2段化)ではなく横スクロールで収める。
-   .app-tabs だけが縮んでスクロール領域になり、ロゴ・右端の固定要素(モデル表示/
-   言語切替/テーマ切替)は flex-shrink: 0 のまま影響を受けない。 */
-.app-tabs {
-  display: flex;
-  align-items: center;
-  flex-wrap: nowrap;
-  gap: 2px;
-  align-self: center;
-  margin-left: 8px;
-  min-width: 0;
-  flex: 1 1 auto;
-  overflow-x: auto;
-  overflow-y: hidden;
-  scrollbar-width: thin;
-  scrollbar-color: var(--border) transparent;
-}
-.app-tabs::-webkit-scrollbar {
-  height: 5px;
-}
-.app-tabs::-webkit-scrollbar-track {
-  background: transparent;
-}
-.app-tabs::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: var(--radius);
-}
-.app-tabs::-webkit-scrollbar-thumb:hover {
-  background: var(--text-dim);
-}
-.app-tab {
-  background: transparent;
-  color: var(--text-muted);
-  border: 1px solid transparent;
-  border-radius: var(--radius);
-  padding: 5px 14px;
-  font-family: var(--sans);
-  font-size: 12px;
-  cursor: pointer;
-  line-height: 1.4;
-  flex-shrink: 0;
-  white-space: nowrap;
-}
-.app-tab:hover {
-  color: var(--text);
-  background: var(--panel-2);
-}
-.app-tab-on {
-  color: var(--text);
-  background: var(--panel-2);
-  border-color: var(--border);
-  box-shadow: inset 0 -2px 0 var(--accent);
-  font-weight: 600;
-}
-
-/* ---- 未承認件数のバッジ(46 Task 4-5)----
-   ナレッジタブに未承認の候補があることを、タブを開かなくても気付けるようにする。 */
-.app-tab-badge {
-  display: inline-block;
-  margin-left: 6px;
-  min-width: 16px;
-  padding: 0 5px;
-  border-radius: 8px;
-  background: var(--accent);
-  color: var(--on-accent);
-  font-family: var(--mono);
-  font-size: 10px;
-  font-weight: 600;
-  line-height: 16px;
-  text-align: center;
-  vertical-align: 1px;
-}
-
-/* ---- テーマ切替トグル(Task 1) ---- */
-.app-theme-btn {
-  align-self: center;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: var(--panel-2);
-  color: var(--text-muted);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 4px 10px;
-  font-family: var(--mono);
-  font-size: 11px;
-  cursor: pointer;
-  line-height: 1.4;
-}
-.app-theme-btn:hover {
-  border-color: var(--accent);
-  color: var(--text);
-}
-.app-theme-icon {
-  font-size: 12px;
-  line-height: 1;
-}
-
-/* ---- 表示言語プルダウン(29 Task 2) ----
-   枠は .app-theme-btn を流用し、中の <select> だけを素の見た目に落とす。 */
-.app-lang {
-  cursor: pointer;
-  padding-right: 6px;
-}
-.app-lang:hover {
-  border-color: var(--accent);
-  color: var(--text);
-}
-.app-lang-select {
-  background: transparent;
-  color: inherit;
-  border: none;
-  outline: none;
-  font-family: var(--mono);
-  font-size: 11px;
-  line-height: 1.4;
-  cursor: pointer;
-  padding: 0 2px;
-}
-/* プルダウンの選択肢はネイティブ描画なので、ダークテーマでも読める色を明示する。 */
-.app-lang-select option {
-  background: var(--panel);
-  color: var(--text);
 }

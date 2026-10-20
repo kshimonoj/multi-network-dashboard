@@ -1,0 +1,328 @@
+/* multi-network-dashboard — シェルのレイアウト: ヘッダー(--nav-header-height)+ 左縦ナビ + コンテンツ(89)
+ *
+ * 上部タブバー(06 / 76)を廃止し、左端の縦ナビに置き換えた。
+ * 寸法・色はすべて src/theme.css の --nav-* トークンを参照する(このファイルに px・色を直書きしない)。
+ *
+ *   .app-shell
+ *     header.app-bar            … ロゴ+MND / model / 言語切替 / テーマ切替
+ *     .app-stale                … 古いビルドの帯(82。theme.css)
+ *     .app-main                 … 横並び
+ *       .app-nav-slot           … 通常フロー上のナビの置き場。収納幅、ピン留め時だけ展開幅
+ *         nav.app-nav           … 置き場の中に absolute で置く。ホバー時はこれだけが広がってコンテンツに重なる
+ *       .app-body > .app-pane   … 各タブ
+ *
+ * 印刷では #root ごと display:none になる(network-investigation/view/styles.css の @media print)。
+ */
+
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+/* ---- ヘッダー ---- */
+.app-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--nav-header-gap);
+  flex-shrink: 0;
+  height: var(--nav-header-height);
+  padding: 0 var(--nav-header-padding-right) 0 var(--nav-header-padding-left);
+  border-bottom: var(--nav-border-width) solid var(--nav-border);
+  background: var(--nav-bg);
+}
+/* 左上のロゴ表記(76番)。"Multi Network Dashboard" を短縮した "MND" + アイコン。 */
+.app-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--nav-logo-gap);
+  flex-shrink: 0;
+  cursor: default;
+}
+.app-logo-icon {
+  display: block;
+  width: var(--nav-logo-size);
+  height: var(--nav-logo-size);
+}
+.app-logo-text {
+  font-size: var(--nav-logo-font-size);
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: var(--nav-text);
+}
+/* 右端の固定要素。並びは model 表示 → 言語プルダウン → テーマトグル。 */
+.app-bar-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--nav-header-gap);
+  margin-left: auto;
+  flex-shrink: 0;
+}
+/* モデル表示(Corstack シェルの topbarModel 相当をローカルに再現)。ネットワーク調査タブでだけ出す。 */
+.app-model {
+  font-family: var(--mono);
+  font-size: var(--nav-control-font-size);
+  color: var(--nav-text-muted);
+}
+
+/* テーマ切替トグル(03 Task 1)。言語プルダウンも同じ枠を使う。 */
+.app-theme-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--nav-control-gap);
+  background: var(--nav-control-bg);
+  color: var(--nav-text-muted);
+  border: var(--nav-border-width) solid var(--nav-border);
+  border-radius: var(--radius);
+  padding: var(--nav-control-padding-y) var(--nav-control-padding-x);
+  font-family: var(--mono);
+  font-size: var(--nav-control-font-size);
+  cursor: pointer;
+  line-height: 1.4;
+}
+.app-theme-btn:hover {
+  border-color: var(--nav-accent);
+  color: var(--nav-text);
+}
+.app-theme-icon {
+  font-size: var(--nav-control-icon-size);
+}
+
+/* 表示言語プルダウン(29 Task 2)。枠は .app-theme-btn を流用し、中の <select> だけを素の見た目に落とす。 */
+.app-lang {
+  padding-right: var(--nav-control-padding-right-select);
+}
+.app-lang-select {
+  background: transparent;
+  color: inherit;
+  border: none;
+  outline: none;
+  font-family: var(--mono);
+  font-size: var(--nav-control-font-size);
+  line-height: 1.4;
+  cursor: pointer;
+  padding: 0 var(--nav-select-padding-x);
+}
+/* <select> 自身の outline は消しているので、キーボードで入ったときは枠(.app-lang)にフォーカスリングを出す。 */
+.app-lang:has(.app-lang-select:focus-visible) {
+  outline: var(--nav-focus-ring-width) solid var(--nav-accent);
+  outline-offset: var(--nav-focus-ring-offset);
+}
+/* プルダウンの選択肢はネイティブ描画なので、ダークテーマでも読める色を明示する。 */
+.app-lang-select option {
+  background: var(--nav-bg);
+  color: var(--nav-text);
+}
+
+/* アイコン(src/components/Icon.tsx)。大きさは置き場所の font-size。 */
+.app-icon {
+  display: block;
+  flex-shrink: 0;
+  width: 1em;
+  height: 1em;
+}
+
+/* ---- ナビ + コンテンツ ---- */
+.app-main {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+.app-body {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  position: relative;
+}
+/* タブごとのペイン(06 Task 1)。非表示側はマウントしたまま display:none で隠す。
+   [hidden] の UA 既定は .app-pane の display に負けるため、明示的に打ち消す。 */
+.app-pane {
+  height: 100%;
+  min-height: 0;
+}
+.app-pane[hidden] {
+  display: none;
+}
+
+/* 通常フロー上の置き場。ホバー一時展開では広がらない(= コンテンツの幅は変わらない)。
+   ピン留め時だけ展開幅になり、コンテンツを押し出す。 */
+.app-nav-slot {
+  position: relative;
+  flex: 0 0 var(--nav-width-collapsed);
+  z-index: var(--nav-z-index);
+}
+.app-nav-slot-pinned {
+  flex-basis: var(--nav-width-expanded);
+}
+.app-nav {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  width: var(--nav-width-collapsed);
+  overflow: hidden;
+  background: var(--nav-bg);
+  border-right: var(--nav-border-width) solid var(--nav-border);
+  transition:
+    width var(--nav-transition),
+    box-shadow var(--nav-transition);
+}
+.app-nav-expanded {
+  width: var(--nav-width-expanded);
+}
+.app-nav-overlay {
+  box-shadow: var(--nav-overlay-shadow);
+}
+.app-nav-list {
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: var(--nav-list-padding-y) 0;
+  scrollbar-width: none;
+}
+
+/* グループ見出し。収納時は区切り線、展開時は文字。先頭グループの線はピン留めボタンとの区切りを兼ねる。 */
+.app-nav-group + .app-nav-group {
+  margin-top: var(--nav-group-gap);
+}
+.app-nav-group-head {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: var(--nav-group-head-height);
+  margin: 0 var(--nav-item-inset);
+  padding: 0 var(--nav-item-padding-x);
+}
+.app-nav-group-rule {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  border-top: var(--nav-group-rule-width) solid var(--nav-group-rule);
+  transition: opacity var(--nav-transition);
+}
+.app-nav-group-text {
+  font-size: var(--nav-group-font-size);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--nav-text-dim);
+  opacity: 0;
+  transition: opacity var(--nav-transition);
+}
+.app-nav-expanded .app-nav-group-rule {
+  opacity: 0;
+}
+.app-nav-expanded .app-nav-group-text {
+  opacity: 1;
+}
+
+/* 項目 */
+.app-nav-item {
+  --nav-item-accent: var(--nav-accent);
+  display: flex;
+  align-items: center;
+  gap: var(--nav-item-gap);
+  width: calc(100% - 2 * var(--nav-item-inset));
+  height: var(--nav-item-height);
+  margin: var(--nav-item-gap-y) var(--nav-item-inset) 0;
+  padding: 0 var(--nav-item-padding-right) 0 var(--nav-item-padding-x);
+  border: none;
+  border-radius: var(--nav-item-radius);
+  background-color: transparent;
+  color: var(--nav-text-muted);
+  font-family: var(--sans);
+  font-size: var(--nav-item-font-size);
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.app-nav-item:hover {
+  background-image: var(--nav-state-hover-layer);
+  color: var(--nav-text);
+}
+.app-nav-item:focus-visible {
+  outline: var(--nav-focus-ring-width) solid var(--nav-accent);
+  outline-offset: calc(-1 * var(--nav-focus-ring-width));
+}
+/* 選択中は state layer 12% + アイコンのアクセント色だけで示す(左端の線は付けない) */
+.app-nav-item-on {
+  background-color: var(--nav-state-selected-color);
+  color: var(--nav-text);
+  font-weight: 600;
+}
+.app-nav-item-on .app-nav-icon {
+  color: var(--nav-item-accent);
+}
+/* Coach は選択していなくても amber(他の項目と色で区別する) */
+.app-nav-item-coach {
+  --nav-item-accent: var(--nav-accent-coach);
+  color: var(--nav-accent-coach);
+}
+.app-nav-item-coach:hover,
+.app-nav-item-coach.app-nav-item-on {
+  color: var(--nav-accent-coach);
+}
+
+.app-nav-icon-wrap {
+  position: relative;
+  flex-shrink: 0;
+  font-size: var(--nav-icon-size);
+}
+.app-nav-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0;
+  transition: opacity var(--nav-transition);
+}
+.app-nav-expanded .app-nav-label {
+  opacity: 1;
+}
+
+/* 未承認ナレッジの件数(46 Task 4-5)。収納時はアイコン右上のドット、展開時は数字。 */
+.app-nav-dot {
+  position: absolute;
+  top: var(--nav-dot-offset);
+  right: var(--nav-dot-offset);
+  width: var(--nav-dot-size);
+  height: var(--nav-dot-size);
+  border-radius: 50%;
+  background: var(--nav-badge-bg);
+  box-shadow: 0 0 0 var(--nav-dot-ring) var(--nav-bg);
+}
+.app-nav-badge {
+  display: none;
+  flex-shrink: 0;
+  min-width: var(--nav-badge-height);
+  padding: 0 var(--nav-badge-padding-x);
+  border-radius: calc(var(--nav-badge-height) / 2);
+  background: var(--nav-badge-bg);
+  color: var(--nav-badge-fg);
+  font-family: var(--mono);
+  font-size: var(--nav-badge-font-size);
+  font-weight: 600;
+  line-height: var(--nav-badge-height);
+  text-align: center;
+}
+.app-nav-expanded .app-nav-dot {
+  display: none;
+}
+.app-nav-expanded .app-nav-badge {
+  display: inline-block;
+}
+
+/* ピン留めボタン(ナビの最上段)。Tab 順を「ヘッダー → ピン留め → 10 項目 → コンテンツ」にするため、
+   DOM でも見た目でも項目一覧より前に置く。 */
+.app-nav-pin {
+  flex-shrink: 0;
+  margin-top: var(--nav-list-padding-y);
+}
+.app-nav-pin-on .app-nav-icon {
+  color: var(--nav-accent);
+}

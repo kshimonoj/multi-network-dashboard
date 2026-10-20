@@ -26,6 +26,9 @@ demo/
 logs/
 npm-debug.log*
 
+# --- Agentation の MCP 設定(85。ローカル開発専用)---
+.mcp.agentation.json
+
 # --- OS / editor ---
 .DS_Store
 Thumbs.db

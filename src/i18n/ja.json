@@ -56,6 +56,18 @@
       "sub": "先輩と壁打ちしながら覚える"
     }
   },
+  "nav": {
+    "groups": {
+      "monitor": "監視",
+      "archive": "蓄積",
+      "analyze": "分析",
+      "learn": "育成"
+    },
+    "pin": "ナビを固定",
+    "unpin": "固定を解除",
+    "pinTitle": "{action}(選択はこのブラウザに保存されます)",
+    "itemWithBadge": "{label}({badge})"
+  },
   "theme": {
     "light": "ライト",
     "dark": "ダーク",

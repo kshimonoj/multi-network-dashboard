@@ -579,14 +579,15 @@
 
 /* ---- 詳細内のテーブル ---- */
 
+/* 寸法は src/theme.css の --table-* を参照する(87)。行高・罫線・hover は .go-table 側。 */
 .tt-table {
-  font-size: 11px;
+  font-size: var(--table-font-size-compact);
 }
 .tt-table th {
-  font-size: 9px;
+  font-size: var(--table-header-font-size-compact);
 }
 .tt-table td {
-  padding: 5px 8px;
+  padding: var(--table-cell-padding-y-compact) var(--table-cell-padding-x-compact);
 }
 .tt-table tbody tr {
   cursor: default;

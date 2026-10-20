@@ -56,6 +56,18 @@
       "sub": "Learn by talking it through with a senior"
     }
   },
+  "nav": {
+    "groups": {
+      "monitor": "Monitor",
+      "archive": "Archive",
+      "analyze": "Analyze",
+      "learn": "Learn"
+    },
+    "pin": "Pin navigation",
+    "unpin": "Unpin navigation",
+    "pinTitle": "{action} (the choice is saved in this browser)",
+    "itemWithBadge": "{label} ({badge})"
+  },
   "theme": {
     "light": "Light",
     "dark": "Dark",

@@ -567,20 +567,21 @@
   overflow: auto;
   max-height: min(62vh, 660px);
 }
+/* 寸法・罫線・面・state layer は src/theme.css の --table-* を参照する(87)。 */
 .go-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 12px;
+  font-size: var(--table-font-size);
 }
 .go-table th {
   text-align: left;
   font-weight: 500;
-  font-size: 10px;
+  font-size: var(--table-header-font-size);
   color: var(--text-muted);
-  padding: 8px 10px;
-  border-bottom: 1px solid var(--border);
+  padding: var(--table-header-padding-y) var(--table-cell-padding-x);
+  border-bottom: var(--table-border-width) solid var(--table-border-header);
   white-space: nowrap;
-  background: var(--panel);
+  background: var(--table-header-bg);
   position: sticky;
   top: 0;
   z-index: 1;
@@ -611,20 +612,28 @@
   font-weight: 400;
 }
 .go-table td {
-  padding: 7px 10px;
-  border-bottom: 1px solid var(--border-soft);
+  height: var(--table-row-height);
+  padding: var(--table-cell-padding-y) var(--table-cell-padding-x);
+  border-bottom: var(--table-border-width) solid var(--table-border);
   font-family: var(--mono);
   white-space: nowrap;
+}
+/* GO サイト一覧だけ行高を 28px にする(87 Phase B)。.go-table は Event/Alert・Webhook・Streaming・
+   レポート・TT と共有しているので、サイト一覧にしか無い列クラス(.go-col-site)で絞り、トークンを差し替える。 */
+.go-table:has(.go-col-site) {
+  --table-row-height: var(--table-row-height-go);
+  --table-cell-padding-y: var(--table-cell-padding-y-go);
 }
 .go-table tbody tr {
   cursor: pointer;
 }
+/* hover は background-image に重ねる。選択行(background-color)の上にも合成される。 */
 .go-table tbody tr:hover {
-  background: var(--panel-2);
+  background-image: var(--table-state-hover-layer);
 }
 .go-row-hl {
-  background: var(--panel-2);
-  box-shadow: inset 2px 0 0 var(--accent);
+  background-color: var(--table-state-selected-color);
+  box-shadow: inset var(--table-selected-indicator-width) 0 0 var(--accent);
 }
 .go-col-site {
   font-family: var(--sans) !important;
@@ -1118,9 +1127,12 @@
 }
 td.go-fc-act { z-index: 1; }
 th.go-fc-act { z-index: 2; } /* 見出し行では縦(top)・横(right)の固定が交差するため他の見出しより前面に */
-.go-table tbody tr:hover .go-fc-act,
+/* 固定列は不透明(var(--panel))なので行の state layer が透けない。同じ層をセル自身にも重ねる。 */
+.go-table tbody tr:hover .go-fc-act {
+  background-image: var(--table-state-hover-layer);
+}
 .go-row-hl .go-fc-act {
-  background: var(--panel-2);
+  background-image: var(--table-state-selected-layer);
 }
 
 .go-fsev {

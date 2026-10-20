@@ -15,7 +15,7 @@
 // URL の ?focus=<historyId>(Corstack の共通検索から飛んでくる形)は、共通検索が無い本アプリでも
 // 「タイムラインの特定カードを開いた状態で共有する」用途に使えるので、そのまま解釈する。
 
-import { StrictMode, useCallback, useEffect, useRef, useState } from "react";
+import { lazy, StrictMode, Suspense, useCallback, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { NetworkInvestigation } from "../plugins/network-investigation/view/NetworkInvestigation";
 import { GlobalOverview } from "../plugins/global-overview/view/GlobalOverview";
@@ -41,7 +41,10 @@ import {
 import { useStaleBuild } from "./buildCheck";
 import { applyTheme, resolveInitialTheme, storeTheme, type Theme } from "./theme";
 import { LanguageProvider, useLanguage, useT, type Lang, type TFunc } from "./i18n";
+import { Icon } from "./components/Icon";
+import { NavRail, type NavGroup } from "./components/NavRail";
 import "./theme.css";
+import "./nav.css";
 
 type TabId =
   | "global-overview"
@@ -68,6 +71,46 @@ const TABS: Array<{ id: TabId; key: string }> = [
   { id: "tagged-targets", key: "tabs.taggedTargets" },
   { id: "coach", key: "tabs.coach" },
 ];
+
+// 左縦ナビ(89)での見せ方。グループ分けとアイコンは表示の都合だけなので、TABS とは別に持つ
+// (並びは TABS と同じ。TABS に足したタブはここにも足すこと。足し忘れるとナビに出ない)。
+const NAV_GROUPS: Array<NavGroup<TabId>> = [
+  {
+    key: "monitor",
+    items: [
+      { id: "global-overview", key: "tabs.globalOverview", icon: "language" },
+      { id: "event-feed", key: "tabs.eventFeed", icon: "notifications" },
+      { id: "webhook-feed", key: "tabs.webhookFeed", icon: "webhook" },
+      { id: "central-streaming", key: "tabs.centralStreaming", icon: "stream" },
+    ],
+  },
+  {
+    key: "archive",
+    items: [
+      { id: "reports", key: "tabs.reports", icon: "description" },
+      { id: "knowledge", key: "tabs.knowledge", icon: "lightbulb", badgeTitleKey: "knowledge.badgeTitle" },
+    ],
+  },
+  {
+    key: "analyze",
+    items: [
+      { id: "network-investigation", key: "tabs.networkInvestigation", icon: "search" },
+      { id: "best-practice", key: "tabs.bestPractice", icon: "checklist" },
+      { id: "tagged-targets", key: "tabs.taggedTargets", icon: "label" },
+    ],
+  },
+  {
+    key: "learn",
+    items: [{ id: "coach", key: "tabs.coach", icon: "school", tone: "coach" }],
+  },
+];
+
+// TABS にあって NAV_GROUPS に無いタブは、選択できるのにナビに出ない。開発時だけ気付けるようにする。
+if (import.meta.env.DEV) {
+  const navIds = new Set(NAV_GROUPS.flatMap((g) => g.items.map((it) => it.id)));
+  const missing = TABS.filter((tb) => !navIds.has(tb.id)).map((tb) => tb.id);
+  if (missing.length > 0) console.error(`[nav] NAV_GROUPS に無いタブ: ${missing.join(", ")}`);
+}
 
 /** 未承認のナレッジ候補を見失わないための、タブ名横のバッジ更新間隔(46 Task 4-5)。 */
 const KNOWLEDGE_BADGE_MS = 60_000;
@@ -101,7 +144,7 @@ function initialTab(focusId: string | null): TabId {
   return "global-overview";
 }
 
-// 左上のロゴ表記(76番)。「Multi Network Dashboard」は文字数が多くタブバーを圧迫するため、
+// 左上のロゴ表記(76番)。「Multi Network Dashboard」は文字数が多くヘッダーを圧迫するため、
 // public/favicon.svg と同じネットワーク図モチーフ + "MND" の短縮表記に置き換える。
 // 何のアプリかはツールチップ(title)とaria-labelで正式名称を添えて分かるようにする。
 function Logo({ title }: { title: string }) {
@@ -139,9 +182,7 @@ function ThemeToggle({ theme, onChange }: { theme: Theme; onChange: (t: Theme) =
       title={t("theme.toggleTitle", { next: nextLabel })}
       aria-label={t("theme.toggleAria", { next: nextLabel })}
     >
-      <span className="app-theme-icon" aria-hidden>
-        {theme === "dark" ? "☀" : "☾"}
-      </span>
+      <Icon name={theme === "dark" ? "lightMode" : "darkMode"} className="app-theme-icon" />
       {nextLabel}
     </button>
   );
@@ -154,9 +195,7 @@ function LanguageSelect() {
   const { lang, setLang, t } = useLanguage();
   return (
     <label className="app-theme-btn app-lang" title={t("language.switchTitle")}>
-      <span className="app-theme-icon" aria-hidden>
-        🌐
-      </span>
+      <Icon name="translate" className="app-theme-icon" />
       <select
         className="app-lang-select"
         value={lang}
@@ -197,9 +236,6 @@ function App() {
   // 既存の pendingHistoryFocus と同じ形で、対象タブが消費したらクリアする。
   const [pendingKnowledgeFocus, setPendingKnowledgeFocus] = useState<PendingKnowledgeFocus | null>(null);
   const [pendingRuleFocus, setPendingRuleFocus] = useState<PendingRuleFocus | null>(null);
-  // タブバー横スクロール対応(76番)。選択中タブが横スクロール領域の外にあるとき、
-  // そのタブが見える位置まで自動でスクロールさせるための参照。
-  const tabButtonRefs = useRef<Map<TabId, HTMLButtonElement>>(new Map());
   // サーバが配っているビルドと食い違っていないか(82)。開きっぱなしのタブが古い JS のまま
   // 動いていると、サーバ側の修正だけが効いた紛らわしい状態になるので、再読み込みを促す。
   const staleBuild = useStaleBuild();
@@ -208,10 +244,6 @@ function App() {
   useEffect(() => {
     applyTheme(theme);
   }, [theme]);
-
-  useEffect(() => {
-    tabButtonRefs.current.get(tab)?.scrollIntoView({ block: "nearest", inline: "nearest" });
-  }, [tab]);
 
   // バッジ用の件数だけを定期取得する(ナレッジタブ自体はマウントしていなくてよい)。
   useEffect(() => {
@@ -300,43 +332,18 @@ function App() {
   return (
     <TopbarModelContext.Provider value={setModel}>
       <div className="app-shell">
-        <div className="app-bar">
+        <header className="app-bar">
           <Logo title={t("app.title")} />
-          <nav className="app-tabs" role="tablist" aria-label={t("app.tabsAriaLabel")}>
-            {TABS.map((tb) => (
-              <button
-                key={tb.id}
-                ref={(el) => {
-                  if (el) tabButtonRefs.current.set(tb.id, el);
-                  else tabButtonRefs.current.delete(tb.id);
-                }}
-                role="tab"
-                aria-selected={tab === tb.id}
-                className={`app-tab${tab === tb.id ? " app-tab-on" : ""}`}
-                onClick={() => onTab(tb.id)}
-                title={t(`${tb.key}.sub`)}
-              >
-                {t(`${tb.key}.label`)}
-                {tb.id === "knowledge" && knowledgePending > 0 && (
-                  <span
-                    className="app-tab-badge"
-                    title={t("knowledge.badgeTitle", { n: knowledgePending })}
-                    aria-label={t("knowledge.badgeTitle", { n: knowledgePending })}
-                  >
-                    {knowledgePending}
-                  </span>
-                )}
-              </button>
-            ))}
-          </nav>
-          {model && tab === "network-investigation" && (
-            <span className="app-model">
-              {t("app.modelPrefix")} {model.label}
-            </span>
-          )}
-          <LanguageSelect />
-          <ThemeToggle theme={theme} onChange={onTheme} />
-        </div>
+          <div className="app-bar-actions">
+            {model && tab === "network-investigation" && (
+              <span className="app-model">
+                {t("app.modelPrefix")} {model.label}
+              </span>
+            )}
+            <LanguageSelect />
+            <ThemeToggle theme={theme} onChange={onTheme} />
+          </div>
+        </header>
         {staleBuild && (
           <div className="app-stale" role="status">
             <span className="app-stale-text">{t("app.staleBuild.message")}</span>
@@ -345,107 +352,124 @@ function App() {
             </button>
           </div>
         )}
-        <div className="app-body">
-          {visited.has("global-overview") && (
-            <div className="app-pane" hidden={tab !== "global-overview"}>
-              <GlobalOverview
-                active={tab === "global-overview"}
-                theme={theme}
-                onInvestigate={onInvestigate}
-                pendingSiteFocus={pendingSiteFocus}
-                onConsumePendingSiteFocus={() => setPendingSiteFocus(null)}
-              />
-            </div>
-          )}
-          {visited.has("event-feed") && (
-            <div className="app-pane" hidden={tab !== "event-feed"}>
-              <EventFeed active={tab === "event-feed"} onInvestigate={onInvestigate} />
-            </div>
-          )}
-          {visited.has("webhook-feed") && (
-            <div className="app-pane" hidden={tab !== "webhook-feed"}>
-              <WebhookFeed
-                active={tab === "webhook-feed"}
-                onInvestigate={onInvestigate}
-                onOpenHistoryFocus={onOpenHistoryFocus}
-              />
-            </div>
-          )}
-          {visited.has("central-streaming") && (
-            <div className="app-pane" hidden={tab !== "central-streaming"}>
-              <CentralStreaming active={tab === "central-streaming"} onInvestigate={onInvestigate} />
-            </div>
-          )}
-          {visited.has("reports") && (
-            <div className="app-pane" hidden={tab !== "reports"}>
-              <Reports
-                active={tab === "reports"}
-                onInvestigate={onInvestigate}
-                onOpenSite={onOpenSite}
-                onOpenHistoryFocus={onOpenHistoryFocus}
-              />
-            </div>
-          )}
-          {visited.has("knowledge") && (
-            <div className="app-pane" hidden={tab !== "knowledge"}>
-              <Knowledge
-                active={tab === "knowledge"}
-                onOpenHistoryFocus={onOpenHistoryFocus}
-                onPendingCount={setKnowledgePending}
-                pendingEntryFocus={pendingKnowledgeFocus}
-                onConsumePendingEntryFocus={() => setPendingKnowledgeFocus(null)}
-              />
-            </div>
-          )}
-          {visited.has("network-investigation") && (
-            <div className="app-pane" hidden={tab !== "network-investigation"}>
-              <NetworkInvestigation
-                plugin={plugin}
-                focusId={focusId}
-                pendingQuery={pendingInvestigationQuery}
-                onConsumePendingQuery={() => setPendingInvestigationQuery(null)}
-                pendingHistoryFocus={pendingHistoryFocus}
-                onConsumePendingHistoryFocus={() => setPendingHistoryFocus(null)}
-              />
-            </div>
-          )}
-          {visited.has("best-practice") && (
-            <div className="app-pane" hidden={tab !== "best-practice"}>
-              <BestPractice
-                active={tab === "best-practice"}
-                pendingRuleFocus={pendingRuleFocus}
-                onConsumePendingRuleFocus={() => setPendingRuleFocus(null)}
-              />
-            </div>
-          )}
-          {visited.has("tagged-targets") && (
-            <div className="app-pane" hidden={tab !== "tagged-targets"}>
-              <TaggedTargets active={tab === "tagged-targets"} />
-            </div>
-          )}
-          {/* Coach(65)。壁打ちは入力途中の文とセッション状態を抱えるので、
-              既存の visited + hidden パターンに乗せてマウントを維持する。 */}
-          {visited.has("coach") && (
-            <div className="app-pane" hidden={tab !== "coach"}>
-              <Coach
-                active={tab === "coach"}
-                onOpenKnowledgeEntry={onOpenKnowledgeEntry}
-                onOpenHistoryFocus={onOpenHistoryFocus}
-                onOpenRule={onOpenRule}
-                onInvestigate={onInvestigate}
-              />
-            </div>
-          )}
+        <div className="app-main">
+          <NavRail
+            groups={NAV_GROUPS}
+            selected={tab}
+            onSelect={onTab}
+            badges={{ knowledge: knowledgePending }}
+          />
+          <div className="app-body">
+            {visited.has("global-overview") && (
+              <div className="app-pane" hidden={tab !== "global-overview"}>
+                <GlobalOverview
+                  active={tab === "global-overview"}
+                  theme={theme}
+                  onInvestigate={onInvestigate}
+                  pendingSiteFocus={pendingSiteFocus}
+                  onConsumePendingSiteFocus={() => setPendingSiteFocus(null)}
+                />
+              </div>
+            )}
+            {visited.has("event-feed") && (
+              <div className="app-pane" hidden={tab !== "event-feed"}>
+                <EventFeed active={tab === "event-feed"} onInvestigate={onInvestigate} />
+              </div>
+            )}
+            {visited.has("webhook-feed") && (
+              <div className="app-pane" hidden={tab !== "webhook-feed"}>
+                <WebhookFeed
+                  active={tab === "webhook-feed"}
+                  onInvestigate={onInvestigate}
+                  onOpenHistoryFocus={onOpenHistoryFocus}
+                />
+              </div>
+            )}
+            {visited.has("central-streaming") && (
+              <div className="app-pane" hidden={tab !== "central-streaming"}>
+                <CentralStreaming active={tab === "central-streaming"} onInvestigate={onInvestigate} />
+              </div>
+            )}
+            {visited.has("reports") && (
+              <div className="app-pane" hidden={tab !== "reports"}>
+                <Reports
+                  active={tab === "reports"}
+                  onInvestigate={onInvestigate}
+                  onOpenSite={onOpenSite}
+                  onOpenHistoryFocus={onOpenHistoryFocus}
+                />
+              </div>
+            )}
+            {visited.has("knowledge") && (
+              <div className="app-pane" hidden={tab !== "knowledge"}>
+                <Knowledge
+                  active={tab === "knowledge"}
+                  onOpenHistoryFocus={onOpenHistoryFocus}
+                  onPendingCount={setKnowledgePending}
+                  pendingEntryFocus={pendingKnowledgeFocus}
+                  onConsumePendingEntryFocus={() => setPendingKnowledgeFocus(null)}
+                />
+              </div>
+            )}
+            {visited.has("network-investigation") && (
+              <div className="app-pane" hidden={tab !== "network-investigation"}>
+                <NetworkInvestigation
+                  plugin={plugin}
+                  focusId={focusId}
+                  pendingQuery={pendingInvestigationQuery}
+                  onConsumePendingQuery={() => setPendingInvestigationQuery(null)}
+                  pendingHistoryFocus={pendingHistoryFocus}
+                  onConsumePendingHistoryFocus={() => setPendingHistoryFocus(null)}
+                />
+              </div>
+            )}
+            {visited.has("best-practice") && (
+              <div className="app-pane" hidden={tab !== "best-practice"}>
+                <BestPractice
+                  active={tab === "best-practice"}
+                  pendingRuleFocus={pendingRuleFocus}
+                  onConsumePendingRuleFocus={() => setPendingRuleFocus(null)}
+                />
+              </div>
+            )}
+            {visited.has("tagged-targets") && (
+              <div className="app-pane" hidden={tab !== "tagged-targets"}>
+                <TaggedTargets active={tab === "tagged-targets"} />
+              </div>
+            )}
+            {/* Coach(65)。壁打ちは入力途中の文とセッション状態を抱えるので、
+                既存の visited + hidden パターンに乗せてマウントを維持する。 */}
+            {visited.has("coach") && (
+              <div className="app-pane" hidden={tab !== "coach"}>
+                <Coach
+                  active={tab === "coach"}
+                  onOpenKnowledgeEntry={onOpenKnowledgeEntry}
+                  onOpenHistoryFocus={onOpenHistoryFocus}
+                  onOpenRule={onOpenRule}
+                  onInvestigate={onInvestigate}
+                />
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </TopbarModelContext.Provider>
   );
 }
 
+// 開発時だけの注釈ツールバー(85)。vite build では import.meta.env.DEV が false に置き換わり、
+// 動的 import ごと消える(静的 import にしないこと。src/devtools/AgentationDev.tsx 冒頭参照)。
+const AgentationDev = import.meta.env.DEV ? lazy(() => import("./devtools/AgentationDev")) : null;
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <LanguageProvider>
       <App />
     </LanguageProvider>
+    {AgentationDev && (
+      <Suspense fallback={null}>
+        <AgentationDev />
+      </Suspense>
+    )}
   </StrictMode>,
 );
